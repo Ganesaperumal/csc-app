@@ -143,6 +143,8 @@ function JobsTable() {
   const [visibleColumns, setVisibleColumns] = useState<string[]>(['erp_job_id', 'job_number', 'job_date', 'customer_name', 'company', 'goods_type', 'goods_track_status', 'spoc_name']);
   const [orderedColumns, setOrderedColumns] = useState<string[]>(ALL_COLUMNS.map(c => c.id));
   const [showColumnSelector, setShowColumnSelector] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
   
   const [filters, setFilters] = useState<Record<string, string[]>>({});
   const [activeFilterColumn, setActiveFilterColumn] = useState<string | null>(null);
@@ -179,6 +181,18 @@ function JobsTable() {
         setOrderedColumns(finalOrder as string[]); 
       } catch (e) {}
     }
+    }
+    
+    // Check if user is admin
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        supabase.from('profiles').select('role').eq('id', data.user.id).single().then(({ data: profileData }) => {
+          if (profileData && profileData.role === 'Admin') {
+            setIsAdmin(true);
+          }
+        });
+      }
+    });
   }, []);
 
   const handleSort = () => {
@@ -304,6 +318,43 @@ function JobsTable() {
     return 'Active Jobs Dashboard';
   };
 
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedJobs(sortedJobs.map(j => j.job_number));
+    } else {
+      setSelectedJobs([]);
+    }
+  };
+
+  const handleSelectJob = (jobNumber: string) => {
+    if (selectedJobs.includes(jobNumber)) {
+      setSelectedJobs(selectedJobs.filter(id => id !== jobNumber));
+    } else {
+      setSelectedJobs([...selectedJobs, jobNumber]);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedJobs.length === 0) return;
+    if (!window.confirm(`Are you sure you want to completely delete ${selectedJobs.length} jobs? This will also wipe their logs and audit history.`)) return;
+    
+    try {
+      setLoading(true);
+      const res = await fetch('/api/admin/delete-jobs', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobNumbers: selectedJobs })
+      });
+      if (!res.ok) throw new Error('Failed to delete jobs');
+      
+      setSelectedJobs([]);
+      fetchJobs();
+    } catch (err: any) {
+      alert(`Error deleting jobs: ${err.message}`);
+      setLoading(false);
+    }
+  };
+
   return (
     <div>
       <div className={styles.header}>
@@ -366,6 +417,14 @@ function JobsTable() {
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
             Refresh
           </button>
+          {isAdmin && selectedJobs.length > 0 && (
+            <button 
+              onClick={handleDeleteSelected}
+              style={{ padding: '0.6rem 1rem', borderRadius: '8px', background: '#ef4444', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+            >
+              Delete Selected ({selectedJobs.length})
+            </button>
+          )}
         </div>
       </div>
 
@@ -376,6 +435,11 @@ function JobsTable() {
           <table className={styles.table}>
             <thead>
               <tr>
+                {isAdmin && (
+                  <th style={{ width: '40px', textAlign: 'center' }}>
+                    <input type="checkbox" onChange={handleSelectAll} checked={sortedJobs.length > 0 && selectedJobs.length === sortedJobs.length} />
+                  </th>
+                )}
                 <th>Action</th>
                 {orderedColumns.filter(id => visibleColumns.includes(id)).map(colId => {
                   const col = ALL_COLUMNS.find(c => c.id === colId)!;
@@ -418,7 +482,12 @@ function JobsTable() {
                 </tr>
               ) : (
                 sortedJobs.map((job) => (
-                  <tr key={job.job_number}>
+                  <tr key={job.job_number} className={selectedJobs.includes(job.job_number) ? styles.selectedRow : ''}>
+                    {isAdmin && (
+                      <td style={{ textAlign: 'center' }}>
+                        <input type="checkbox" checked={selectedJobs.includes(job.job_number)} onChange={() => handleSelectJob(job.job_number)} />
+                      </td>
+                    )}
                     <td>
                       <button 
                         className="btn btn-secondary" 
