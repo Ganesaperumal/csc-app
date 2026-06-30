@@ -140,6 +140,13 @@ async function syncERP() {
     }
   } catch (err) {
     console.error('❌ Fatal Error during Sync:', err);
+    // Emergency unlock if it failed before reaching the API
+    try {
+      await fetch(API_URL.replace('/ingest-erp', '/admin/delete-jobs').replace('delete-jobs', 'unlock-sync'), {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${CRON_SECRET_KEY}` }
+      });
+    } catch(e) {}
   } finally {
     if (excelFilePath && fs.existsSync(excelFilePath)) {
       fs.unlinkSync(excelFilePath);

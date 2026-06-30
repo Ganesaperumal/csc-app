@@ -76,8 +76,8 @@ export default function SyncERPButton({ user: initialUser }: { user?: any }) {
     } catch (err: any) {
       console.error(err);
       alert('Error triggering sync: ' + err.message);
-    } finally {
-      // Unlock it!
+      
+      // Only unlock immediately if the initial trigger failed
       await supabase.from('sync_lock').update({
         is_syncing: false
       }).eq('id', 1);

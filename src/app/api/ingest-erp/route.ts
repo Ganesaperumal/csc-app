@@ -98,6 +98,9 @@ export async function POST(request: Request) {
       }
     }
 
+    // 6. Unlock the sync button!
+    await supabase.from('sync_lock').update({ is_syncing: false }).eq('id', 1);
+
     return NextResponse.json({ 
       success: true, 
       message: `Processed ${body.length} jobs. Inserted ${newJobsToInsert.length}, updated ${existingJobsToUpdate.length}.`
@@ -105,6 +108,8 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error('Error processing ERP ingestion:', error);
+    // Ensure we unlock on error too
+    await supabase.from('sync_lock').update({ is_syncing: false }).eq('id', 1);
     return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
   }
 }
