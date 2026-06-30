@@ -123,7 +123,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
       <div className={styles.header}>
         <div className={styles.headerTitle}>
           <button className="btn btn-secondary" onClick={() => router.push('/dashboard')}>&larr; Back</button>
-          <h1>Job: {job.job_number}</h1>
+          <h1>{job.job_date || ''} | {job.job_number} {job.enq_number ? `| ${job.enq_number}` : ''}</h1>
         </div>
         <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           {saving ? (
@@ -152,9 +152,6 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <span className={styles.textPrimary}>Primary Details (Editable)</span>
             </h3>
             <div className={styles.grid}>
-              <div className={styles.inputGroup}><label>Job ID</label><input value={job.erp_job_id || ''} disabled /></div>
-              <div className={styles.inputGroup}><label>Job Number</label><input value={job.job_number || ''} disabled /></div>
-              <div className={styles.inputGroup}><label>Date</label><input value={job.job_date || ''} disabled /></div>
               <div className={styles.inputGroup}><label>Branch</label><input value={job.branch || ''} disabled /></div>
               <div className={styles.inputGroup}><label>Customer Name</label><input name="customer_name" value={job.customer_name || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>Company</label><input name="company" value={job.company || ''} onChange={handleChange} /></div>
