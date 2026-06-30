@@ -69,6 +69,24 @@ export default function AdminPage() {
     }
   };
 
+  const handleDeleteAllJobs = async () => {
+    if (!window.confirm('🚨 DANGER! Are you absolutely sure you want to delete EVERY single job in the database? This cannot be undone! 🚨')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await fetch('/api/admin/delete-jobs', { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete jobs');
+      alert('✅ All jobs have been wiped successfully! You can now run a fresh Sync.');
+    } catch (err: any) {
+      alert(`❌ Error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto', height: '100%', overflowY: 'auto' }}>
       <h1 style={{ marginBottom: '2rem', color: 'var(--text-primary)', fontSize: '2rem' }}>User Management</h1>
@@ -169,6 +187,37 @@ export default function AdminPage() {
             })}
           </tbody>
         </table>
+      </div>
+
+      <div className="glass" style={{ padding: '2rem', borderRadius: '12px', marginTop: '2rem', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+        <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          ⚠️ Danger Zone
+        </h2>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+          Clear the entire Jobs table. This is useful during development or if the table is filled with malformed data.
+        </p>
+        <button 
+          onClick={handleDeleteAllJobs}
+          disabled={loading}
+          style={{ 
+            padding: '0.75rem 1.5rem', 
+            borderRadius: '8px', 
+            background: 'rgba(239, 68, 68, 0.1)', 
+            color: '#ef4444', 
+            border: '1px solid rgba(239, 68, 68, 0.5)',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            fontWeight: 'bold',
+            transition: 'all 0.2s'
+          }}
+          onMouseOver={(e) => {
+            if (!loading) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+          }}
+          onMouseOut={(e) => {
+            if (!loading) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+          }}
+        >
+          {loading ? 'Processing...' : '🗑️ Delete All Jobs'}
+        </button>
       </div>
     </div>
   );
