@@ -91,17 +91,17 @@ async function syncERP() {
       // row is an array of strings since we used { header: 1 }
       return {
         erp_job_id: row[1] ? parseInt(row[1], 10) : null,
-        branch: row[2] || '',
-        job_number: row[3] || '',
-        enq_number: row[4] || '',
-        origin: row[7] || '',
-        destination: row[8] || '',
+        branch: row[2] ? String(row[2]).trim() : '',
+        job_number: row[3] ? String(row[3]).trim() : '',
+        enq_number: row[4] ? String(row[4]).trim() : '',
+        origin: row[7] || row[24] || '', // Origin or From
+        destination: row[8] || row[25] || '', // Destination or To
         erp_status: row[9] || 'Active',
-        job_date: row[10] || null,
-        customer_name: row[17] || '', // Using a guess for name/company based on typical column order, but the critical ones are Job No and Enq No
-        company: row[18] || '',
-        customer_phone: row[19] || '',
-        goods_type: row[23] || '',
+        job_date: row[10] || null, // Order Recd Dt
+        customer_name: row[20] || '', // Name
+        company: row[21] || '', // Company
+        customer_phone: row[22] || row[23] || '', // Phone or Mobile
+        goods_type: row[28] || '', // Type Of Goods
       };
     }).filter(row => {
       const status = String(row.erp_status || '').trim().toUpperCase();
