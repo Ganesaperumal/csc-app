@@ -50,6 +50,22 @@ export default function SyncERPButton({ user: initialUser }: { user?: any }) {
     };
   }, [user?.id]);
 
+  // Fallback Polling Mechanism
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isSyncing) {
+      // Poll every 3 seconds to check if the lock has been cleared by the backend
+      interval = setInterval(async () => {
+        const { data } = await supabase.from('sync_lock').select('*').eq('id', 1).single();
+        if (data && !data.is_syncing) {
+          setIsSyncing(false);
+          setSyncingBy('');
+        }
+      }, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [isSyncing]);
+
   const triggerSync = async () => {
     if (isSyncing) return;
     
