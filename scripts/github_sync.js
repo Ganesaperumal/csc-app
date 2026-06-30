@@ -84,28 +84,35 @@ async function syncERP() {
     const sheetName = workbook.SheetNames[0]; 
     const sheet = workbook.Sheets[sheetName];
 
-    const rawData = xlsx.utils.sheet_to_json(sheet, { range: 6, defval: "" });
+    const rawData = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: "" });
     console.log(`Found ${rawData.length} rows in the Excel sheet.`);
 
-    const formattedData = rawData.map(row => ({
-      job_number: row['Job No'],
-      erp_job_id: row['Job ID'] ? parseInt(row['Job ID'], 10) : null,
-      enq_number: row['Master Enq No'] || '',
-      job_date: row['Order Recd Dt'] || null,
-      branch: row['BRN'] || '',
-      customer_name: row['Name'] || '',
-      company: row['Company'] || '',
-      goods_type: row['Type Of Goods'] || '',
-      origin: row['From'] || row['Origin'] || '',
-      destination: row['To'] || row['Destination'] || '',
-      customer_phone: row['Phone'] || '',
-      erp_status: row['Status'] || 'Active'
-    })).filter(row => {
+    const formattedData = rawData.map(row => {
+      // row is an array of strings since we used { header: 1 }
+      return {
+        erp_job_id: row[1] ? parseInt(row[1], 10) : null,
+        branch: row[2] || '',
+        job_number: row[3] || '',
+        enq_number: row[4] || '',
+        origin: row[7] || '',
+        destination: row[8] || '',
+        erp_status: row[9] || 'Active',
+        job_date: row[10] || null,
+        customer_name: row[17] || '', // Using a guess for name/company based on typical column order, but the critical ones are Job No and Enq No
+        company: row[18] || '',
+        customer_phone: row[19] || '',
+        goods_type: row[23] || '',
+      };
+    }).filter(row => {
       const status = String(row.erp_status || '').trim().toUpperCase();
+      const jobNo = String(row.job_number || '').trim();
+      const enqNo = String(row.enq_number || '').trim();
+      
       return (
-        row.job_number && 
-        row.enq_number !== 'EN/0/26/' && 
-        row.enq_number !== 'EN/0/25/' &&
+        jobNo && 
+        jobNo.startsWith('JB/') && // Ensures it's a valid Job Number row, skipping headers!
+        enqNo !== 'EN/0/26/' && 
+        enqNo !== 'EN/0/25/' &&
         status !== 'BILLED' && 
         status !== 'CANCELED' && 
         status !== 'CANCELLED'
