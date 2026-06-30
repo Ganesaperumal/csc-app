@@ -499,7 +499,7 @@ function JobsTable() {
                     </td>
                     {orderedColumns.filter(id => visibleColumns.includes(id)).map(colId => {
                       let value: any = job[colId];
-                      if (colId === 'car_included') value = value ? 'Yes' : 'No';
+                      if (colId === 'car_included') value = value === true ? 'Yes' : (value === false ? 'No' : '');
                       else if (colId === 'last_comm_date') value = value ? new Date(value).toLocaleDateString() : '';
                       else if (colId === 'goods_track_status') value = value || 'Pending';
                       else if (colId === 'spoc_name') value = value || '-';
