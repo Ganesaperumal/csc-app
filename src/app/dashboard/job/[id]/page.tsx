@@ -5,6 +5,15 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import styles from './jobDetails.module.css';
 
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = date.toLocaleString('en-US', { month: 'short' });
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+};
+
 export default function JobDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const id = resolvedParams.id;
@@ -123,7 +132,11 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
       <div className={styles.header}>
         <div className={styles.headerTitle}>
           <button className="btn btn-secondary" onClick={() => router.push('/dashboard')}>&larr; Back</button>
-          <h1>{job.job_date || ''} | {job.job_number} {job.enq_number ? `| ${job.enq_number}` : ''}</h1>
+          <h1 style={{ display: 'flex', gap: '2rem', alignItems: 'center', margin: 0 }}>
+            {job.job_date && <span style={{ color: '#ec4899' }}>{formatDate(job.job_date)}</span>}
+            <span style={{ color: '#10b981' }}>{job.job_number}</span>
+            {job.enq_number && <span style={{ color: '#3b82f6' }}>{job.enq_number}</span>}
+          </h1>
         </div>
         <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           {saving ? (
