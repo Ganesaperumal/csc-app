@@ -104,7 +104,6 @@ async function syncERP() {
         goods_type: row[28] || '', // Type Of Goods
       };
     }).filter(row => {
-      const status = String(row.erp_status || '').trim().toUpperCase();
       const jobNo = String(row.job_number || '').trim();
       const enqNo = String(row.enq_number || '').trim();
       
@@ -112,10 +111,7 @@ async function syncERP() {
         jobNo && 
         jobNo.startsWith('JB/') && // Ensures it's a valid Job Number row, skipping headers!
         enqNo !== 'EN/0/26/' && 
-        enqNo !== 'EN/0/25/' &&
-        status !== 'BILLED' && 
-        status !== 'CANCELED' && 
-        status !== 'CANCELLED'
+        enqNo !== 'EN/0/25/'
       );
     });
 
