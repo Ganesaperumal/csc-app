@@ -33,7 +33,7 @@ export default function SyncERPButton({ user: initialUser }: { user?: any }) {
       if (data) {
         const startedAt = data.started_at ? new Date(data.started_at).getTime() : 0;
         const now = new Date().getTime();
-        const isExpired = data.is_syncing && (now - startedAt > 180000); // 3 minutes
+        const isExpired = data.is_syncing && (now - startedAt > 300000); // 5 minutes
 
         if (isExpired) {
           await supabase.from('sync_lock').update({ is_syncing: false, started_by: null }).eq('id', 1);
@@ -52,7 +52,7 @@ export default function SyncERPButton({ user: initialUser }: { user?: any }) {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sync_lock' }, (payload) => {
         const startedAt = payload.new.started_at ? new Date(payload.new.started_at).getTime() : 0;
         const now = new Date().getTime();
-        const isExpired = payload.new.is_syncing && (now - startedAt > 180000);
+        const isExpired = payload.new.is_syncing && (now - startedAt > 300000); // 5 minutes
 
         if (isExpired) {
           setIsSyncing(false);
@@ -79,7 +79,7 @@ export default function SyncERPButton({ user: initialUser }: { user?: any }) {
         if (data) {
           const startedAt = data.started_at ? new Date(data.started_at).getTime() : 0;
           const now = new Date().getTime();
-          const isExpired = data.is_syncing && (now - startedAt > 180000);
+          const isExpired = data.is_syncing && (now - startedAt > 300000); // 5 minutes
 
           if (!data.is_syncing || isExpired) {
             if (isExpired && data.is_syncing) {
