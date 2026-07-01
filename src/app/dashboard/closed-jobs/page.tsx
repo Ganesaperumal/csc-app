@@ -216,9 +216,13 @@ export default function ClosedJobsPage() {
     const sA = String(aVal).toLowerCase(); const sB = String(bVal).toLowerCase();
     return sortConfig.direction === 'asc' ? sA.localeCompare(sB) : sB.localeCompare(sA);
   });
-
   const billedCount = jobs.filter(j => j.erp_status?.toLowerCase() === 'billed').length;
   const cancelledCount = jobs.filter(j => ['cancelled', 'canceled'].includes(j.erp_status?.toLowerCase())).length;
+
+  const clearAllFilters = () => {
+    setFilters({});
+    localStorage.removeItem('csc_closed_column_filters');
+  };
 
   return (
     <div>
@@ -258,6 +262,30 @@ export default function ClosedJobsPage() {
             ))}
           </div>
 
+          <button 
+            title="Clear all filters"
+            onClick={clearAllFilters}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#64748b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0.5rem',
+              borderRadius: '50%',
+              transition: 'all 0.2s',
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fee2e2'; }}
+            onMouseOut={(e) => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.background = 'none'; }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+              <line x1="4" y1="4" x2="20" y2="20"></line>
+            </svg>
+          </button>
+          
           {/* Type slider */}
           {(() => {
             const opts = ['HHG', 'COM', 'ALL'] as const;

@@ -384,6 +384,11 @@ function JobsTable() {
     return 'badge active';
   };
 
+  const clearAllFilters = () => {
+    setFilters({});
+    localStorage.removeItem('csc_column_filters');
+  };
+
   const getTitle = () => {
     if (currentView === 'billed') return 'Billed Jobs Dashboard';
     if (currentView === 'cancelled') return 'Cancelled Jobs Dashboard';
@@ -405,6 +410,29 @@ function JobsTable() {
           {getTitle()}
         </h1>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <button 
+            title="Clear all filters"
+            onClick={clearAllFilters}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#64748b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0.5rem',
+              borderRadius: '50%',
+              transition: 'all 0.2s',
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fee2e2'; }}
+            onMouseOut={(e) => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.background = 'none'; }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+              <line x1="4" y1="4" x2="20" y2="20"></line>
+            </svg>
+          </button>
           <div className={styles.toggleContainer}>
             <button 
               className={`${styles.toggleBtn} ${typeFilter === 'HHG' ? styles.activeHHG : ''}`}
