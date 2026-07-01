@@ -33,8 +33,13 @@
   white-space: nowrap;
 }
 
-.table th:first-child { border-top-left-radius: 14px; }
-.table th:last-child  { border-top-right-radius: 14px; }
+.table th:first-child {
+  border-top-left-radius: 14px;
+}
+
+.table th:last-child {
+  border-top-right-radius: 14px;
+}
 
 .table td {
   padding: 0.85rem 1rem;
@@ -45,7 +50,9 @@
   transition: background 0.15s;
 }
 
-.table tr:last-child td { border-bottom: none; }
+.table tr:last-child td {
+  border-bottom: none;
+}
 
 .table tr:hover td {
   background: rgba(79, 70, 229, 0.03);
@@ -62,7 +69,8 @@
   font-size: 0.82rem;
 }
 
-.loading, .noData {
+.loading,
+.noData {
   padding: 3rem;
   text-align: center;
   color: var(--text-secondary);
@@ -206,9 +214,11 @@
 .dropdownMenu::-webkit-scrollbar {
   width: 6px;
 }
+
 .dropdownMenu::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .dropdownMenu::-webkit-scrollbar-thumb {
   background: rgba(244, 114, 182, 0.5);
   border-radius: 10px;
@@ -243,10 +253,12 @@
   justify-content: center;
   transition: all 0.2s;
 }
+
 .filterBtn:hover {
   background: rgba(148, 163, 184, 0.2);
   color: var(--text-primary);
 }
+
 .gsFilterDropdown {
   position: absolute;
   top: 100%;
@@ -264,6 +276,7 @@
   flex-direction: column;
   gap: 1rem;
 }
+
 .gsFilterHeader {
   display: flex;
   justify-content: space-between;
@@ -271,15 +284,18 @@
   font-size: 0.85rem;
   color: var(--text-secondary);
 }
+
 .gsFilterHeader span {
   cursor: pointer;
   color: #4f46e5;
   transition: color 0.2s;
 }
+
 .gsFilterHeader span:hover {
   color: #4338ca;
   text-decoration: underline;
 }
+
 .gsSearchBox {
   display: flex;
   align-items: center;
@@ -288,6 +304,7 @@
   border-radius: 6px;
   padding: 0.5rem;
 }
+
 .gsSearchBox input {
   background: transparent;
   border: none;
@@ -296,9 +313,11 @@
   width: 100%;
   font-size: 0.9rem;
 }
+
 .gsSearchBox svg {
   color: var(--text-secondary);
 }
+
 .gsFilterList {
   max-height: 200px;
   overflow-y: auto;
@@ -307,13 +326,16 @@
   gap: 0.25rem;
   padding-right: 0.5rem;
 }
+
 .gsFilterList::-webkit-scrollbar {
   width: 6px;
 }
+
 .gsFilterList::-webkit-scrollbar-thumb {
   background: rgba(148, 163, 184, 0.3);
   border-radius: 10px;
 }
+
 .gsFilterItem {
   display: flex;
   align-items: center;
@@ -325,9 +347,11 @@
   font-size: 0.9rem;
   color: var(--text-primary);
 }
+
 .gsFilterItem:hover {
   background: rgba(148, 163, 184, 0.15);
 }
+
 .gsCheckbox {
   width: 16px;
   height: 16px;
@@ -335,6 +359,7 @@
   align-items: center;
   justify-content: center;
 }
+
 .gsFilterFooter {
   display: flex;
   justify-content: flex-end;
@@ -342,6 +367,7 @@
   padding-top: 0.5rem;
   border-top: 1px solid rgba(148, 163, 184, 0.2);
 }
+
 .gsBtnCancel {
   background: transparent;
   border: 1px solid rgba(148, 163, 184, 0.4);
@@ -352,9 +378,11 @@
   font-size: 0.85rem;
   transition: all 0.2s;
 }
+
 .gsBtnCancel:hover {
   background: rgba(148, 163, 184, 0.1);
 }
+
 .gsBtnOk {
   background: linear-gradient(135deg, #4f46e5, #7c3aed);
   color: white;
@@ -366,6 +394,7 @@
   font-weight: 600;
   transition: all 0.2s;
 }
+
 .gsBtnOk:hover {
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
   transform: translateY(-1px);
