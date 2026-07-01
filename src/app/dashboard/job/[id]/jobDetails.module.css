@@ -37,7 +37,7 @@
 /* ── MAIN LAYOUT ── */
 .layout {
   display: grid;
-  grid-template-columns: 3fr 1fr 1fr;
+  grid-template-columns: 55fr 20fr 25fr;
   gap: 1.25rem;
   align-items: start;
 }
