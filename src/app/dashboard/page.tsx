@@ -302,7 +302,7 @@ function JobsTable() {
       let query = supabase
         .from('jobs')
         .select('*')
-        .order('erp_job_id', { ascending: true, nullsFirst: false });
+        .order('erp_job_id', { ascending: false, nullsFirst: false });
         
       if (currentView === 'billed') {
         query = query.ilike('erp_status', 'Billed');

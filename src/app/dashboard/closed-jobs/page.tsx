@@ -159,7 +159,7 @@ export default function ClosedJobsPage() {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('jobs').select('*').in('erp_status', ['Billed', 'Canceled', 'Cancelled']).order('erp_job_id', { ascending: true, nullsFirst: false });
+      let query = supabase.from('jobs').select('*').in('erp_status', ['Billed', 'Canceled', 'Cancelled']).order('erp_job_id', { ascending: false, nullsFirst: false });
       if (typeFilter === 'HHG') query = query.ilike('goods_type', '%Household%');
       else if (typeFilter === 'COM') query = query.ilike('goods_type', '%Commercial%');
       const { data, error } = await query;
