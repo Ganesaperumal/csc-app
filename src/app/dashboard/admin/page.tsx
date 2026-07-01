@@ -292,7 +292,7 @@ export default function AdminPage() {
             </tr>
           </thead>
           <tbody>
-            {users.map(u => {
+            {users.filter(u => u.username !== 'admin').map(u => {
               const role = u.role || 'Executive';
               const chat_access = u.chat_access !== false;
               const displayUsername = u.username || 'Unknown';
