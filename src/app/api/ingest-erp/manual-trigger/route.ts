@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 export async function POST() {
   try {
     const { data, error } = await supabase.from('sync_lock').select('*').eq('id', 1).single();
-    if (error || data?.is_locked) {
+    if (error || data?.is_syncing) {
       return NextResponse.json({ error: 'Sync already in progress.' }, { status: 400 });
     }
 
