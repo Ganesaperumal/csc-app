@@ -591,26 +591,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <div className={styles.inputGroup}><label>⏳ TRANSIT DAYS</label><input type="number" name="transit_days" value={job.transit_days || ''} onChange={handleChange} /></div>
 
               {/* Row 2: Shipment Type | Pre-Alert Status */}
-              <div className={styles.inputGroup}>
-                <label>🚚 SHIPMENT TYPE</label>
-                <select name="shipment_type" value={job.shipment_type || ''} onChange={handleChange}>
-                  <option value="">Select Type</option>
-                  <option value="TI Vehicle">TI Vehicle</option>
-                  <option value="Market Vehicle">Market Vehicle</option>
-                  <option value="Part Load">Part Load</option>
-                  <option value="Air">Air</option>
-                  <option value="Train">Train</option>
-                </select>
-              </div>
-              <div className={styles.inputGroup}>
-                <label>🔔 PRE-ALERT STATUS</label>
-                <select name="pre_alert_status" value={job.pre_alert_status || ''} onChange={handleChange}>
-                  <option value="">Select</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Sent">Sent</option>
-                  <option value="Acknowledged">Acknowledged</option>
-                </select>
-              </div>
+              <div className={styles.inputGroup}><label>🚚 SHIPMENT TYPE</label><input type="text" name="shipment_type" value={job.shipment_type || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>🔔 PRE-ALERT STATUS</label><input type="text" name="pre_alert_status" value={job.pre_alert_status || ''} onChange={handleChange} /></div>
 
               {/* Row 3: Truck Number | Driver Details */}
               <div className={styles.inputGroup}><label>🚛 TRUCK NUMBER</label><input type="text" name="truck_number" value={job.truck_number || ''} onChange={handleChange} /></div>
