@@ -242,21 +242,20 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
     // Fetch the real username from profiles table
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
-        supabase
-          .from('profiles')
-          .select('username, name')
-          .eq('id', data.user.id)
-          .single()
-          .then(({ data: profile }) => {
-            if (profile) {
-              setAgentName(profile.name || profile.username || data.user.email?.split('@')[0] || 'Agent');
-            } else {
-              setAgentName(data.user.email?.split('@')[0] || 'Agent');
-            }
-          })
-          .catch(() => {
+        const fetchProfile = async () => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username, name')
+            .eq('id', data.user.id)
+            .single();
+            
+          if (profile) {
+            setAgentName(profile.name || profile.username || data.user.email?.split('@')[0] || 'Agent');
+          } else {
             setAgentName(data.user.email?.split('@')[0] || 'Agent');
-          });
+          }
+        };
+        fetchProfile();
       }
     });
   }, []);
