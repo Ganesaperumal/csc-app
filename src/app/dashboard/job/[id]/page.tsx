@@ -613,9 +613,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <div className={styles.inputGroup}><label>🚀 DISPATCH DATE</label><DateInput name="dispatch_date" value={job.dispatch_date || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>⏳ TRANSIT DAYS</label><input type="number" name="transit_days" value={job.transit_days || ''} onChange={handleChange} /></div>
 
-              {/* Row 2: Shipment Type | Pre-Alert Status */}
+              {/* Row 2: Shipment Type | Pre-Alert */}
               <div className={styles.inputGroup}><label>🚚 SHIPMENT TYPE</label><input type="text" name="shipment_type" value={job.shipment_type || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>🔔 PRE-ALERT STATUS</label><input type="text" name="pre_alert_status" value={job.pre_alert_status || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>🔔 PRE-ALERT</label><input type="text" name="pre_alert_status" value={job.pre_alert_status || ''} onChange={handleChange} /></div>
 
               {/* Row 3: Truck Number | Driver Details */}
               <div className={styles.inputGroup}><label>🚛 TRUCK NUMBER</label><input type="text" name="truck_number" value={job.truck_number || ''} onChange={handleChange} /></div>
