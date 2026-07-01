@@ -102,6 +102,8 @@ async function syncERP() {
         company: row[21] || '', // Company
         customer_phone: row[22] || row[23] || '', // Phone or Mobile
         goods_type: row[28] || '', // Type Of Goods
+        invoice_number: row[18] ? String(row[18]).trim() : null, // Bill No
+        invoice_date: row[19] ? String(row[19]).trim() : null, // Bill Dt
       };
     }).filter(row => {
       const jobNo = String(row.job_number || '').trim();
