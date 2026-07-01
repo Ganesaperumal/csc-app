@@ -32,14 +32,14 @@ const DateInput = ({ name, value, onChange }: { name: string, value: string, onC
   );
 };
 
-const ToggleSwitch = ({ name, value, onChange }: { name: string, value: any, onChange: (val: any) => void }) => {
-  const isYes = value === 'Yes' || value === true;
+const ToggleSwitch = ({ name, value, onChange }: { name: string, value: any, onChange: (val: boolean) => void }) => {
+  const isOn = value === true || value === 'Yes' || value === 'yes';
   return (
-    <div className={styles.toggleContainer} onClick={() => onChange(isYes ? (typeof value === 'boolean' ? false : 'No') : (typeof value === 'boolean' ? true : 'Yes'))}>
-      <div className={`${styles.toggleTrack} ${isYes ? styles.toggleTrackActive : ''}`}>
-        <div className={`${styles.toggleThumb} ${isYes ? styles.toggleThumbActive : ''}`} />
+    <div className={styles.toggleContainer} onClick={() => onChange(!isOn)}>
+      <div className={`${styles.toggleTrack} ${isOn ? styles.toggleTrackActive : ''}`}>
+        <div className={`${styles.toggleThumb} ${isOn ? styles.toggleThumbActive : ''}`} />
       </div>
-      <span className={styles.toggleLabel}>{isYes ? 'Yes' : 'No'}</span>
+      <span className={styles.toggleLabel}>{isOn ? 'Yes' : 'No'}</span>
     </div>
   );
 };
@@ -486,11 +486,11 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               </div>
               <div className={styles.inputGroup}>
                 <label>🚗 CAR INCLUDED?</label>
-                <ToggleSwitch name="car_included" value={job.car_included === true ? 'Yes' : 'No'} onChange={(val) => handleFieldChange('car_included', val === 'Yes')} />
+                <ToggleSwitch name="car_included" value={job.car_included === true} onChange={(val) => handleFieldChange('car_included', val)} />
               </div>
               <div className={styles.inputGroup}>
                 <label>🏋️‍♂️ HEAVY ITEMS</label>
-                <ToggleSwitch name="heavy_items" value={job.heavy_items} onChange={(val) => handleFieldChange('heavy_items', val)} />
+                <ToggleSwitch name="heavy_items" value={job.heavy_items === true || job.heavy_items === 'Yes'} onChange={(val) => handleFieldChange('heavy_items', val)} />
               </div>
               {/* ERP-synced invoice fields — read-only, shown only when erp_status is Billed */}
               {job.erp_status?.toLowerCase() === 'billed' && (
@@ -565,11 +565,11 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <div className={styles.inputGroup}><label>🏢 FLOOR</label><input type="number" name="origin_floor" value={job.origin_floor || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}>
                 <label>🛗 SERVICE LIFT</label>
-                <ToggleSwitch name="origin_service_lift" value={job.origin_service_lift} onChange={(val) => handleFieldChange('origin_service_lift', val)} />
+                <ToggleSwitch name="origin_service_lift" value={job.origin_service_lift === true || job.origin_service_lift === 'Yes'} onChange={(val) => handleFieldChange('origin_service_lift', val)} />
               </div>
               <div className={styles.inputGroup}>
                 <label>🅿️ PARKING</label>
-                <ToggleSwitch name="origin_parking" value={job.origin_parking} onChange={(val) => handleFieldChange('origin_parking', val)} />
+                <ToggleSwitch name="origin_parking" value={job.origin_parking === true || job.origin_parking === 'Yes'} onChange={(val) => handleFieldChange('origin_parking', val)} />
               </div>
               <div className={styles.inputGroup}><label>⌚ COMMITTED TIME</label><input type="time" name="committed_time" value={job.committed_time || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>⏱️ REPORTED TIME</label><input type="time" name="reported_time" value={job.reported_time || ''} onChange={handleChange} /></div>
@@ -595,12 +595,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <div className={styles.inputGroup}><label>🎯 EXPECTED REACHING DATE</label><DateInput name="expected_to_reach_dest" value={job.expected_to_reach_dest || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>🏁 REACHED DESTINATION DATE</label><DateInput name="reached_destination" value={job.reached_destination || ''} onChange={handleChange} /></div>
               
-              <div className={styles.inputGroup}>
-                <label>⚠️ DEVIATION</label>
-                <ToggleSwitch name="deviation" value={job.deviation} onChange={(val) => handleFieldChange('deviation', val)} />
-              </div>
               <div className={styles.inputGroup}><label>✍️ REASON / REMARKS</label><input name="deviation_reason" value={job.deviation_reason || ''} onChange={handleChange} /></div>
             </div>
+
           </div>
 
           <div className={`glass ${styles.section} ${styles.sectionPrimary}`} style={{ borderLeftColor: '#34d399' }}>
@@ -620,11 +617,11 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               
               <div className={styles.inputGroup}>
                 <label>🛗 SERVICE LIFT</label>
-                <ToggleSwitch name="dest_service_lift" value={job.dest_service_lift} onChange={(val) => handleFieldChange('dest_service_lift', val)} />
+                <ToggleSwitch name="dest_service_lift" value={job.dest_service_lift === true || job.dest_service_lift === 'Yes'} onChange={(val) => handleFieldChange('dest_service_lift', val)} />
               </div>
               <div className={styles.inputGroup}>
                 <label>🅿️ PARKING</label>
-                <ToggleSwitch name="dest_parking" value={job.dest_parking} onChange={(val) => handleFieldChange('dest_parking', val)} />
+                <ToggleSwitch name="dest_parking" value={job.dest_parking === true || job.dest_parking === 'Yes'} onChange={(val) => handleFieldChange('dest_parking', val)} />
               </div>
               
               <div className={styles.inputGroup}><label>🏢 FLOOR</label><input type="number" name="dest_floor" value={job.dest_floor || ''} onChange={handleChange} /></div>
@@ -640,7 +637,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <div className={styles.inputGroup}><label>💯 JTR %</label><input type="number" name="jtr_percentage" value={job.jtr_percentage || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}>
                 <label>⭐ GOOGLE REVIEW</label>
-                <ToggleSwitch name="google_review_taken" value={job.google_review_taken} onChange={(val) => handleFieldChange('google_review_taken', val)} />
+                <ToggleSwitch name="google_review_taken" value={job.google_review_taken === true || job.google_review_taken === 'Yes'} onChange={(val) => handleFieldChange('google_review_taken', val)} />
               </div>
               
               <div className={styles.inputGroup}><label>📝 INSTRUCTIONS</label><textarea name="dest_instructions" value={job.dest_instructions || ''} onChange={handleChange} /></div>
