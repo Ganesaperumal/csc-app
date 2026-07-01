@@ -31,8 +31,18 @@ export default function SyncERPButton({ user: initialUser }: { user?: any }) {
     const checkStatus = async () => {
       const { data } = await supabase.from('sync_lock').select('*').eq('id', 1).single();
       if (data) {
-        setIsSyncing(data.is_syncing);
-        setSyncingBy(data.started_by || 'Someone');
+        const startedAt = data.started_at ? new Date(data.started_at).getTime() : 0;
+        const now = new Date().getTime();
+        const isExpired = data.is_syncing && (now - startedAt > 180000); // 3 minutes
+
+        if (isExpired) {
+          await supabase.from('sync_lock').update({ is_syncing: false, started_by: null }).eq('id', 1);
+          setIsSyncing(false);
+          setSyncingBy('');
+        } else {
+          setIsSyncing(data.is_syncing);
+          setSyncingBy(data.started_by || 'Someone');
+        }
       }
     };
     checkStatus();
@@ -40,8 +50,17 @@ export default function SyncERPButton({ user: initialUser }: { user?: any }) {
     // Listen to changes in real-time
     const channel = supabase.channel('public:sync_lock')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sync_lock' }, (payload) => {
-        setIsSyncing(payload.new.is_syncing);
-        setSyncingBy(payload.new.started_by || 'Someone');
+        const startedAt = payload.new.started_at ? new Date(payload.new.started_at).getTime() : 0;
+        const now = new Date().getTime();
+        const isExpired = payload.new.is_syncing && (now - startedAt > 180000);
+
+        if (isExpired) {
+          setIsSyncing(false);
+          setSyncingBy('');
+        } else {
+          setIsSyncing(payload.new.is_syncing);
+          setSyncingBy(payload.new.started_by || 'Someone');
+        }
       })
       .subscribe();
 
@@ -50,16 +69,25 @@ export default function SyncERPButton({ user: initialUser }: { user?: any }) {
     };
   }, [user?.id]);
 
-  // Fallback Polling Mechanism
+  // Fallback Polling & Expiry Mechanism
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isSyncing) {
-      // Poll every 3 seconds to check if the lock has been cleared by the backend
+      // Poll every 3 seconds to check if the lock has been cleared by the backend or is expired
       interval = setInterval(async () => {
         const { data } = await supabase.from('sync_lock').select('*').eq('id', 1).single();
-        if (data && !data.is_syncing) {
-          setIsSyncing(false);
-          setSyncingBy('');
+        if (data) {
+          const startedAt = data.started_at ? new Date(data.started_at).getTime() : 0;
+          const now = new Date().getTime();
+          const isExpired = data.is_syncing && (now - startedAt > 180000);
+
+          if (!data.is_syncing || isExpired) {
+            if (isExpired && data.is_syncing) {
+              await supabase.from('sync_lock').update({ is_syncing: false, started_by: null }).eq('id', 1);
+            }
+            setIsSyncing(false);
+            setSyncingBy('');
+          }
         }
       }, 3000);
     }
