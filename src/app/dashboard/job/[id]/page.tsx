@@ -595,7 +595,15 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <div className={styles.inputGroup}><label>🎯 EXPECTED REACHING DATE</label><DateInput name="expected_to_reach_dest" value={job.expected_to_reach_dest || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>🏁 REACHED DESTINATION DATE</label><DateInput name="reached_destination" value={job.reached_destination || ''} onChange={handleChange} /></div>
               
-              <div className={styles.inputGroup}><label>✍️ REASON / REMARKS</label><input name="deviation_reason" value={job.deviation_reason || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}>
+                <label>⚠️ DEVIATION</label>
+                <ToggleSwitch name="deviation" value={job.deviation === true} onChange={(val) => handleFieldChange('deviation', val)} />
+              </div>
+              <div className={styles.inputGroup}><label>✍️ REASON</label><input name="deviation_reason" value={job.deviation_reason || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
+                <label>💬 REMARKS</label>
+                <textarea name="remarks" value={job.remarks || ''} onChange={handleChange} rows={3} style={{ resize: 'vertical', minHeight: '72px' }} />
+              </div>
             </div>
 
           </div>
