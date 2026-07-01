@@ -132,15 +132,15 @@ export default function ProfilePopup({ user }: { user: any }) {
     <div style={{ position: 'relative' }} ref={popupRef}>
       {/* Trigger */}
       <div onClick={() => setIsOpen(!isOpen)} style={{ cursor: 'pointer' }}>
-        <AvatarComponent size={28} />
+        <AvatarComponent size={42} />
       </div>
 
       {/* Popup Menu */}
       {isOpen && (
         <div style={{
-          position: 'absolute', top: '50px', left: '0', width: '280px', zIndex: 9999,
-          borderRadius: '16px', padding: '1.5rem', boxShadow: '0 10px 40px rgba(0,0,0,0.8)',
-          backgroundColor: 'var(--surface-color)', border: '1px solid var(--border-color)',
+          position: 'fixed', top: '5rem', left: '1rem', width: '240px', zIndex: 9999,
+          borderRadius: '16px', padding: '1.5rem', boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+          backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)', border: '1px solid rgba(148, 163, 184, 0.3)',
           display: 'flex', flexDirection: 'column', alignItems: 'center'
         }}>
           
@@ -152,34 +152,29 @@ export default function ProfilePopup({ user }: { user: any }) {
                 <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
                 <AvatarComponent size={140} />
               </label>
-              <h3 style={{ marginTop: '1rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>Hi, {displayName}!</h3>
+              <h3 style={{ marginTop: '1rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>{displayName}!</h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>{role}</p>
 
               <button 
                 onClick={() => setIsManageMode(true)}
-                style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '0.5rem 1rem', borderRadius: '20px', cursor: 'pointer', fontSize: '0.9rem', marginBottom: '0.5rem', width: '100%' }}
+                style={{ background: 'linear-gradient(135deg, #3b82f6, #2563eb)', border: 'none', color: 'white', padding: '0.5rem 1rem', borderRadius: '20px', cursor: 'pointer', fontSize: '0.9rem', marginBottom: '0.5rem', width: '100%', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}
               >
                 Manage your Profile
               </button>
 
-              <button 
-                onClick={toggleTheme}
-                style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-primary)', padding: '0.5rem 1rem', borderRadius: '20px', cursor: 'pointer', fontSize: '0.9rem', marginBottom: '1.5rem', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-              >
-                {isLightMode ? '🌙 Switch to Dark Mode' : '☀️ Switch to Light Mode'}
-              </button>
 
-              <div style={{ width: '100%', borderTop: '1px solid var(--border-color)', marginBottom: '1rem' }}></div>
+
+              <div style={{ width: '100%', borderTop: '1px solid rgba(148, 163, 184, 0.2)', marginBottom: '1rem' }}></div>
 
               {role === 'Admin' && (
-                <Link href="/dashboard/admin" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.75rem', borderRadius: '8px', color: 'var(--text-primary)', textDecoration: 'none', background: 'rgba(255,255,255,0.05)', marginBottom: '0.5rem' }}>
-                  👥 Manage Users
+                <Link href="/dashboard/admin" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.75rem', borderRadius: '8px', color: 'white', textDecoration: 'none', background: 'linear-gradient(135deg, #334155, #0f172a)', marginBottom: '0.5rem', boxShadow: '0 4px 12px rgba(15,23,42,0.2)', fontSize: '0.9rem' }}>
+                  ⚙️ Control Center
                 </Link>
               )}
 
               <button 
                 onClick={() => supabase.auth.signOut()}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.75rem', borderRadius: '8px', color: 'var(--text-primary)', background: 'rgba(255,255,255,0.05)', border: 'none', cursor: 'pointer' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.75rem', borderRadius: '8px', color: 'white', background: 'linear-gradient(135deg, #ef4444, #dc2626)', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(239,68,68,0.3)', fontSize: '0.9rem' }}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                 Sign out

@@ -9,7 +9,7 @@ import GroupChat from './components/GroupChat';
 import ProfilePopup from './components/ProfilePopup';
 import SyncERPButton from './components/SyncERPButton';
 
-function DashboardNav() {
+function DashboardNav({ role }: { role: string | null }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentView = searchParams.get('view') || 'active';
@@ -19,18 +19,17 @@ function DashboardNav() {
       <Link href="/dashboard?view=active" className={`${styles.navItem} ${currentView === 'active' && pathname === '/dashboard' ? styles.active : ''}`}>
         Active Jobs
       </Link>
-      <Link href="/dashboard?view=billed" className={`${styles.navItem} ${currentView === 'billed' ? styles.active : ''}`}>
-        Billed Jobs
+      <Link href="/dashboard/closed-jobs" className={`${styles.navItem} ${pathname === '/dashboard/closed-jobs' ? styles.active : ''}`}>
+        Closed Jobs
       </Link>
-      <Link href="/dashboard?view=cancelled" className={`${styles.navItem} ${currentView === 'cancelled' ? styles.active : ''}`}>
-        Cancelled Jobs
+      <Link href="/dashboard/spocs" className={`${styles.navItem} ${pathname === '/dashboard/spocs' ? styles.active : ''}`}>
+        SPOC Management
       </Link>
-      <Link href="#" className={`${styles.navItem} ${currentView === 'completed' ? styles.active : ''}`}>
-        Completed Jobs
-      </Link>
-      <Link href="#" className={`${styles.navItem} ${currentView === 'reports' ? styles.active : ''}`}>
-        Reports
-      </Link>
+      {role === 'Admin' && (
+        <Link href="/dashboard/activity-log" className={`${styles.navItem} ${pathname === '/dashboard/activity-log' ? styles.active : ''}`}>
+          Activity Log
+        </Link>
+      )}
     </nav>
   );
 }
@@ -42,6 +41,7 @@ export default function DashboardLayout({
 }) {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [role, setRole] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const isJobPage = pathname.startsWith('/dashboard/job/');
@@ -53,6 +53,18 @@ export default function DashboardLayout({
         router.push('/login');
       } else {
         setUser(session.user);
+        
+        // Fetch role from profiles
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+          
+        if (profile) {
+          setRole(profile.role);
+        }
+        
         setLoading(false);
       }
     };
@@ -93,12 +105,12 @@ export default function DashboardLayout({
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1rem' }}>
               <ProfilePopup user={user} />
-              <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold', background: 'linear-gradient(45deg, #f472b6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>CSC Portal</h2>
+              <h2 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 'bold', backgroundImage: 'linear-gradient(45deg, #059669, #10b981)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', letterSpacing: '-0.02em' }}>CSC Portal</h2>
             </div>
 
             <div>
               <Suspense fallback={<nav className={styles.nav}>Loading...</nav>}>
-                <DashboardNav />
+                <DashboardNav role={role} />
               </Suspense>
             </div>
             

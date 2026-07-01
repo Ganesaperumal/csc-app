@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import styles from '../dashboard.module.css';
+import { getUserColor } from '@/lib/colorUtils';
 
 interface Message {
   id: string;
@@ -59,7 +60,7 @@ export default function GroupChat({ user }: { user: any }) {
     if (bottomRef.current) {
       // Use setTimeout to ensure DOM has fully painted the flex layout before scrolling
       setTimeout(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }, 50);
     }
   }, [messages]);
@@ -78,28 +79,32 @@ export default function GroupChat({ user }: { user: any }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', borderRadius: '8px', overflow: 'hidden', background: 'rgba(255,255,255,0.1)' }}>
-      <div style={{ padding: '0.75rem', background: 'rgba(0,0,0,0.2)', fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', borderRadius: '8px', overflow: 'hidden', background: 'rgba(255, 255, 255, 0.4)', border: '1px solid rgba(148, 163, 184, 0.2)' }}>
+      <div style={{ padding: '0.75rem', background: 'rgba(241, 245, 249, 0.8)', borderBottom: '1px solid rgba(148, 163, 184, 0.2)', fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
         🤝 CSC Team Colab
       </div>
       <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         {messages.map(msg => {
           const isMe = msg.sender_id === user.id;
+          const senderName = msg.sender_email ? msg.sender_email.split('@')[0] : 'Unknown';
+          const userColor = getUserColor(senderName);
           return (
             <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
-              <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginBottom: '2px' }}>
-                {msg.sender_email.split('@')[0]}
+              <span style={{ fontSize: '0.65rem', color: isMe ? 'var(--text-secondary)' : userColor.text, marginBottom: '2px', fontWeight: isMe ? 400 : 600 }}>
+                {senderName}
               </span>
               <div style={{ 
-                background: isMe ? '#f472b6' : 'rgba(255,255,255,0.2)', 
-                color: isMe ? 'white' : 'var(--text-primary)',
+                background: isMe ? 'linear-gradient(135deg, #4f46e5, #7c3aed)' : userColor.bg, 
+                color: isMe ? 'white' : userColor.text,
+                border: isMe ? 'none' : `1px solid ${userColor.text}40`,
                 padding: '0.5rem 0.75rem', 
                 borderRadius: '12px',
                 borderTopRightRadius: isMe ? '4px' : '12px',
                 borderTopLeftRadius: !isMe ? '4px' : '12px',
                 fontSize: '0.85rem',
                 maxWidth: '85%',
-                wordBreak: 'break-word'
+                wordBreak: 'break-word',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
               }}>
                 {msg.message}
               </div>
@@ -108,16 +113,16 @@ export default function GroupChat({ user }: { user: any }) {
         })}
         <div ref={bottomRef} />
       </div>
-      <form onSubmit={sendMessage} style={{ display: 'flex', padding: '0.5rem', background: 'rgba(0,0,0,0.1)' }}>
+      <form onSubmit={sendMessage} style={{ display: 'flex', padding: '0.5rem', background: 'rgba(241, 245, 249, 0.8)', borderTop: '1px solid rgba(148, 163, 184, 0.2)' }}>
         <input
           type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder={canChat ? "Type a message..." : "Chat disabled"}
           disabled={!canChat}
-          style={{ flex: 1, padding: '0.5rem', borderRadius: '20px', border: 'none', background: 'rgba(255,255,255,0.7)', color: '#0f172a', fontSize: '0.85rem' }}
+          style={{ flex: 1, padding: '0.5rem', borderRadius: '20px', border: '1px solid rgba(148, 163, 184, 0.3)', background: '#ffffff', color: 'var(--text-primary)', fontSize: '0.85rem' }}
         />
-        <button type="submit" disabled={!canChat || !newMessage.trim()} style={{ background: 'none', border: 'none', color: '#f472b6', marginLeft: '0.5rem', cursor: canChat ? 'pointer' : 'not-allowed' }}>
+        <button type="submit" disabled={!canChat || !newMessage.trim()} style={{ background: 'none', border: 'none', color: '#4f46e5', marginLeft: '0.5rem', cursor: canChat ? 'pointer' : 'not-allowed' }}>
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>
       </form>

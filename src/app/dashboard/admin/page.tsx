@@ -1,7 +1,54 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import styles from '../dashboard.module.css';
+import { supabase } from '@/lib/supabase';
+import Papa from 'papaparse';
+
+const cardStyle: React.CSSProperties = {
+  background: 'rgba(255, 255, 255, 0.75)',
+  backdropFilter: 'blur(24px) saturate(180%)',
+  WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+  border: '1px solid rgba(148, 163, 184, 0.2)',
+  borderRadius: '16px',
+  boxShadow: '0 8px 30px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.8)',
+  padding: '2rem',
+  marginBottom: '1.5rem',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  marginBottom: '0.4rem',
+  color: '#64748b',
+  fontSize: '0.78rem',
+  fontWeight: 700,
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+};
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '0.6rem 0.85rem',
+  borderRadius: '8px',
+  border: '1px solid rgba(148, 163, 184, 0.35)',
+  background: 'rgba(255,255,255,0.85)',
+  color: '#0f172a',
+  fontSize: '0.875rem',
+  fontFamily: "'Outfit', 'Inter', sans-serif",
+  outline: 'none',
+  transition: 'border-color 0.2s, box-shadow 0.2s',
+};
+
+const selectStyle: React.CSSProperties = {
+  padding: '0.4rem 0.7rem',
+  borderRadius: '8px',
+  border: '1px solid rgba(148, 163, 184, 0.35)',
+  background: 'rgba(255,255,255,0.85)',
+  color: '#0f172a',
+  fontSize: '0.82rem',
+  fontFamily: "'Outfit', 'Inter', sans-serif",
+  cursor: 'pointer',
+  minWidth: '130px',
+};
 
 export default function AdminPage() {
   const [name, setName] = useState('');
@@ -10,18 +57,97 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'error' | 'success', text: string } | null>(null);
   const [users, setUsers] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [loadingJobs, setLoadingJobs] = useState(false);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+
+  const downloadCSV = async (table: 'jobs' | 'job_logs') => {
+    try {
+      const { data, error } = await supabase.from(table).select('*');
+      if (error) throw error;
+      
+      const csv = Papa.unparse(data);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${table}_export_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err: any) {
+      setMessage({ type: 'error', text: `Failed to download ${table}: ${err.message}` });
+    }
+  };
+
+  const uploadCSV = (e: React.ChangeEvent<HTMLInputElement>, table: 'jobs' | 'job_logs') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (table === 'jobs') setLoadingJobs(true);
+    if (table === 'job_logs') setLoadingLogs(true);
+    setMessage(null);
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        try {
+          const data = results.data as any[];
+          
+          // Clean data: remove empty strings that should be null, handle ids
+          const cleanedData = data.map(row => {
+            const cleanRow: any = {};
+            for (const key in row) {
+              if (row[key] === '') {
+                cleanRow[key] = null;
+              } else {
+                cleanRow[key] = row[key];
+              }
+            }
+            if (!cleanRow.id) delete cleanRow.id;
+            return cleanRow;
+          });
+
+          let res;
+          if (table === 'jobs') {
+            res = await supabase.from('jobs').upsert(cleanedData, { onConflict: 'job_number' });
+          } else {
+            res = await supabase.from('job_logs').upsert(cleanedData);
+          }
+
+          if (res.error) throw res.error;
+
+          setMessage({ type: 'success', text: `Successfully upserted ${cleanedData.length} records into ${table}!` });
+        } catch (err: any) {
+          setMessage({ type: 'error', text: `Failed to upload ${table}: ${err.message}` });
+        } finally {
+          if (table === 'jobs') setLoadingJobs(false);
+          if (table === 'job_logs') setLoadingLogs(false);
+          e.target.value = '';
+        }
+      },
+      error: (error) => {
+        setMessage({ type: 'error', text: `CSV Parse Error: ${error.message}` });
+        if (table === 'jobs') setLoadingJobs(false);
+        if (table === 'job_logs') setLoadingLogs(false);
+        e.target.value = '';
+      }
+    });
+  };
 
   useEffect(() => {
     fetchUsers();
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setCurrentUser(data.user);
+    });
   }, []);
 
   const fetchUsers = async () => {
     try {
       const res = await fetch('/api/admin/users');
       const data = await res.json();
-      if (data.users) {
-        setUsers(data.users);
-      }
+      if (data.users) setUsers(data.users);
     } catch (err) {
       console.error('Failed to fetch users', err);
     }
@@ -31,26 +157,20 @@ export default function AdminPage() {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
-
     try {
-      const formattedEmail = `${username}@transworld.local`.toLowerCase();
+      const formattedEmail = `${username}@transworldintl.com`.toLowerCase();
       const res = await fetch('/api/admin/create-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formattedEmail, password, name })
       });
-
       const data = await res.json();
-
       if (!res.ok) throw new Error(data.error || 'Failed to create user');
-
-      setMessage({ type: 'success', text: `User ${name || username} created successfully!` });
-      setName('');
-      setUsername('');
-      setPassword('');
-      fetchUsers(); // Refresh list
+      setMessage({ type: 'success', text: `✅ User "${name || username}" created successfully!` });
+      setName(''); setUsername(''); setPassword('');
+      fetchUsers();
     } catch (err: any) {
-      setMessage({ type: 'error', text: err.message });
+      setMessage({ type: 'error', text: `❌ ${err.message}` });
     } finally {
       setLoading(false);
     }
@@ -70,16 +190,13 @@ export default function AdminPage() {
   };
 
   const handleDeleteAllJobs = async () => {
-    if (!window.confirm('🚨 DANGER! Are you absolutely sure you want to delete EVERY single job in the database? This cannot be undone! 🚨')) {
-      return;
-    }
-
+    if (!window.confirm('🚨 DANGER! Are you absolutely sure you want to delete EVERY job? This cannot be undone!')) return;
     try {
       setLoading(true);
       const res = await fetch('/api/admin/delete-jobs', { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to delete jobs');
-      alert('✅ All jobs have been wiped successfully! You can now run a fresh Sync.');
+      alert('✅ All jobs wiped successfully!');
     } catch (err: any) {
       alert(`❌ Error: ${err.message}`);
     } finally {
@@ -88,52 +205,90 @@ export default function AdminPage() {
   };
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto', height: '100%', overflowY: 'auto' }}>
-      <h1 style={{ marginBottom: '2rem', color: 'var(--text-primary)', fontSize: '2rem' }}>User Management</h1>
-      
-      <div className="glass" style={{ padding: '2rem', borderRadius: '12px', marginBottom: '2rem' }}>
-        <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', color: 'var(--text-primary)' }}>Add New User</h2>
-        
+    <div style={{ padding: '2rem', maxWidth: '860px', margin: '0 auto', height: '100%', overflowY: 'auto', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
+
+      <div style={{ marginBottom: '2rem' }}>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
+          ⚙️ Control Center
+        </h1>
+        <p style={{ color: '#64748b', fontSize: '0.88rem', marginTop: '0.35rem' }}>
+          Manage team members, roles, and bulk data operations.
+        </p>
+      </div>
+
+      {/* Add New User Card */}
+      <div style={{ ...cardStyle, borderTop: '3px solid transparent', backgroundImage: 'linear-gradient(white, white), linear-gradient(90deg, #4f46e5, #9333ea)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box', borderTopLeftRadius: '16px', borderTopRightRadius: '16px' }}>
+        <h2 style={{ margin: '0 0 1.5rem', fontSize: '1rem', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ background: 'linear-gradient(135deg, rgba(79,70,229,0.1), rgba(147,51,234,0.1))', borderRadius: '8px', padding: '0.3rem 0.5rem' }}>✨</span>
+          Add New User
+        </h2>
+
         {message && (
-          <div style={{ 
-            padding: '1rem', marginBottom: '1.5rem', borderRadius: '8px', 
-            backgroundColor: message.type === 'success' ? 'rgba(52, 211, 153, 0.1)' : 'rgba(248, 113, 113, 0.1)',
-            color: message.type === 'success' ? '#10b981' : '#ef4444',
-            border: `1px solid ${message.type === 'success' ? '#34d399' : '#f87171'}`
+          <div style={{
+            padding: '0.85rem 1.1rem',
+            marginBottom: '1.25rem',
+            borderRadius: '10px',
+            background: message.type === 'success' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+            color: message.type === 'success' ? '#059669' : '#dc2626',
+            border: `1px solid ${message.type === 'success' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+            fontSize: '0.88rem',
+            fontWeight: 600,
           }}>
             {message.text}
           </div>
         )}
 
-        <form onSubmit={handleCreateUser} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div style={{ flex: '1 1 200px' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Full Name</label>
-            <input type="text" required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Ganesh Perumal" style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)' }} />
+        <form onSubmit={handleCreateUser} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '1rem', alignItems: 'flex-end' }}>
+          <div>
+            <label style={labelStyle}>Full Name</label>
+            <input type="text" required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Ganesh Perumal" style={inputStyle} />
           </div>
-          <div style={{ flex: '1 1 200px' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Username</label>
-            <input type="text" required value={username} onChange={(e) => setUsername(e.target.value)} placeholder="e.g. ganesh" style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)' }} />
+          <div>
+            <label style={labelStyle}>Username</label>
+            <input type="text" required value={username} onChange={(e) => setUsername(e.target.value)} placeholder="e.g. ganesh" style={inputStyle} />
           </div>
-          <div style={{ flex: '1 1 200px' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Temporary Password</label>
-            <input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)' }} />
+          <div>
+            <label style={labelStyle}>Temporary Password</label>
+            <input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min. 6 characters" style={inputStyle} />
           </div>
-          <button type="submit" className="btn btn-primary" disabled={loading} style={{ padding: '0.75rem 1.5rem', flex: '0 0 auto' }}>
-            {loading ? 'Creating...' : 'Create User'}
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              padding: '0.62rem 1.3rem',
+              borderRadius: '8px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+              color: 'white',
+              fontWeight: 700,
+              fontSize: '0.875rem',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 4px 12px rgba(79,70,229,0.3)',
+              opacity: loading ? 0.7 : 1,
+              transition: 'all 0.2s',
+              fontFamily: "'Outfit', sans-serif",
+            }}
+          >
+            {loading ? 'Creating…' : '+ Create User'}
           </button>
         </form>
       </div>
 
-      <div className="glass" style={{ padding: '2rem', borderRadius: '12px' }}>
-        <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', color: 'var(--text-primary)' }}>Manage Team</h2>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+      {/* Manage Team Card */}
+      <div style={cardStyle}>
+        <h2 style={{ margin: '0 0 1.5rem', fontSize: '1rem', fontWeight: 700, color: '#0ea5e9', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ background: 'rgba(14,165,233,0.1)', borderRadius: '8px', padding: '0.3rem 0.5rem' }}>🛠</span>
+          Manage Team
+        </h2>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
-              <th style={{ padding: '0.75rem 1rem 0.75rem 0' }}>Username</th>
-              <th style={{ padding: '0.75rem 1rem 0.75rem 0' }}>Name</th>
-              <th style={{ padding: '0.75rem 1rem 0.75rem 0' }}>Role</th>
-              <th style={{ padding: '0.75rem 1rem 0.75rem 0' }}>Chat Access</th>
-              <th style={{ padding: '0.75rem 0' }}>Reset Password</th>
+            <tr style={{ borderBottom: '2px solid rgba(148,163,184,0.2)' }}>
+              {['Full Name', 'Username', 'Role', 'Chat Access', 'Actions'].map(col => (
+                <th key={col} style={{ padding: '0.6rem 1rem 0.6rem 0', textAlign: 'left', color: '#64748b', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {col}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -141,32 +296,45 @@ export default function AdminPage() {
               const role = u.role || 'Executive';
               const chat_access = u.chat_access !== false;
               const displayUsername = u.username || 'Unknown';
-              
               return (
-                <tr key={u.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '1rem 1rem 1rem 0', color: 'var(--text-primary)' }}>{displayUsername}</td>
-                  <td style={{ padding: '1rem 1rem 1rem 0', color: 'var(--text-secondary)' }}>{u.name || '-'}</td>
-                  <td style={{ padding: '1rem 1rem 1rem 0' }}>
-                    <select 
-                      value={role} 
-                      onChange={(e) => updateUser(u.id, e.target.value, chat_access)}
-                      style={{ padding: '0.25rem', borderRadius: '4px', background: 'var(--surface-color)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', width: '100%', minWidth: '120px' }}
-                    >
+                <tr key={u.id} style={{ borderBottom: '1px solid rgba(148,163,184,0.12)', transition: 'background 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(241,245,249,0.6)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <td style={{ padding: '0.85rem 1rem 0.85rem 0', fontWeight: 600, color: '#0f172a' }}>{u.name || '—'}</td>
+                  <td style={{ padding: '0.85rem 1rem 0.85rem 0', color: '#475569' }}>{displayUsername}</td>
+                  <td style={{ padding: '0.85rem 1rem 0.85rem 0' }}>
+                    <select value={role} onChange={(e) => updateUser(u.id, e.target.value, chat_access)} style={selectStyle}>
                       <option value="Executive">Executive</option>
                       <option value="Manager">Manager</option>
                       <option value="Admin">Admin</option>
                     </select>
                   </td>
-                  <td style={{ padding: '1rem 1rem 1rem 0' }}>
-                    <button 
+                  <td style={{ padding: '0.85rem 1rem 0.85rem 0' }}>
+                    <button
                       onClick={() => updateUser(u.id, role, !chat_access)}
-                      style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', background: chat_access ? '#34d399' : '#f87171', color: 'white', border: 'none', cursor: 'pointer', minWidth: '80px' }}
+                      style={{
+                        padding: '0.35rem 0.85rem',
+                        borderRadius: '99px',
+                        border: 'none',
+                        background: chat_access
+                          ? 'linear-gradient(135deg, #10b981, #059669)'
+                          : 'linear-gradient(135deg, #f87171, #dc2626)',
+                        color: 'white',
+                        fontWeight: 700,
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        letterSpacing: '0.03em',
+                        boxShadow: chat_access ? '0 2px 8px rgba(16,185,129,0.3)' : '0 2px 8px rgba(239,68,68,0.3)',
+                        minWidth: '85px',
+                        fontFamily: "'Outfit', sans-serif",
+                      }}
                     >
-                      {chat_access ? 'Enabled' : 'Disabled'}
+                      {chat_access ? '✓ Enabled' : '✕ Disabled'}
                     </button>
                   </td>
-                  <td style={{ padding: '1rem 0' }}>
-                    <button 
+                  <td style={{ padding: '0.85rem 0', display: 'flex', gap: '0.5rem' }}>
+                    <button
                       onClick={() => {
                         const newPwd = prompt(`Enter new password for ${displayUsername}:`);
                         if (newPwd) {
@@ -174,13 +342,70 @@ export default function AdminPage() {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ userId: u.id, role, chat_enabled: chat_access, password: newPwd })
-                          }).then(() => alert('Password updated!'));
+                          })
+                          .then(async (res) => {
+                            const data = await res.json();
+                            if (!res.ok) throw new Error(data.error || 'Failed to update password');
+                            alert('✅ Password updated successfully!');
+                          })
+                          .catch((err) => alert(`❌ Error: ${err.message}`));
                         }
                       }}
-                      style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', background: 'var(--surface-hover)', color: 'white', border: '1px solid var(--border-color)', cursor: 'pointer' }}
+                      style={{
+                        padding: '0.35rem 0.85rem',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(148, 163, 184, 0.4)',
+                        background: 'rgba(241,245,249,0.8)',
+                        color: '#475569',
+                        fontWeight: 600,
+                        fontSize: '0.78rem',
+                        cursor: 'pointer',
+                        fontFamily: "'Outfit', sans-serif",
+                        transition: 'all 0.15s',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(226,232,240,0.9)'; e.currentTarget.style.color = '#0f172a'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(241,245,249,0.8)'; e.currentTarget.style.color = '#475569'; }}
                     >
-                      Reset Password
+                      🔑 Reset
                     </button>
+                    {u.id !== currentUser?.id && (
+                      <button
+                        onClick={async () => {
+                          if (window.confirm(`🚨 Are you sure you want to delete user "${displayUsername}"? This will permanently remove their account.`)) {
+                            try {
+                              const res = await fetch(`/api/admin/users?userId=${u.id}`, {
+                                method: 'DELETE'
+                              });
+                              if (res.ok) {
+                                alert('✅ User deleted successfully!');
+                                fetchUsers();
+                              } else {
+                                const errData = await res.json();
+                                alert(`❌ Failed to delete user: ${errData.error || 'Unknown error'}`);
+                              }
+                            } catch (err: any) {
+                              alert(`❌ Error deleting user: ${err.message}`);
+                            }
+                          }
+                        }}
+                        style={{
+                          padding: '0.35rem 0.85rem',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(239, 68, 68, 0.4)',
+                          background: 'rgba(254, 242, 242, 0.8)',
+                          color: '#dc2626',
+                          fontWeight: 600,
+                          fontSize: '0.78rem',
+                          cursor: 'pointer',
+                          fontFamily: "'Outfit', sans-serif",
+                          transition: 'all 0.15s',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(254, 226, 226, 0.9)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(254, 242, 242, 0.8)'; }}
+                      >
+                        🗑 Delete
+                      </button>
+                    )}
                   </td>
                 </tr>
               );
@@ -189,36 +414,81 @@ export default function AdminPage() {
         </table>
       </div>
 
-      <div className="glass" style={{ padding: '2rem', borderRadius: '12px', marginTop: '2rem', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
-        <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          ⚠️ Danger Zone
+      {/* Bulk Data Management Cards */}
+      {/* Bulk Data Management Card */}
+      <div style={cardStyle}>
+        <h2 style={{ margin: '0 0 1.5rem', fontSize: '1.25rem', fontWeight: 800, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ background: 'rgba(245,158,11,0.1)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>📦</span>
+          Bulk Data Management:
         </h2>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-          Clear the entire Jobs table. This is useful during development or if the table is filled with malformed data.
-        </p>
-        <button 
-          onClick={handleDeleteAllJobs}
-          disabled={loading}
-          style={{ 
-            padding: '0.75rem 1.5rem', 
-            borderRadius: '8px', 
-            background: 'rgba(239, 68, 68, 0.1)', 
-            color: '#ef4444', 
-            border: '1px solid rgba(239, 68, 68, 0.5)',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            fontWeight: 'bold',
-            transition: 'all 0.2s'
-          }}
-          onMouseOver={(e) => {
-            if (!loading) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
-          }}
-          onMouseOut={(e) => {
-            if (!loading) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-          }}
-        >
-          {loading ? 'Processing...' : '🗑️ Delete All Jobs'}
-        </button>
+        
+        {/* Jobs Section */}
+        <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem' }}>Jobs Table</h3>
+          <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1rem' }}>
+            Download the current jobs as a CSV file, edit it, and upload it back. Uses <strong>job_number</strong> as the unique identifier for updates (UPSERT).
+          </p>
+          
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <button 
+              onClick={() => downloadCSV('jobs')}
+              style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}
+            >
+              Download Jobs CSV
+            </button>
+            
+            <div style={{ position: 'relative' }}>
+              <input 
+                type="file" 
+                accept=".csv"
+                onChange={(e) => uploadCSV(e, 'jobs')}
+                style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
+                disabled={loadingJobs}
+              />
+              <button 
+                disabled={loadingJobs}
+                style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: loadingJobs ? '#cbd5e1' : 'linear-gradient(135deg, #10b981, #059669)', color: 'white', border: 'none', pointerEvents: 'none', fontWeight: 600, boxShadow: '0 4px 12px rgba(16,185,129,0.3)' }}
+              >
+                {loadingJobs ? 'Uploading...' : 'Upload Jobs CSV'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Job Logs Section */}
+        <div>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem' }}>Job Logs Table</h3>
+          <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1rem' }}>
+            Download and bulk upload job logs. If you are adding new logs, leave the <strong>id</strong> column blank. Must include <strong>job_number</strong> to map correctly.
+          </p>
+          
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <button 
+              onClick={() => downloadCSV('job_logs')}
+              style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}
+            >
+              Download Logs CSV
+            </button>
+            
+            <div style={{ position: 'relative' }}>
+              <input 
+                type="file" 
+                accept=".csv"
+                onChange={(e) => uploadCSV(e, 'job_logs')}
+                style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
+                disabled={loadingLogs}
+              />
+              <button 
+                disabled={loadingLogs}
+                style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: loadingLogs ? '#cbd5e1' : 'linear-gradient(135deg, #10b981, #059669)', color: 'white', border: 'none', pointerEvents: 'none', fontWeight: 600, boxShadow: '0 4px 12px rgba(16,185,129,0.3)' }}
+              >
+                {loadingLogs ? 'Uploading...' : 'Upload Logs CSV'}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
+
     </div>
   );
 }

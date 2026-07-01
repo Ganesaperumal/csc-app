@@ -41,18 +41,24 @@ const ALL_COLUMNS = [
   { id: 'car_pickup_date', label: 'Car Pickup Date' },
   { id: 'car_delivery_date', label: 'Car Delivery Date' },
   { id: 'google_review_taken', label: 'Google Review' },
-  { id: 'floor', label: 'Floor' },
-  { id: 'service_lift', label: 'Service Lift' },
-  { id: 'parking', label: 'Parking' },
+  { id: 'origin_floor', label: 'Origin Floor' },
+  { id: 'origin_service_lift', label: 'Origin Service Lift' },
+  { id: 'origin_parking', label: 'Origin Parking' },
+  { id: 'origin_instructions', label: 'Origin Instructions' },
+  { id: 'dest_supervisor', label: 'Dest Supervisor' },
+  { id: 'dest_floor', label: 'Dest Floor' },
+  { id: 'dest_service_lift', label: 'Dest Service Lift' },
+  { id: 'dest_parking', label: 'Dest Parking' },
+  { id: 'dest_instructions', label: 'Dest Instructions' },
+  { id: 'incidents', label: 'Incidents' },
+  { id: 'deviation', label: 'Deviation' },
   { id: 'heavy_items', label: 'Heavy Items' },
-  { id: 'commercial_status', label: 'Commercial Status' },
-  { id: 'submission_date', label: 'Submission Date' },
-  { id: 'due_days', label: 'Due Days' },
-  { id: 'commercial_issues', label: 'Commercial Issues' },
   { id: 'referrals', label: 'Referrals' },
   { id: 'pre_alert_status', label: 'Pre Alert Status' },
   { id: 'last_comm_by', label: 'Last Comm By' },
-  { id: 'last_comm_date', label: 'Last Comm Date' }
+  { id: 'last_comm_date', label: 'Last Comm Date' },
+  { id: 'invoice_number', label: 'Invoice Number' },
+  { id: 'invoice_date', label: 'Invoice Date' }
 ];
 
 function ColumnFilterDropdown({ 
@@ -139,16 +145,60 @@ function ColumnFilterDropdown({
 function JobsTable() {
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [typeFilter, setTypeFilter] = useState('HHG');
+  const [typeFilter, setTypeFilter] = useState<string>(() => {
+    try { return localStorage.getItem('csc_type_filter') || 'HHG'; } catch { return 'HHG'; }
+  });
   const [visibleColumns, setVisibleColumns] = useState<string[]>(['erp_job_id', 'job_number', 'job_date', 'customer_name', 'company', 'goods_type', 'goods_track_status', 'spoc_name']);
   const [orderedColumns, setOrderedColumns] = useState<string[]>(ALL_COLUMNS.map(c => c.id));
   const [showColumnSelector, setShowColumnSelector] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
-  
-  const [filters, setFilters] = useState<Record<string, string[]>>({});
+  const [filters, setFilters] = useState<Record<string, string[]>>(() => {
+    try {
+      const saved = localStorage.getItem('csc_column_filters');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
   const [activeFilterColumn, setActiveFilterColumn] = useState<string | null>(null);
-  const [sortConfig, setSortConfig] = useState<{ colId: string, direction: 'asc' | 'desc' } | null>(null);
+
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const resizingCol = useRef<string | null>(null);
+  const startX = useRef<number>(0);
+  const startWidth = useRef<number>(0);
+
+  const onMouseDown = (e: React.MouseEvent, colId: string) => {
+    e.preventDefault();
+    resizingCol.current = colId;
+    startX.current = e.clientX;
+    const th = (e.target as HTMLElement).closest('th');
+    startWidth.current = th ? th.getBoundingClientRect().width : 150;
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  const onMouseMove = (e: MouseEvent) => {
+    if (!resizingCol.current) return;
+    const newWidth = Math.max(50, startWidth.current + (e.clientX - startX.current));
+    setColumnWidths(prev => ({ ...prev, [resizingCol.current!]: newWidth }));
+  };
+
+  const onMouseUp = () => {
+    resizingCol.current = null;
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  };
+
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+  const [sortConfig, setSortConfig] = useState<{ colId: string, direction: 'asc' | 'desc' } | null>(() => {
+    try {
+      const saved = localStorage.getItem('csc_sort_config');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
   
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
@@ -181,7 +231,6 @@ function JobsTable() {
         setOrderedColumns(finalOrder as string[]); 
       } catch (e) {}
     }
-    }
     
     // Check if user is admin
     supabase.auth.getUser().then(({ data }) => {
@@ -193,6 +242,11 @@ function JobsTable() {
         });
       }
     });
+
+    // Save current path to sessionStorage
+    try {
+      sessionStorage.setItem('csc_last_jobs_page', '/dashboard');
+    } catch {}
   }, []);
 
   const handleSort = () => {
@@ -219,6 +273,24 @@ function JobsTable() {
     setVisibleColumns(newCols);
     localStorage.setItem('csc_visible_columns', JSON.stringify(newCols));
   };
+
+  // Persist filters whenever they change
+  useEffect(() => {
+    try { localStorage.setItem('csc_column_filters', JSON.stringify(filters)); } catch {}
+  }, [filters]);
+
+  // Persist sortConfig whenever it changes
+  useEffect(() => {
+    try {
+      if (sortConfig) localStorage.setItem('csc_sort_config', JSON.stringify(sortConfig));
+      else localStorage.removeItem('csc_sort_config');
+    } catch {}
+  }, [sortConfig]);
+
+  // Persist typeFilter whenever it changes
+  useEffect(() => {
+    try { localStorage.setItem('csc_type_filter', typeFilter); } catch {}
+  }, [typeFilter]);
 
   useEffect(() => {
     fetchJobs();
@@ -317,48 +389,21 @@ function JobsTable() {
     if (currentView === 'cancelled') return 'Cancelled Jobs Dashboard';
     return 'Active Jobs Dashboard';
   };
-
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelectedJobs(sortedJobs.map(j => j.job_number));
-    } else {
-      setSelectedJobs([]);
-    }
-  };
-
-  const handleSelectJob = (jobNumber: string) => {
-    if (selectedJobs.includes(jobNumber)) {
-      setSelectedJobs(selectedJobs.filter(id => id !== jobNumber));
-    } else {
-      setSelectedJobs([...selectedJobs, jobNumber]);
-    }
-  };
-
-  const handleDeleteSelected = async () => {
-    if (selectedJobs.length === 0) return;
-    if (!window.confirm(`Are you sure you want to completely delete ${selectedJobs.length} jobs? This will also wipe their logs and audit history.`)) return;
-    
-    try {
-      setLoading(true);
-      const res = await fetch('/api/admin/delete-jobs', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobNumbers: selectedJobs })
-      });
-      if (!res.ok) throw new Error('Failed to delete jobs');
-      
-      setSelectedJobs([]);
-      fetchJobs();
-    } catch (err: any) {
-      alert(`Error deleting jobs: ${err.message}`);
-      setLoading(false);
-    }
-  };
-
   return (
     <div>
       <div className={styles.header}>
-        <h1 className={styles.headerTitle}>{getTitle()}</h1>
+        <h1 style={{ 
+            margin: 0, 
+            fontSize: '2.4rem', 
+            fontWeight: 800, 
+            background: 'linear-gradient(135deg, #4f46e5 0%, #d946ef 50%, #06b6d4 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            letterSpacing: '-0.02em',
+            filter: 'drop-shadow(0 2px 4px rgba(79, 70, 229, 0.1))'
+          }}>
+          {getTitle()}
+        </h1>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <div className={styles.toggleContainer}>
             <button 
@@ -417,14 +462,6 @@ function JobsTable() {
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
             Refresh
           </button>
-          {isAdmin && selectedJobs.length > 0 && (
-            <button 
-              onClick={handleDeleteSelected}
-              style={{ padding: '0.6rem 1rem', borderRadius: '8px', background: '#ef4444', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}
-            >
-              Delete Selected ({selectedJobs.length})
-            </button>
-          )}
         </div>
       </div>
 
@@ -435,17 +472,17 @@ function JobsTable() {
           <table className={styles.table}>
             <thead>
               <tr>
-                {isAdmin && (
-                  <th style={{ width: '40px', textAlign: 'center' }}>
-                    <input type="checkbox" onChange={handleSelectAll} checked={sortedJobs.length > 0 && selectedJobs.length === sortedJobs.length} />
-                  </th>
-                )}
                 <th>Action</th>
-                {orderedColumns.filter(id => visibleColumns.includes(id)).map(colId => {
+                {orderedColumns.filter(id => visibleColumns.includes(id) && ALL_COLUMNS.some(c => c.id === id)).map(colId => {
                   const col = ALL_COLUMNS.find(c => c.id === colId)!;
                   return (
-                    <th key={col.id}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                    <th key={col.id} style={{ 
+                      width: columnWidths[col.id] ? `${columnWidths[col.id]}px` : 'auto', 
+                      minWidth: columnWidths[col.id] ? `${columnWidths[col.id]}px` : '100px',
+                      maxWidth: columnWidths[col.id] ? `${columnWidths[col.id]}px` : 'none',
+                      position: 'relative' 
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', paddingRight: '8px' }}>
                         {col.label}
                         <div style={{ position: 'relative' }} ref={activeFilterColumn === col.id ? filterRef : null}>
                           <button 
@@ -470,6 +507,21 @@ function JobsTable() {
                           )}
                         </div>
                       </div>
+                      <div 
+                        onMouseDown={(e) => onMouseDown(e, col.id)}
+                        style={{
+                          position: 'absolute',
+                          right: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: '8px',
+                          cursor: 'col-resize',
+                          background: 'transparent',
+                          zIndex: 10
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.2)'}
+                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                      />
                     </th>
                   );
                 })}
@@ -482,32 +534,83 @@ function JobsTable() {
                 </tr>
               ) : (
                 sortedJobs.map((job) => (
-                  <tr key={job.job_number} className={selectedJobs.includes(job.job_number) ? styles.selectedRow : ''}>
-                    {isAdmin && (
-                      <td style={{ textAlign: 'center' }}>
-                        <input type="checkbox" checked={selectedJobs.includes(job.job_number)} onChange={() => handleSelectJob(job.job_number)} />
-                      </td>
-                    )}
+                  <tr key={job.job_number}>
                     <td>
                       <button 
-                        className="btn btn-secondary" 
-                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.875rem' }}
+                        style={{ 
+                          padding: '0.5rem 1.25rem', 
+                          fontSize: '0.85rem',
+                          background: 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)',
+                          color: '#4f46e5',
+                          border: 'none',
+                          borderRadius: '99px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          boxShadow: '0 2px 8px rgba(79, 70, 229, 0.15)',
+                          whiteSpace: 'nowrap'
+                        }}
+                        onMouseOver={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #4f46e5 0%, #d946ef 100%)'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)'; e.currentTarget.style.color = '#4f46e5'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.15)'; }}
                         onClick={() => router.push(`/dashboard/job/${encodeURIComponent(job.job_number)}`)}
                       >
                         View
                       </button>
                     </td>
-                    {orderedColumns.filter(id => visibleColumns.includes(id)).map(colId => {
+                    {orderedColumns.filter(id => visibleColumns.includes(id) && ALL_COLUMNS.some(c => c.id === id)).map(colId => {
                       let value: any = job[colId];
-                      if (colId === 'car_included') value = value === true ? 'Yes' : (value === false ? 'No' : '');
-                      else if (colId === 'last_comm_date') value = value ? new Date(value).toLocaleDateString() : '';
-                      else if (colId === 'goods_track_status') value = value || 'Pending';
-                      else if (colId === 'spoc_name') value = value || '-';
-                      else value = value || '';
+                      
+                      const dateColumns = ['job_date', 'packing_date', 'dispatch_date', 'expected_to_reach_dest', 'reached_destination', 'planned_delivery', 'actual_delivery', 'car_pickup_date', 'car_delivery_date', 'follow_up_date', 'last_comm_date', 'invoice_date'];
+                      const timeColumns = ['committed_time', 'reported_time'];
+                      
+                      if (colId === 'car_included') {
+                        value = value === true ? 'Yes' : (value === false ? 'No' : '');
+                      } else if (dateColumns.includes(colId) && value) {
+                        const date = new Date(value);
+                        if (!isNaN(date.getTime())) {
+                          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                          const dd = String(date.getDate()).padStart(2, '0');
+                          const mmm = months[date.getMonth()];
+                          const yy = String(date.getFullYear()).slice(-2);
+                          value = `${dd}-${mmm}-${yy}`;
+                        }
+                      } else if (timeColumns.includes(colId) && value) {
+                        if (typeof value === 'string' && value.match(/^\d{1,2}:\d{2}/)) {
+                          const [h, m] = value.split(':');
+                          let hours = parseInt(h, 10);
+                          const ampm = hours >= 12 ? 'PM' : 'AM';
+                          hours = hours % 12;
+                          hours = hours ? hours : 12;
+                          value = `${String(hours).padStart(2, '0')}:${m} ${ampm}`;
+                        } else {
+                          const date = new Date(value);
+                          if (!isNaN(date.getTime())) {
+                            value = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                          }
+                        }
+                      } else if (colId === 'goods_track_status') {
+                        value = value || 'Pending';
+                      } else if (colId === 'spoc_name') {
+                        value = value || '-';
+                      } else {
+                        value = value || '';
+                      }
 
                       return (
-                        <td key={colId} className={colId === 'job_number' ? styles.jobNum : undefined}>
-                          {value}
+                        <td key={colId} style={{ 
+                          maxWidth: columnWidths[colId] ? `${columnWidths[colId]}px` : '350px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          paddingRight: '1rem'
+                        }}>
+                          <span 
+                            className={colId === 'job_number' ? styles.jobNum : undefined}
+                            style={colId === 'customer_name' ? { fontWeight: 'bold' } : undefined}
+                            title={String(value)} // Show full value on hover
+                          >
+                            {value}
+                          </span>
                         </td>
                       );
                     })}

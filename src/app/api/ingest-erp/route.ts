@@ -14,7 +14,9 @@ interface ErpJobData {
   origin?: string;
   destination?: string;
   customer_phone?: string;
-  erp_status: string; // The only field that gets updated if job exists
+  erp_status: string;      // Overridden on every sync
+  invoice_number?: string; // Overridden on every sync
+  invoice_date?: string;   // Overridden on every sync
 }
 
 export async function POST(request: Request) {
@@ -54,6 +56,17 @@ export async function POST(request: Request) {
       
       data?.forEach(job => existingJobNumbers.add(job.job_number));
     }
+    // Fetch company SPOCs to assign to new jobs
+    const { data: spocsData, error: spocsError } = await supabase.from('company_spocs').select('company_name, spoc_name');
+    if (spocsError) {
+      console.error('Error fetching company SPOCs:', spocsError);
+    }
+    const spocMap: Record<string, string> = {};
+    if (spocsData) {
+      spocsData.forEach(s => {
+        spocMap[s.company_name] = s.spoc_name;
+      });
+    }
     
     const newJobsToInsert = [];
     const existingJobsToUpdate = [];
@@ -66,11 +79,17 @@ export async function POST(request: Request) {
           erp_job_id: job.erp_job_id,
           erp_status: job.erp_status,
           enq_number: job.enq_number,
+          invoice_number: job.invoice_number ?? null,
+          invoice_date: job.invoice_date ?? null,
           updated_at: new Date().toISOString()
         });
       } else {
         // Insert all data for new jobs
-        newJobsToInsert.push(job);
+        const newJob = { ...job };
+        if (job.company && spocMap[job.company]) {
+          (newJob as any).spoc_name = spocMap[job.company];
+        }
+        newJobsToInsert.push(newJob);
       }
     }
 
