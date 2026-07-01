@@ -91,9 +91,24 @@ async function syncERP() {
       if (!val) return null;
       const str = String(val).trim();
       if (str === '' || str === '-' || str.toLowerCase() === 'n/a') return null;
-      
+
+      // If it's an Excel serial number (numeric), convert using xlsx utility
+      const num = Number(str);
+      if (!isNaN(num) && num > 1000 && num < 100000) {
+        try {
+          const parsed = xlsx.SSF.parse_date_code(num);
+          if (parsed && parsed.y) {
+            const m = String(parsed.m).padStart(2, '0');
+            const d = String(parsed.d).padStart(2, '0');
+            return `${parsed.y}-${m}-${d}`;
+          }
+        } catch (e) {}
+        return null;
+      }
+
+      // Otherwise try parsing as a date string (e.g. "02-Apr-26")
       const d = new Date(str);
-      if (!isNaN(d.getTime())) {
+      if (!isNaN(d.getTime()) && d.getFullYear() > 1990 && d.getFullYear() < 2100) {
         return d.toISOString().split('T')[0];
       }
       return null;
