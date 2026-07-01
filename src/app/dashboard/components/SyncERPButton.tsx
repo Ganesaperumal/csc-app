@@ -71,19 +71,16 @@ export default function SyncERPButton({ user: initialUser }: { user?: any }) {
     
     setIsSyncing(true);
     setSyncingBy('You');
-    const username = user?.email?.split('@')[0] || 'User';
-
-    // Lock it!
-    await supabase.from('sync_lock').update({
-      is_syncing: true,
-      started_at: new Date().toISOString(),
-      started_by: username
-    }).eq('id', 1);
+    // Lock is now handled by the backend API
 
     try {
-      // Trigger our local API endpoint that runs the sync
+      const username = user?.email?.split('@')[0] || 'User';
       const res = await fetch('/api/ingest-erp/manual-trigger', {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username })
       });
       if (!res.ok) {
         const errorData = await res.json();

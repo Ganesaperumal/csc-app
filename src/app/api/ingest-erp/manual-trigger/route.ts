@@ -1,12 +1,22 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    const body = await request.json().catch(() => ({}));
+    const username = body.username || 'Server';
+
     const { data, error } = await supabase.from('sync_lock').select('*').eq('id', 1).single();
     if (error || data?.is_syncing) {
       return NextResponse.json({ error: 'Sync already in progress.' }, { status: 400 });
     }
+
+    // Set the lock
+    await supabase.from('sync_lock').update({ 
+      is_syncing: true, 
+      started_by: username, 
+      started_at: new Date().toISOString() 
+    }).eq('id', 1);
 
     // Ping GitHub Actions to trigger the workflow
     const GITHUB_PAT = process.env.GITHUB_PAT;
