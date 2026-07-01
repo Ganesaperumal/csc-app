@@ -680,7 +680,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   onClick={() => handleFieldChange('goods_track_status', option)}
                 >
                   <div className={styles.stepIndicator}>
-                    {isCompleted ? '✓' : idx + 1}
+                    {isCompleted ? '' : idx + 1}
                   </div>
                   <span className={styles.stepLabel}>{option}</span>
                 </div>
