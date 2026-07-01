@@ -87,6 +87,18 @@ async function syncERP() {
     const rawData = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: "" });
     console.log(`Found ${rawData.length} rows in the Excel sheet.`);
 
+    const parseExcelDate = (val) => {
+      if (!val) return null;
+      const str = String(val).trim();
+      if (str === '' || str === '-' || str.toLowerCase() === 'n/a') return null;
+      
+      const d = new Date(str);
+      if (!isNaN(d.getTime())) {
+        return d.toISOString().split('T')[0];
+      }
+      return null;
+    };
+
     const formattedData = rawData.map(row => {
       // row is an array of strings since we used { header: 1 }
       return {
@@ -97,13 +109,13 @@ async function syncERP() {
         origin: row[7] || row[24] || '', // Origin or From
         destination: row[8] || row[25] || '', // Destination or To
         erp_status: row[9] || 'Active',
-        job_date: row[10] || null, // Order Recd Dt
+        job_date: parseExcelDate(row[10]), // Order Recd Dt
         customer_name: row[20] || '', // Name
         company: row[21] || '', // Company
         customer_phone: row[22] || row[23] || '', // Phone or Mobile
         goods_type: row[28] || '', // Type Of Goods
         invoice_number: row[18] ? String(row[18]).trim() : null, // Bill No
-        invoice_date: row[19] ? String(row[19]).trim() : null, // Bill Dt
+        invoice_date: parseExcelDate(row[19]), // Bill Dt
       };
     }).filter(row => {
       const jobNo = String(row.job_number || '').trim();
