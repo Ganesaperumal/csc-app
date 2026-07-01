@@ -18,7 +18,7 @@ export default function LoginPage() {
     setError('');
 
     const { error } = await supabase.auth.signInWithPassword({
-      email: `${username}@transworldintl.com`.toLowerCase(),
+      email: `${username.trim()}@transworldintl.com`.toLowerCase(),
       password,
     });
 
