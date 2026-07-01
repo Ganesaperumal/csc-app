@@ -586,20 +586,48 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <span className={styles.textLogistics}>Cargo Service</span>
             </h3>
             <div className={styles.grid}>
+              {/* Row 1: Dispatch Date | Transit Days */}
               <div className={styles.inputGroup}><label>🚀 DISPATCH DATE</label><DateInput name="dispatch_date" value={job.dispatch_date || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>⏳ TRANSIT DAYS</label><input type="number" name="transit_days" value={job.transit_days || ''} onChange={handleChange} /></div>
-              
+
+              {/* Row 2: Shipment Type | Pre-Alert Status */}
+              <div className={styles.inputGroup}>
+                <label>🚚 SHIPMENT TYPE</label>
+                <select name="shipment_type" value={job.shipment_type || ''} onChange={handleChange}>
+                  <option value="">Select Type</option>
+                  <option value="TI Vehicle">TI Vehicle</option>
+                  <option value="Market Vehicle">Market Vehicle</option>
+                  <option value="Part Load">Part Load</option>
+                  <option value="Air">Air</option>
+                  <option value="Train">Train</option>
+                </select>
+              </div>
+              <div className={styles.inputGroup}>
+                <label>🔔 PRE-ALERT STATUS</label>
+                <select name="pre_alert_status" value={job.pre_alert_status || ''} onChange={handleChange}>
+                  <option value="">Select</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Sent">Sent</option>
+                  <option value="Acknowledged">Acknowledged</option>
+                </select>
+              </div>
+
+              {/* Row 3: Truck Number | Driver Details */}
               <div className={styles.inputGroup}><label>🚛 TRUCK NUMBER</label><input type="text" name="truck_number" value={job.truck_number || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>👨‍✈️ DRIVER DETAILS</label><input type="text" name="driver_details" value={job.driver_details || ''} onChange={handleChange} placeholder="e.g. Ram - 9876543210" /></div>
-              
+
+              {/* Row 4: Expected Reaching Date | Reached Destination Date */}
               <div className={styles.inputGroup}><label>🎯 EXPECTED REACHING DATE</label><DateInput name="expected_to_reach_dest" value={job.expected_to_reach_dest || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>🏁 REACHED DESTINATION DATE</label><DateInput name="reached_destination" value={job.reached_destination || ''} onChange={handleChange} /></div>
-              
+
+              {/* Row 5: Deviation | Reason */}
               <div className={styles.inputGroup}>
                 <label>⚠️ DEVIATION</label>
                 <ToggleSwitch name="deviation" value={job.deviation === true} onChange={(val) => handleFieldChange('deviation', val)} />
               </div>
               <div className={styles.inputGroup}><label>✍️ REASON</label><input name="deviation_reason" value={job.deviation_reason || ''} onChange={handleChange} /></div>
+
+              {/* Row 6: Remarks full-width */}
               <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
                 <label>💬 REMARKS</label>
                 <textarea name="remarks" value={job.remarks || ''} onChange={handleChange} rows={3} style={{ resize: 'vertical', minHeight: '72px' }} />
