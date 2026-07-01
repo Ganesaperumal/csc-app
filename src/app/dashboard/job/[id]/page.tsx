@@ -616,9 +616,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <div className={styles.inputGroup}><label>🚛 TRUCK NUMBER</label><input type="text" name="truck_number" value={job.truck_number || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>👨‍✈️ DRIVER DETAILS</label><input type="text" name="driver_details" value={job.driver_details || ''} onChange={handleChange} placeholder="e.g. Ram - 9876543210" /></div>
 
-              {/* Row 4: Expected Reaching Date | Reached Destination Date */}
+              {/* Row 4: Expected Reaching Date | Actual Reached Date */}
               <div className={styles.inputGroup}><label>🎯 EXPECTED REACHING DATE</label><DateInput name="expected_to_reach_dest" value={job.expected_to_reach_dest || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>🏁 REACHED DESTINATION DATE</label><DateInput name="reached_destination" value={job.reached_destination || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>🏁 ACTUAL REACHED DATE</label><DateInput name="reached_destination" value={job.reached_destination || ''} onChange={handleChange} /></div>
 
               {/* Row 5: Deviation | Reason */}
               <div className={styles.inputGroup}>
