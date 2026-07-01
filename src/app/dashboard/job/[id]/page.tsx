@@ -237,6 +237,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const [newShipmentDate, setNewShipmentDate] = useState('');
   const [newShipmentLocation, setNewShipmentLocation] = useState('');
   const [agentName, setAgentName] = useState('Agent');
+  const [supervisors, setSupervisors] = useState<string[]>([]);
 
   useEffect(() => {
     // Fetch the real username from profiles table
@@ -263,7 +264,24 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   useEffect(() => {
     fetchJobDetails();
     fetchLogs();
+    fetchSupervisors();
   }, [decodedId]);
+
+  const fetchSupervisors = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('packing_team_supervisor, dest_supervisor');
+      if (data && !error) {
+        const sups = new Set<string>();
+        data.forEach(row => {
+          if (row.packing_team_supervisor && row.packing_team_supervisor.trim() !== '') sups.add(row.packing_team_supervisor.trim());
+          if (row.dest_supervisor && row.dest_supervisor.trim() !== '') sups.add(row.dest_supervisor.trim());
+        });
+        setSupervisors(Array.from(sups).sort());
+      }
+    } catch(e) {}
+  };
 
   const fetchJobDetails = async () => {
     try {
@@ -413,6 +431,11 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className={styles.container}>
+      <datalist id="supervisors-list">
+        {supervisors.map(sup => (
+          <option key={sup} value={sup} />
+        ))}
+      </datalist>
       <div className={styles.header}>
         <div className={styles.headerTitle}>
           <button 
@@ -560,7 +583,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
             </h3>
             <div className={styles.grid}>
               <div className={styles.inputGroup}><label>📆 PACKING DATE</label><DateInput name="packing_date" value={job.packing_date || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>👔 SUPERVISOR</label><input name="packing_team_supervisor" value={job.packing_team_supervisor || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>👔 SUPERVISOR</label><input name="packing_team_supervisor" value={job.packing_team_supervisor || ''} onChange={handleChange} list="supervisors-list" /></div>
               <div className={styles.inputGroup}><label>👷‍♂️ HANDYMAN</label><input name="handyman_origin" value={job.handyman_origin || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>🏢 FLOOR</label><input type="number" name="origin_floor" value={job.origin_floor || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}>
@@ -630,7 +653,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <div className={styles.inputGroup}><label>📅 PLANNED DELIVERY DATE</label><DateInput name="planned_delivery" value={job.planned_delivery || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>✅ ACTUAL DELIVERY DATE</label><DateInput name="actual_delivery" value={job.actual_delivery || ''} onChange={handleChange} /></div>
               
-              <div className={styles.inputGroup}><label>👔 SUPERVISOR</label><input name="dest_supervisor" value={job.dest_supervisor || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>👔 SUPERVISOR</label><input name="dest_supervisor" value={job.dest_supervisor || ''} onChange={handleChange} list="supervisors-list" /></div>
               <div className={styles.inputGroup}><label>👷‍♂️ HANDYMAN</label><input name="handyman_destination" value={job.handyman_destination || ''} onChange={handleChange} /></div>
               
               <div className={styles.inputGroup}>
