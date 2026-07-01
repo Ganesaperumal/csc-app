@@ -567,7 +567,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div className={styles.inputGroup}><label>🏎️ CAR PICKUP DATE</label><DateInput name="car_pickup_date" value={job.car_pickup_date || ''} onChange={handleChange} /></div>
-                  <div className={styles.inputGroup}><label>🏁 CAR DELIVERY DATE</label><DateInput name="car_delivery_date" value={job.car_delivery_date || ''} onChange={handleChange} /></div>
+                  <div className={styles.inputGroup}><label>🏁 CAR DELIVERY</label><DateInput name="car_delivery_date" value={job.car_delivery_date || ''} onChange={handleChange} /></div>
                 </div>
               </div>
             </div>
