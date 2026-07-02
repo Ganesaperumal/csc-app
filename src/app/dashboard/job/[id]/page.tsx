@@ -205,7 +205,7 @@ const CarStatusSlider = ({ name, options, value, onChange }: { name: string, opt
                 🚗
               </span>
             ) : (
-              i + 1
+              i
             )}
             
             {hoveredIndex === i && (
@@ -766,7 +766,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   onClick={() => handleFieldChange('goods_track_status', option)}
                 >
                   <div className={styles.stepIndicator}>
-                    {isActive ? '' : (isCompleted ? '✓' : idx + 1)}
+                    {isActive ? '' : (isCompleted ? '✓' : idx)}
                   </div>
                   <span className={styles.stepLabel}>{option}</span>
                 </div>
