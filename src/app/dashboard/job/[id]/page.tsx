@@ -50,7 +50,6 @@ const ToggleSwitch = ({ name, value, onChange }: { name: string, value: any, onC
 };
 
 const GOODS_TRACK_OPTIONS = [
-  "00. New Order",
   "01. Packing Not Scheduled",
   "02. Packing Scheduled",
   "03. Packing in Progress",
@@ -80,7 +79,6 @@ const GOODS_TRACK_OPTIONS = [
 ];
 
 const CAR_TRACK_OPTIONS = [
-  "00. New Order",
   "01. Car Pickup Not Scheduled",
   "02. Car Pickup Scheduled",
   "03. Car Picked",
@@ -205,7 +203,7 @@ const CarStatusSlider = ({ name, options, value, onChange }: { name: string, opt
                 🚗
               </span>
             ) : (
-              i
+              i + 1
             )}
             
             {hoveredIndex === i && (
@@ -757,7 +755,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           <div className={styles.verticalSteps}>
             {GOODS_TRACK_OPTIONS.map((option, idx) => {
               const isActive = job.goods_track_status === option;
-              const currentIndex = GOODS_TRACK_OPTIONS.indexOf(job.goods_track_status || '00. New Order');
+              const currentIndex = GOODS_TRACK_OPTIONS.indexOf(job.goods_track_status || '01. Packing Not Scheduled');
               const isCompleted = idx <= currentIndex;
               return (
                 <div 
@@ -766,7 +764,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   onClick={() => handleFieldChange('goods_track_status', option)}
                 >
                   <div className={styles.stepIndicator}>
-                    {isActive ? '' : (isCompleted ? '✓' : idx)}
+                    {isActive ? '' : (isCompleted ? '✓' : idx + 1)}
                   </div>
                   <span className={styles.stepLabel}>{option}</span>
                 </div>
