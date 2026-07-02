@@ -240,7 +240,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const [comms, setComms] = useState<any[]>([]);
   const [commForm, setCommForm] = useState({
     call_type: 'Customer' as 'Customer' | 'Internal',
-    regarding: 'Pre-Packing',
+    regarding: '',
     summary: '',
     follow_up_required: false,
     follow_up_date: ''
@@ -456,7 +456,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           follow_up_date: commForm.follow_up_required && commForm.follow_up_date ? commForm.follow_up_date : null
         });
       if (error) throw error;
-      setCommForm({ call_type: 'Customer', regarding: 'Pre-Packing', summary: '', follow_up_required: false, follow_up_date: '' });
+      setCommForm({ call_type: 'Customer', regarding: '', summary: '', follow_up_required: false, follow_up_date: '' });
       setCommFormOpen(false);
       fetchComms();
       fetchJobDetails();
@@ -940,11 +940,11 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                       ))}
                     </div>
                   </div>
-                  <div style={{ flex: 1.5, minWidth: '180px' }}>
-                    <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem', display: 'block' }}>Regarding</label>
-                    <select value={commForm.regarding} onChange={e => setCommForm(f => ({ ...f, regarding: e.target.value }))}
+                  <div style={{ flex: 1.5, minWidth: '180px', display: 'flex', alignItems: 'flex-end' }}>
+                    <select required value={commForm.regarding} onChange={e => setCommForm(f => ({ ...f, regarding: e.target.value }))}
                       style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', fontSize: '0.85rem', background: 'rgba(255,255,255,0.9)', color: 'var(--text-primary)', cursor: 'pointer' }}
                     >
+                      <option value="" disabled>- Regarding -</option>
                       {['Pre-Packing', 'Packing', 'In Transit', 'Delivery', 'Feedback', 'Damages', 'Complaints', 'Billing', 'Storage'].map(r => (
                         <option key={r} value={r}>{r}</option>
                       ))}
