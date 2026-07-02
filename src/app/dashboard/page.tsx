@@ -182,6 +182,19 @@ function JobsTable() {
 
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const notificationTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  const handleMouseEnterNotification = () => {
+    if (notificationTimeout.current) clearTimeout(notificationTimeout.current);
+  };
+
+  const handleMouseLeaveNotification = () => {
+    if (showNotifications) {
+      notificationTimeout.current = setTimeout(() => {
+        setShowNotifications(false);
+      }, 2000);
+    }
+  };
 
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const resizingCol = useRef<string | null>(null);
@@ -539,7 +552,11 @@ function JobsTable() {
               </div>
             )}
           </div>
-          <div style={{ position: 'relative' }} onMouseLeave={() => setShowNotifications(false)}>
+          <div 
+            style={{ position: 'relative' }}
+            onMouseEnter={handleMouseEnterNotification}
+            onMouseLeave={handleMouseLeaveNotification}
+          >
             <button 
               className={styles.refreshBtn} 
               onClick={() => setShowNotifications(!showNotifications)}
