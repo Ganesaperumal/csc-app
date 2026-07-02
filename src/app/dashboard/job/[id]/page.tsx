@@ -1001,8 +1001,15 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                 </div>
                 {/* Row 4: Follow-up */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                    🔔 Reminder on
+                  <label style={{ 
+                    display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 600, 
+                    whiteSpace: 'nowrap', padding: '0.5rem 0.8rem', borderRadius: '8px',
+                    background: commForm.follow_up_date ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(255,255,255,0.7)',
+                    color: commForm.follow_up_date ? '#fff' : 'var(--text-secondary)',
+                    border: commForm.follow_up_date ? 'none' : '1px solid rgba(148,163,184,0.3)',
+                    boxShadow: commForm.follow_up_date ? '0 2px 8px rgba(16,185,129,0.3)' : 'none'
+                  }}>
+                    🔔 Reminder
                   </label>
                   <input type="date" value={commForm.follow_up_date}
                     onChange={e => setCommForm(f => ({ ...f, follow_up_date: e.target.value, follow_up_required: !!e.target.value }))}
