@@ -62,7 +62,7 @@ function ColumnFilterDropdown({ colId, jobs, currentFilters, onApply, onSort, cu
   const hasBlanks = jobs.some(j => j[colId] === null || j[colId] === undefined || j[colId] === '');
   const allValues = Array.from(new Set(jobs.map(j => j[colId]).filter(v => v !== null && v !== undefined && v !== ''))).sort();
   if (hasBlanks) {
-    allValues.push('(Blank)');
+    allValues.unshift('(Blank)');
   }
   const [q, setQ] = useState('');
   const displayed = allValues.filter(v => getDisplayValue(v).toLowerCase().includes(q.toLowerCase()));

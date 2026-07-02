@@ -95,7 +95,7 @@ function ColumnFilterDropdown({
   const hasBlanks = jobs.some(j => j[colId] === null || j[colId] === undefined || j[colId] === '');
   const allUniqueValues = Array.from(new Set(jobs.map(j => j[colId]).filter(v => v !== null && v !== undefined && v !== ''))).sort();
   if (hasBlanks) {
-    allUniqueValues.push('(Blank)');
+    allUniqueValues.unshift('(Blank)');
   }
   
   const [searchQuery, setSearchQuery] = useState('');
