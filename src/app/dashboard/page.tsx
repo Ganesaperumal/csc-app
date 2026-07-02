@@ -539,7 +539,7 @@ function JobsTable() {
               </div>
             )}
           </div>
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative' }} onMouseLeave={() => setShowNotifications(false)}>
             <button 
               className={styles.refreshBtn} 
               onClick={() => setShowNotifications(!showNotifications)}
