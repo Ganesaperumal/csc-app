@@ -620,7 +620,7 @@ function JobsTable() {
                               {jobDetails.branch && <span style={{ padding: '0.15rem 0.6rem', borderRadius: '12px', background: 'rgba(139, 92, 246, 0.08)', color: '#7c3aed', border: '1px solid rgba(139, 92, 246, 0.2)' }}>🏢 {jobDetails.branch}</span>}
                             </div>
                             <div style={{ flex: 1, textAlign: 'center' }}>
-                              <span style={{ padding: '0.15rem 0.6rem', borderRadius: '12px', background: n.call_type === 'Customer' ? 'rgba(245, 158, 11, 0.08)' : 'rgba(14, 165, 233, 0.08)', color: n.call_type === 'Customer' ? '#d97706' : '#0284c7', border: `1px solid ${n.call_type === 'Customer' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(14, 165, 233, 0.2)'}` }}>{n.call_type === 'Customer' ? '👤 Customer' : '🏢 Internal'}</span>
+                              <span style={{ color: n.call_type === 'Customer' ? '#d97706' : '#0284c7' }}>{n.call_type === 'Customer' ? '👤 Customer' : '🏢 Internal'}</span>
                             </div>
                             <div style={{ flex: 1, textAlign: 'right' }}>
                               {n.regarding && <span style={{ padding: '0.15rem 0.6rem', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.08)', color: '#059669', border: '1px solid rgba(16, 185, 129, 0.2)' }}>{n.regarding}</span>}
