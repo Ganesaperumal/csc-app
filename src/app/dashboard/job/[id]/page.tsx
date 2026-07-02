@@ -1000,17 +1000,17 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   />
                 </div>
                 {/* Row 4: Follow-up */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                     🔔 Reminder on
                   </label>
                   <input type="date" value={commForm.follow_up_date}
                     onChange={e => setCommForm(f => ({ ...f, follow_up_date: e.target.value, follow_up_required: !!e.target.value }))}
-                    style={{ padding: '0.4rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', fontSize: '0.85rem', background: 'rgba(255,255,255,0.9)', outline: 'none' }}
+                    style={{ flex: 1, padding: '0.4rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', fontSize: '0.85rem', background: 'rgba(255,255,255,0.9)', outline: 'none' }}
                   />
                   {commForm.follow_up_date && (
                     <button type="button" onClick={() => setCommForm(f => ({ ...f, follow_up_date: '', follow_up_required: false }))} 
-                      style={{ border: 'none', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '0.75rem', cursor: 'pointer', padding: '0.3rem 0.6rem', borderRadius: '6px', fontWeight: 600 }}>
+                      style={{ border: 'none', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '0.75rem', cursor: 'pointer', padding: '0.4rem 0.6rem', borderRadius: '6px', fontWeight: 600, whiteSpace: 'nowrap' }}>
                       Clear
                     </button>
                   )}
