@@ -236,8 +236,19 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [newComm, setNewComm] = useState('');
   const [newNote, setNewNote] = useState('');
+  const [comms, setComms] = useState<any[]>([]);
+  const [commForm, setCommForm] = useState({
+    call_type: 'Customer' as 'Customer' | 'Internal',
+    regarding: 'Pre-Packing',
+    contact_person: '',
+    contact_number: '',
+    summary: '',
+    follow_up_required: false,
+    follow_up_date: ''
+  });
+  const [commFormOpen, setCommFormOpen] = useState(false);
+  const [commFilter, setCommFilter] = useState<string>('All');
   const [newShipmentDate, setNewShipmentDate] = useState('');
   const [newShipmentLocation, setNewShipmentLocation] = useState('');
   const [agentName, setAgentName] = useState('Agent');
@@ -286,6 +297,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   useEffect(() => {
     fetchJobDetails();
     fetchLogs();
+    fetchComms();
     fetchSupervisors();
   }, [decodedId]);
 
@@ -416,11 +428,44 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
       
       clearInput();
       fetchLogs();
-      if (type === 'Communication') {
-        fetchJobDetails(); // Refresh to show new last comm date
-      }
     } catch (err) {
       console.error('Error adding log:', err);
+    }
+  };
+
+  const fetchComms = async () => {
+    const { data, error } = await supabase
+      .from('job_communications')
+      .select('*')
+      .eq('job_number', decodedId)
+      .order('created_at', { ascending: false });
+    if (!error && data) setComms(data);
+  };
+
+  const handleAddComm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commForm.summary.trim()) return;
+    try {
+      const { error } = await supabase
+        .from('job_communications')
+        .insert({
+          job_number: decodedId,
+          agent_name: agentName,
+          call_type: commForm.call_type,
+          regarding: commForm.regarding,
+          contact_person: commForm.contact_person || null,
+          contact_number: commForm.contact_number || null,
+          summary: commForm.summary,
+          follow_up_required: commForm.follow_up_required,
+          follow_up_date: commForm.follow_up_required && commForm.follow_up_date ? commForm.follow_up_date : null
+        });
+      if (error) throw error;
+      setCommForm({ call_type: 'Customer', regarding: 'Pre-Packing', contact_person: '', contact_number: '', summary: '', follow_up_required: false, follow_up_date: '' });
+      setCommFormOpen(false);
+      fetchComms();
+      fetchJobDetails();
+    } catch (err) {
+      console.error('Error adding communication:', err);
     }
   };
 
@@ -854,37 +899,181 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
         <div className={styles.sidePanel}>
           {/* Communications Section */}
           <div className={`glass ${styles.logsSection}`} style={{ marginBottom: '1.5rem' }}>
-            <h3>Communications</h3>
-            
-            <form onSubmit={(e) => { e.preventDefault(); handleAddLog('Communication', newComm, () => setNewComm('')); }} className={styles.addLogForm}>
-              <div className={styles.inputWrapper}>
-                <textarea 
-                  value={newComm} 
-                  onChange={(e) => setNewComm(e.target.value)} 
-                  placeholder="Type a communication update..."
-                  required
-                  rows={2}
-                />
-                <button type="submit" className={`${styles.sendButton} ${styles.sendButtonComm}`} title="Send Communication">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
-                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                  </svg>
-                </button>
-              </div>
-            </form>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <h3 style={{ margin: 0 }}>📞 Communications</h3>
+              <button
+                type="button"
+                onClick={() => setCommFormOpen(!commFormOpen)}
+                style={{
+                  background: commFormOpen ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                  color: '#fff', border: 'none', borderRadius: '8px', padding: '0.45rem 1rem',
+                  fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
+                  boxShadow: commFormOpen ? '0 3px 12px rgba(239,68,68,0.3)' : '0 3px 12px rgba(99,102,241,0.3)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {commFormOpen ? '✕ Cancel' : '+ Log Call'}
+              </button>
+            </div>
 
-            <div className={styles.logsList}>
-              {logs.filter(log => log.log_type === 'Communication').map((log) => (
-                <div key={log.id} className={`${styles.logItem} ${styles.logComm}`}>
-                  <div className={styles.logHeader}>
-                    <span className={styles.logAgent} style={{ color: getUserColor(log.agent_name).text }}>{log.agent_name}</span>
-                    <span className={styles.logDate}>{new Date(log.created_at).toLocaleString()}</span>
+            {commFormOpen && (
+              <form onSubmit={handleAddComm} style={{
+                background: 'linear-gradient(135deg, rgba(79,70,229,0.04), rgba(124,58,237,0.06))',
+                border: '1px solid rgba(99,102,241,0.15)', borderRadius: '14px', padding: '1.1rem',
+                marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.7rem'
+              }}>
+                {/* Row 1: Call Type & Regarding */}
+                <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: '140px' }}>
+                    <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem', display: 'block' }}>Call Type</label>
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      {(['Customer', 'Internal'] as const).map(t => (
+                        <button key={t} type="button" onClick={() => setCommForm(f => ({ ...f, call_type: t }))}
+                          style={{
+                            flex: 1, padding: '0.5rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s ease',
+                            background: commForm.call_type === t
+                              ? (t === 'Customer' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #3b82f6, #2563eb)')
+                              : 'rgba(255,255,255,0.7)',
+                            color: commForm.call_type === t ? '#fff' : 'var(--text-secondary)',
+                            border: commForm.call_type === t ? 'none' : '1px solid rgba(148,163,184,0.3)',
+                            boxShadow: commForm.call_type === t ? '0 2px 8px rgba(0,0,0,0.15)' : 'none'
+                          }}
+                        >
+                          {t === 'Customer' ? '👤 Customer' : '🏢 Internal'}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className={styles.logMessage}>{log.message}</div>
+                  <div style={{ flex: 1.5, minWidth: '180px' }}>
+                    <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem', display: 'block' }}>Regarding</label>
+                    <select value={commForm.regarding} onChange={e => setCommForm(f => ({ ...f, regarding: e.target.value }))}
+                      style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', fontSize: '0.85rem', background: 'rgba(255,255,255,0.9)', color: 'var(--text-primary)', cursor: 'pointer' }}
+                    >
+                      {['Pre-Packing', 'Packing', 'In Transit', 'Delivery', 'Feedback', 'Damages', 'Complaints', 'Billing', 'Storage'].map(r => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
+                {/* Row 2: Contact Person & Number */}
+                <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: '140px' }}>
+                    <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem', display: 'block' }}>Contact Person</label>
+                    <input type="text" placeholder="Name" value={commForm.contact_person}
+                      onChange={e => setCommForm(f => ({ ...f, contact_person: e.target.value }))}
+                      style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', fontSize: '0.85rem', background: 'rgba(255,255,255,0.9)', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div style={{ flex: 1, minWidth: '140px' }}>
+                    <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem', display: 'block' }}>Contact Number</label>
+                    <input type="tel" placeholder="Phone" value={commForm.contact_number}
+                      onChange={e => setCommForm(f => ({ ...f, contact_number: e.target.value }))}
+                      style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', fontSize: '0.85rem', background: 'rgba(255,255,255,0.9)', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+                {/* Row 3: Summary */}
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem', display: 'block' }}>Call Summary *</label>
+                  <textarea required value={commForm.summary} onChange={e => setCommForm(f => ({ ...f, summary: e.target.value }))} rows={3}
+                    placeholder="Describe what was discussed..."
+                    style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', fontSize: '0.85rem', background: 'rgba(255,255,255,0.9)', resize: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                {/* Row 4: Follow-up */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', cursor: 'pointer', color: 'var(--text-primary)' }}>
+                    <input type="checkbox" checked={commForm.follow_up_required}
+                      onChange={e => setCommForm(f => ({ ...f, follow_up_required: e.target.checked, follow_up_date: e.target.checked ? f.follow_up_date : '' }))}
+                      style={{ accentColor: '#4f46e5', width: '16px', height: '16px' }}
+                    />
+                    Follow-up Required
+                  </label>
+                  {commForm.follow_up_required && (
+                    <input type="date" value={commForm.follow_up_date}
+                      onChange={e => setCommForm(f => ({ ...f, follow_up_date: e.target.value }))}
+                      style={{ padding: '0.4rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', fontSize: '0.85rem', background: 'rgba(255,255,255,0.9)' }}
+                    />
+                  )}
+                </div>
+                {/* Submit */}
+                <button type="submit" style={{
+                  background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', border: 'none', borderRadius: '10px',
+                  padding: '0.65rem 1.2rem', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(99,102,241,0.35)', transition: 'all 0.2s ease', alignSelf: 'flex-end'
+                }}>📞 Save Communication</button>
+              </form>
+            )}
+
+            {/* Filter Pills */}
+            <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+              {['All', 'Customer', 'Internal'].map(f => (
+                <button key={f} type="button" onClick={() => setCommFilter(f)}
+                  style={{
+                    padding: '0.3rem 0.7rem', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s ease',
+                    background: commFilter === f ? '#4f46e5' : 'rgba(255,255,255,0.7)',
+                    color: commFilter === f ? '#fff' : 'var(--text-secondary)',
+                    border: commFilter === f ? '1px solid #4f46e5' : '1px solid rgba(148,163,184,0.3)'
+                  }}
+                >{f === 'All' ? `All (${comms.length})` : f === 'Customer' ? `👤 Customer (${comms.filter(c => c.call_type === 'Customer').length})` : `🏢 Internal (${comms.filter(c => c.call_type === 'Internal').length})`}</button>
               ))}
-              {logs.filter(log => log.log_type === 'Communication').length === 0 && <div className="text-muted">No communications recorded yet.</div>}
+            </div>
+
+            {/* Communications List */}
+            <div className={styles.logsList}>
+              {comms
+                .filter(c => commFilter === 'All' || c.call_type === commFilter)
+                .map(c => {
+                  const regardingColors: Record<string, string> = {
+                    'Pre-Packing': '#8b5cf6', 'Packing': '#6366f1', 'In Transit': '#3b82f6',
+                    'Delivery': '#10b981', 'Feedback': '#14b8a6', 'Damages': '#ef4444',
+                    'Complaints': '#f97316', 'Billing': '#eab308', 'Storage': '#64748b'
+                  };
+                  const tagColor = regardingColors[c.regarding] || '#6366f1';
+                  return (
+                    <div key={c.id} className={`${styles.logItem} ${styles.logComm}`} style={{ padding: '0.9rem 1rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          <span style={{
+                            padding: '0.15rem 0.55rem', borderRadius: '20px', fontSize: '0.68rem', fontWeight: 700,
+                            background: c.call_type === 'Customer' ? 'rgba(245,158,11,0.12)' : 'rgba(59,130,246,0.12)',
+                            color: c.call_type === 'Customer' ? '#d97706' : '#2563eb',
+                            border: `1px solid ${c.call_type === 'Customer' ? 'rgba(245,158,11,0.25)' : 'rgba(59,130,246,0.25)'}`
+                          }}>{c.call_type === 'Customer' ? '👤 Customer' : '🏢 Internal'}</span>
+                          <span style={{
+                            padding: '0.15rem 0.55rem', borderRadius: '20px', fontSize: '0.68rem', fontWeight: 700,
+                            background: `${tagColor}14`, color: tagColor, border: `1px solid ${tagColor}30`
+                          }}>{c.regarding}</span>
+                        </div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                          {new Date(c.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true })}
+                        </span>
+                      </div>
+                      {(c.contact_person || c.contact_number) && (
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '0.35rem', display: 'flex', gap: '0.7rem', flexWrap: 'wrap' }}>
+                          {c.contact_person && <span>👤 {c.contact_person}</span>}
+                          {c.contact_number && <span>📱 {c.contact_number}</span>}
+                        </div>
+                      )}
+                      <div className={styles.logMessage}>{c.summary}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.4rem' }}>
+                        <span className={styles.logAgent} style={{ color: getUserColor(c.agent_name).text }}>{c.agent_name}</span>
+                        {c.follow_up_required && (
+                          <span style={{
+                            padding: '0.15rem 0.5rem', borderRadius: '20px', fontSize: '0.68rem', fontWeight: 700,
+                            background: 'rgba(239,68,68,0.1)', color: '#dc2626', border: '1px solid rgba(239,68,68,0.2)',
+                            display: 'flex', alignItems: 'center', gap: '0.25rem'
+                          }}>🔔 Follow-up{c.follow_up_date ? `: ${formatDate(c.follow_up_date)}` : ''}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+              })}
+              {comms.filter(c => commFilter === 'All' || c.call_type === commFilter).length === 0 && (
+                <div className="text-muted" style={{ textAlign: 'center', padding: '2rem 0' }}>
+                  {comms.length === 0 ? 'No communications recorded yet. Click "+ Log Call" to add one.' : 'No communications match this filter.'}
+                </div>
+              )}
             </div>
           </div>
 
