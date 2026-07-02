@@ -180,6 +180,9 @@ function JobsTable() {
   });
   const [activeFilterColumn, setActiveFilterColumn] = useState<string | null>(null);
 
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const resizingCol = useRef<string | null>(null);
   const startX = useRef<number>(0);
@@ -314,7 +317,21 @@ function JobsTable() {
 
   useEffect(() => {
     fetchJobs();
+    fetchNotifications();
   }, [typeFilter]);
+
+  const fetchNotifications = async () => {
+    const { data, error } = await supabase
+      .from('job_communications')
+      .select('*')
+      .eq('follow_up_required', true)
+      .eq('follow_up_completed', false)
+      .order('follow_up_date', { ascending: true });
+    
+    if (!error && data) {
+      setNotifications(data);
+    }
+  };
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -522,10 +539,66 @@ function JobsTable() {
               </div>
             )}
           </div>
-          <button className={styles.refreshBtn} onClick={fetchJobs}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-            Refresh
-          </button>
+          <div style={{ position: 'relative' }}>
+            <button 
+              className={styles.refreshBtn} 
+              onClick={() => setShowNotifications(!showNotifications)}
+              style={{ padding: '0.5rem 0.8rem', background: notifications.length > 0 ? '#ef4444' : 'var(--glass-bg)', color: notifications.length > 0 ? '#fff' : 'var(--text-primary)' }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+              {notifications.length > 0 && <span style={{ marginLeft: '4px', fontWeight: 'bold' }}>{notifications.length}</span>}
+            </button>
+
+            {showNotifications && (
+              <div style={{ 
+                position: 'absolute', top: '100%', right: 0, marginTop: '0.5rem', width: '320px', 
+                background: '#fff', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', 
+                border: '1px solid rgba(0,0,0,0.05)', zIndex: 100, overflow: 'hidden', display: 'flex', flexDirection: 'column'
+              }}>
+                <div style={{ padding: '1rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontWeight: 600, color: '#0f172a', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Pending Follow-ups</span>
+                  <span style={{ background: '#ef4444', color: '#fff', padding: '0.1rem 0.5rem', borderRadius: '10px', fontSize: '0.75rem' }}>{notifications.length}</span>
+                </div>
+                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                  {notifications.length === 0 ? (
+                    <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>You're all caught up!</div>
+                  ) : (
+                    notifications.map(n => {
+                      let isUrgent = false;
+                      if (n.follow_up_date) {
+                        const today = new Date();
+                        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                        if (n.follow_up_date <= todayStr) isUrgent = true;
+                      } else {
+                        isUrgent = true;
+                      }
+
+                      return (
+                        <div key={n.id} style={{ 
+                          padding: '1rem', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.2s',
+                          background: isUrgent ? 'rgba(239, 68, 68, 0.04)' : '#fff'
+                        }} onClick={() => {
+                          setShowNotifications(false);
+                          router.push('/dashboard/job/' + encodeURIComponent(n.job_number));
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                            <span style={{ fontWeight: 600, color: '#3b82f6', fontSize: '0.85rem' }}>{n.job_number}</span>
+                            <span style={{ fontSize: '0.75rem', color: isUrgent ? '#ef4444' : '#64748b', fontWeight: isUrgent ? 700 : 500 }}>
+                              {n.follow_up_date ? new Date(n.follow_up_date).toLocaleDateString() : 'ASAP'}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: '#334155', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            <span style={{ fontWeight: 600, color: n.call_type === 'Customer' ? '#d97706' : '#2563eb', marginRight: '0.3rem' }}>{n.call_type}</span>
+                            {n.summary}
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
