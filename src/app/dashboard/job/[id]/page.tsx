@@ -233,7 +233,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const router = useRouter();
   
   const [job, setJob] = useState<any>(null);
-  const [logs, setLogs] = useState<any[]>([]);
+  const [notes, setNotes] = useState<any[]>([]);
+  const [trackingLogs, setTrackingLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newNote, setNewNote] = useState('');
@@ -252,23 +253,6 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const [agentName, setAgentName] = useState('Agent');
   const [supervisors, setSupervisors] = useState<string[]>([]);
 
-  const trackingLogs = logs
-    .filter(log => log.log_type === 'Shipment Tracking')
-    .map(log => {
-      const msg = log.message || '';
-      const dateMatch = msg.match(/Date:\s*([^|]+)/);
-      const locMatch = msg.match(/Location:\s*([^|]+)/);
-      const remMatch = msg.match(/Remarks:\s*(.*)/);
-      
-      return {
-        id: log.id,
-        date: dateMatch ? dateMatch[1].trim() : '',
-        location: locMatch ? locMatch[1].trim() : '',
-        remarks: remMatch ? remMatch[1].trim() : '',
-        rawDate: dateMatch ? new Date(dateMatch[1].trim()) : new Date(0)
-      };
-    })
-    .sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
 
   useEffect(() => {
     // Fetch the real username from profiles table
@@ -294,7 +278,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
   useEffect(() => {
     fetchJobDetails();
-    fetchLogs();
+    fetchNotes();
+    fetchTrackingLogs();
     fetchComms();
     fetchSupervisors();
   }, [decodedId]);
@@ -339,15 +324,25 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
     }
   };
 
-  const fetchLogs = async () => {
+  const fetchNotes = async () => {
     const { data, error } = await supabase
-      .from('job_logs')
+      .from('job_notes')
       .select('*')
       .eq('job_number', decodedId)
       .order('created_at', { ascending: false });
-      
     if (!error && data) {
-      setLogs(data);
+      setNotes(data.filter(n => n.log_type === 'Note' || !n.log_type));
+    }
+  };
+
+  const fetchTrackingLogs = async () => {
+    const { data, error } = await supabase
+      .from('job_shipment_track')
+      .select('*')
+      .eq('job_number', decodedId)
+      .order('date', { ascending: true });
+    if (!error && data) {
+      setTrackingLogs(data);
     }
   };
 
@@ -409,25 +404,26 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
     handleFieldChange(e.target.name, e.target.value);
   };
 
-  const handleAddLog = async (type: string, message: string, clearInput: () => void) => {
-    if (!message.trim()) return;
+  const handleAddNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newNote.trim()) return;
     
     try {
       const { error } = await supabase
-        .from('job_logs')
+        .from('job_notes')
         .insert({
           job_number: decodedId,
           agent_name: agentName,
-          log_type: type,
-          message: message
+          log_type: 'Note',
+          message: newNote
         });
         
       if (error) throw error;
       
-      clearInput();
-      fetchLogs();
+      setNewNote('');
+      fetchNotes();
     } catch (err) {
-      console.error('Error adding log:', err);
+      console.error('Error adding note:', err);
     }
   };
 
@@ -465,14 +461,27 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
     }
   };
 
-  const handleAddShipmentLog = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newShipmentDate || !newShipmentLocation.trim()) return;
-    const message = `Date: ${newShipmentDate} | Location: ${newShipmentLocation}`;
-    handleAddLog('Shipment Tracking', message, () => {
+  const handleAddShipmentLog = async (e?: React.FormEvent, date?: string, location?: string, remark?: string) => {
+    if (e) e.preventDefault();
+    const d = date || newShipmentDate;
+    const l = location || newShipmentLocation;
+    if (!d || !l.trim()) return;
+    
+    try {
+      const { error } = await supabase.from('job_shipment_track').insert({
+        job_number: decodedId,
+        agent_name: agentName,
+        date: d,
+        location: l,
+        remark: remark || null
+      });
+      if (error) throw error;
       setNewShipmentDate('');
       setNewShipmentLocation('');
-    });
+      fetchTrackingLogs();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   if (loading) return <div className={styles.container}>Loading job details...</div>;
@@ -659,7 +668,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
               <div className={styles.inputGroupFullWidth} style={{ gridColumn: 'span 2' }}>
                 <label>💬 LAST COMMUNICATION DETAILS WITH CUSTOMERS</label>
-                <textarea value={logs.find(l => l.log_type === 'Communication')?.message || 'N/A'} disabled rows={3} style={{ opacity: 0.8 }} />
+                <textarea value={comms.length > 0 ? comms[0].summary : 'N/A'} disabled rows={3} style={{ opacity: 0.8 }} />
               </div>
             </div>
           </div>
@@ -841,7 +850,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                     <div style={{ position: 'absolute', left: '-2.5rem', top: '2px', width: '16px', height: '16px', borderRadius: '50%', background: '#3b82f6', border: '3px solid white', boxShadow: '0 0 0 1px #3b82f6', zIndex: 2 }}></div>
                     <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>{track.location ? toProperCase(track.location) : ''}</div>
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>{track.date ? formatDate(track.date) : ''}</div>
-                    {track.remarks && <div style={{ fontSize: '0.85rem', color: '#64748b', fontStyle: 'italic', marginTop: '0.4rem', padding: '0.5rem 0.7rem', background: 'rgba(0,0,0,0.02)', borderRadius: '6px', borderLeft: '3px solid #3b82f6' }}>{track.remarks}</div>}
+                    {track.remark && <div style={{ fontSize: '0.85rem', color: '#64748b', fontStyle: 'italic', marginTop: '0.4rem', padding: '0.5rem 0.7rem', background: 'rgba(0,0,0,0.02)', borderRadius: '6px', borderLeft: '3px solid #3b82f6' }}>{track.remark}</div>}
                   </div>
                 ))}
                 
@@ -857,24 +866,11 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                       const r = (document.getElementById('new_track_remarks') as HTMLInputElement).value;
                       if (!d || !l) return alert('Date and Location are required to add an update');
                       
-                      const message = `Date: ${d} | Location: ${l} | Remarks: ${r}`;
-                      const { error } = await supabase
-                        .from('job_logs')
-                        .insert({
-                          job_number: decodedId,
-                          agent_name: agentName,
-                          log_type: 'Shipment Tracking',
-                          message: message
-                        });
+                      await handleAddShipmentLog(undefined, d, l, r);
                       
-                      if (!error) {
-                        fetchLogs();
-                        (document.getElementById('new_track_date') as HTMLInputElement).value = '';
-                        (document.getElementById('new_track_location') as HTMLInputElement).value = '';
-                        (document.getElementById('new_track_remarks') as HTMLInputElement).value = '';
-                      } else {
-                        alert('Failed to save shipment tracking update');
-                      }
+                      (document.getElementById('new_track_date') as HTMLInputElement).value = '';
+                      (document.getElementById('new_track_location') as HTMLInputElement).value = '';
+                      (document.getElementById('new_track_remarks') as HTMLInputElement).value = '';
                     }} style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '0.7rem 1rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 2px 8px rgba(59,130,246,0.3)', marginTop: '0.5rem' }}>+ Add Update</button>
                   </div>
                 </div>
@@ -1058,7 +1054,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           <div className={`glass ${styles.logsSection}`}>
             <h3>Notes</h3>
             
-            <form onSubmit={(e) => { e.preventDefault(); handleAddLog('Note', newNote, () => setNewNote('')); }} className={styles.addLogForm}>
+            <form onSubmit={handleAddNote} className={styles.addLogForm}>
               <div className={styles.inputWrapper}>
                 <textarea 
                   value={newNote} 
@@ -1077,7 +1073,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
             </form>
 
             <div className={styles.logsList}>
-              {logs.filter(log => log.log_type === 'Note').map((log) => (
+              {notes.map((log) => (
                 <div key={log.id} className={`${styles.logItem} ${styles.logNote}`}>
                   <div className={styles.logHeader}>
                     <span className={styles.logAgent} style={{ color: getUserColor(log.agent_name).text }}>{log.agent_name}</span>
@@ -1086,7 +1082,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   <div className={styles.logMessage}>{log.message}</div>
                 </div>
               ))}
-              {logs.filter(log => log.log_type === 'Note').length === 0 && <div className="text-muted">No notes recorded yet.</div>}
+              {notes.length === 0 && <div className="text-muted">No notes recorded yet.</div>}
             </div>
           </div>
         </div>
