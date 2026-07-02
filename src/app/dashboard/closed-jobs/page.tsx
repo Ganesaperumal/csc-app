@@ -285,10 +285,10 @@ export default function ClosedJobsPage() {
             title="Clear all filters"
             onClick={clearAllFilters}
             style={{
-              background: hasAppliedFilters ? '#fee2e2' : 'none',
+              background: hasAppliedFilters ? '#ffe5e5' : 'none',
               border: 'none',
               cursor: 'pointer',
-              color: hasAppliedFilters ? '#ef4444' : '#64748b',
+              color: hasAppliedFilters ? '#ff3b30' : '#64748b',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -296,12 +296,11 @@ export default function ClosedJobsPage() {
               borderRadius: '50%',
               transition: 'all 0.2s',
             }}
-            onMouseOver={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fee2e2'; }}
-            onMouseOut={(e) => { e.currentTarget.style.color = hasAppliedFilters ? '#ef4444' : '#64748b'; e.currentTarget.style.background = hasAppliedFilters ? '#fee2e2' : 'none'; }}
+            onMouseOver={(e) => { e.currentTarget.style.color = '#ff3b30'; e.currentTarget.style.background = '#ffe5e5'; }}
+            onMouseOut={(e) => { e.currentTarget.style.color = hasAppliedFilters ? '#ff3b30' : '#64748b'; e.currentTarget.style.background = hasAppliedFilters ? '#ffe5e5' : 'none'; }}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={hasAppliedFilters ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-              <line x1="4" y1="4" x2="20" y2="20"></line>
             </svg>
           </button>
           
