@@ -584,31 +584,25 @@ function JobsTable() {
                           setShowNotifications(false);
                           router.push('/dashboard/job/' + encodeURIComponent(n.job_number));
                         }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', alignItems: 'center' }}>
-                            <span style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.85rem' }}>{n.job_number}</span>
-                            <span style={{ fontSize: '0.7rem', color: isUrgent ? '#ef4444' : '#64748b', fontWeight: isUrgent ? 700 : 500, background: isUrgent ? '#fee2e2' : '#f1f5f9', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
-                              {n.follow_up_date ? new Date(n.follow_up_date).toLocaleDateString() : 'ASAP'}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', alignItems: 'flex-start' }}>
+                            <span style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.85rem', flex: 1, paddingRight: '0.5rem', wordBreak: 'break-word' }}>
+                              {jobDetails.customer_name || 'Unknown Customer'}
+                            </span>
+                            <span style={{ fontSize: '0.7rem', color: isUrgent ? '#ef4444' : '#64748b', fontWeight: isUrgent ? 700 : 500, background: isUrgent ? '#fee2e2' : '#f1f5f9', padding: '0.15rem 0.4rem', borderRadius: '4px', whiteSpace: 'nowrap' }}>
+                              {n.follow_up_date ? new Date(n.follow_up_date).toLocaleDateString('en-GB') : 'ASAP'}
                             </span>
                           </div>
                           
-                          <div style={{ fontSize: '0.75rem', color: '#475569', marginBottom: '0.4rem', display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                            {jobDetails.customer_name && <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>👤 {jobDetails.customer_name}</span>}
+                          <div style={{ fontSize: '0.75rem', color: '#475569', marginBottom: '0.5rem', display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <span style={{ fontWeight: 600, color: '#3b82f6' }}>#{jobDetails.erp_job_id || n.job_number.split('/')[1] || n.job_number}</span>
                             {jobDetails.branch && <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>🏢 {jobDetails.branch}</span>}
-                          </div>
-
-                          <div style={{ fontSize: '0.8rem', color: '#334155', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontStyle: 'italic', marginBottom: '0.4rem' }}>
-                            "{n.summary.split('\n')[0]}"
-                          </div>
-                          
-                          <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.7rem' }}>
-                            <span style={{ fontWeight: 600, color: n.call_type === 'Customer' ? '#d97706' : '#2563eb', background: n.call_type === 'Customer' ? '#fef3c7' : '#dbeafe', padding: '0.15rem 0.4rem', borderRadius: '10px' }}>
+                            <span style={{ fontWeight: 600, color: n.call_type === 'Customer' ? '#d97706' : '#2563eb', background: n.call_type === 'Customer' ? '#fef3c7' : '#dbeafe', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
                               {n.call_type}
                             </span>
-                            {n.regarding && (
-                              <span style={{ fontWeight: 600, color: '#475569', background: '#e2e8f0', padding: '0.15rem 0.4rem', borderRadius: '10px' }}>
-                                {n.regarding}
-                              </span>
-                            )}
+                          </div>
+
+                          <div style={{ fontSize: '0.8rem', color: '#334155', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontStyle: 'italic' }}>
+                            "{n.summary.split('\n')[0]}"
                           </div>
                         </div>
                       )
