@@ -932,7 +932,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
         <div className={styles.sidePanel}>
           {/* Communications Section */}
-          <div className={`glass ${styles.logsSection}`} style={{ flex: '7 1 0%', minHeight: 0 }}>
+          <div className={`glass ${styles.logsSection}`} style={{ flex: 7, minHeight: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
               <h3 style={{ margin: 0 }}>📞 Communications</h3>
               <button
@@ -1133,7 +1133,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
 
           {/* Notes Section */}
-          <div className={`glass ${styles.logsSection}`} style={{ flex: '3 1 0%', minHeight: 0 }}>
+          <div className={`glass ${styles.logsSection}`} style={{ flex: 3, minHeight: 0 }}>
             <h3>Notes</h3>
             
             <form onSubmit={handleAddNote} className={styles.addLogForm}>
