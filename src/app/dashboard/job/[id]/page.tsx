@@ -507,6 +507,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   </label>
                 </div>
               </div>
+              {job.operation_by === 'Outsourced' && (
+                <div className={styles.inputGroup}><label>🤝 OUTSOURCING PARTNER</label><input name="outsourcing_partner" value={job.outsourcing_partner || ''} onChange={handleChange} placeholder="Partner name" /></div>
+              )}
               <div className={styles.inputGroup}>
                 <label>🚗 CAR INCLUDED?</label>
                 <ToggleSwitch name="car_included" value={job.car_included === true} onChange={(val) => handleFieldChange('car_included', val)} />
@@ -568,6 +571,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div className={styles.inputGroup}><label>🏎️ CAR PICKUP DATE</label><DateInput name="car_pickup_date" value={job.car_pickup_date || ''} onChange={handleChange} /></div>
                   <div className={styles.inputGroup}><label>🏁 CAR DELIVERY</label><DateInput name="car_delivery_date" value={job.car_delivery_date || ''} onChange={handleChange} /></div>
+                  <div className={styles.inputGroup}><label>🚛 CAR TRANSPORTER</label><input type="text" name="car_transporter" value={job.car_transporter || ''} onChange={handleChange} placeholder="Transporter name" /></div>
                 </div>
               </div>
             </div>
@@ -585,6 +589,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <div className={styles.inputGroup}><label>📆 PACKING DATE</label><DateInput name="packing_date" value={job.packing_date || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>👔 SUPERVISOR</label><input name="packing_team_supervisor" value={job.packing_team_supervisor || ''} onChange={handleChange} list="supervisors-list" /></div>
               <div className={styles.inputGroup}><label>👷‍♂️ HANDYMAN</label><input name="handyman_origin" value={job.handyman_origin || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>📝 REMARKS ON HANDYMAN</label><input name="handyman_origin_remarks" value={job.handyman_origin_remarks || ''} onChange={handleChange} placeholder="Remarks on handyman" /></div>
               <div className={styles.inputGroup}><label>🏢 FLOOR</label><input type="number" name="origin_floor" value={job.origin_floor || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}>
                 <label>🛗 SERVICE LIFT</label>
@@ -609,6 +614,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <span className={styles.textLogistics}>Cargo Service</span>
             </h3>
             <div className={styles.grid}>
+              {/* Row 0: Vehicle Type full-width */}
+              <div className={styles.inputGroup}><label>🚗 VEHICLE TYPE</label><input type="text" name="vehicle_type" value={job.vehicle_type || ''} onChange={handleChange} placeholder="e.g. 20ft, 40ft, Trailer" /></div>
               {/* Row 1: Dispatch Date | Transit Days */}
               <div className={styles.inputGroup}><label>🚀 DISPATCH DATE</label><DateInput name="dispatch_date" value={job.dispatch_date || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>⏳ TRANSIT DAYS</label><input type="number" name="transit_days" value={job.transit_days || ''} onChange={handleChange} /></div>
@@ -655,6 +662,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               
               <div className={styles.inputGroup}><label>👔 SUPERVISOR</label><input name="dest_supervisor" value={job.dest_supervisor || ''} onChange={handleChange} list="supervisors-list" /></div>
               <div className={styles.inputGroup}><label>👷‍♂️ HANDYMAN</label><input name="handyman_destination" value={job.handyman_destination || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>📝 REMARKS ON HANDYMAN</label><input name="handyman_dest_remarks" value={job.handyman_dest_remarks || ''} onChange={handleChange} placeholder="Remarks on handyman" /></div>
               
               <div className={styles.inputGroup}>
                 <label>🛗 SERVICE LIFT</label>
@@ -683,6 +691,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               
               <div className={styles.inputGroup}><label>📝 INSTRUCTIONS</label><textarea name="dest_instructions" value={job.dest_instructions || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>📢 REFERRALS</label><textarea name="referrals" value={job.referrals || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}><label>💬 CUSTOMER FEEDBACK</label><textarea name="customer_feedback" value={job.customer_feedback || ''} onChange={handleChange} rows={4} style={{ resize: 'vertical', minHeight: '90px' }} placeholder="Customer feedback and comments..." /></div>
             </div>
           </div>
 
