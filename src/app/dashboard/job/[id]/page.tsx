@@ -240,7 +240,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const [newNote, setNewNote] = useState('');
   const [comms, setComms] = useState<any[]>([]);
   const [commForm, setCommForm] = useState({
-    call_type: 'Customer' as 'Customer' | 'Internal',
+    call_type: '' as '' | 'Customer' | 'Internal',
     regarding: '',
     summary: '',
     follow_up_required: false,
@@ -438,6 +438,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
   const handleAddComm = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!commForm.call_type) return alert('Please select a Call Type (Customer or Internal)');
     if (!commForm.summary.trim()) return;
     try {
       const { error } = await supabase
@@ -452,7 +453,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           follow_up_date: commForm.follow_up_required && commForm.follow_up_date ? commForm.follow_up_date : null
         });
       if (error) throw error;
-      setCommForm({ call_type: 'Customer', regarding: '', summary: '', follow_up_required: false, follow_up_date: '' });
+      setCommForm({ call_type: '', regarding: '', summary: '', follow_up_required: false, follow_up_date: '' });
       setCommFormOpen(false);
       fetchComms();
       fetchJobDetails();
