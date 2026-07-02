@@ -256,6 +256,8 @@
   flex-direction: column;
   position: sticky;
   top: 1rem;
+  height: calc(100vh - 160px);
+  gap: 1.5rem;
 }
 
 .logsSection {
@@ -263,7 +265,6 @@
   border-radius: 16px;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 160px);
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(24px);
   border: 1px solid rgba(148, 163, 184, 0.2);

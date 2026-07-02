@@ -932,7 +932,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
         <div className={styles.sidePanel}>
           {/* Communications Section */}
-          <div className={`glass ${styles.logsSection}`} style={{ marginBottom: '1.5rem' }}>
+          <div className={`glass ${styles.logsSection}`} style={{ flex: '7 1 0%', minHeight: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
               <h3 style={{ margin: 0 }}>📞 Communications</h3>
               <button
@@ -1077,10 +1077,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                           let isFuture = false;
                           
                           if (!isCompleted && c.follow_up_date) {
-                            const fDate = new Date(c.follow_up_date);
                             const today = new Date();
-                            today.setHours(0,0,0,0);
-                            if (fDate <= today) isUrgent = true;
+                            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                            if (c.follow_up_date <= todayStr) isUrgent = true;
                             else isFuture = true;
                           } else if (!isCompleted && !c.follow_up_date) {
                             isUrgent = true;
@@ -1134,7 +1133,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
 
           {/* Notes Section */}
-          <div className={`glass ${styles.logsSection}`}>
+          <div className={`glass ${styles.logsSection}`} style={{ flex: '3 1 0%', minHeight: 0 }}>
             <h3>Notes</h3>
             
             <form onSubmit={handleAddNote} className={styles.addLogForm}>
