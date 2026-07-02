@@ -232,7 +232,7 @@ function JobsTable() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const currentView = searchParams.get('view') || 'active';
+  // Search params hook could be removed if unused, but we'll leave useSearchParams if other things need it
 
   useEffect(() => {
     const saved = localStorage.getItem('csc_visible_columns');
@@ -310,7 +310,7 @@ function JobsTable() {
 
   useEffect(() => {
     fetchJobs();
-  }, [currentView, typeFilter]);
+  }, [typeFilter]);
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -318,15 +318,9 @@ function JobsTable() {
       let query = supabase
         .from('jobs')
         .select('*')
+        // Exclude clearly cancelled jobs to reduce payload size
+        .not('erp_status', 'ilike', '%cancel%')
         .order('erp_job_id', { ascending: false, nullsFirst: false });
-        
-      if (currentView === 'billed') {
-        query = query.ilike('erp_status', 'Billed');
-      } else if (currentView === 'cancelled') {
-        query = query.ilike('erp_status', 'Canceled');
-      } else if (currentView === 'active') {
-        query = query.not('erp_status', 'in', '("Billed","Canceled")');
-      }
 
       if (typeFilter === 'HHG') {
         query = query.ilike('goods_type', '%Household%');
@@ -337,7 +331,28 @@ function JobsTable() {
       const { data, error } = await query;
 
       if (error) throw error;
-      setJobs(data || []);
+      
+      const activeJobs = (data || []).filter(job => {
+        // If it's cancelled, it shouldn't be here (already filtered in SQL, but just in case)
+        if (job.erp_status?.toLowerCase().includes('cancel')) return false;
+
+        // If it's not billed, it's definitely active
+        const isBilled = job.erp_status?.toLowerCase() === 'billed';
+        if (!isBilled) return true;
+
+        // If it IS billed, we check completion status
+        const goodsCompleted = job.goods_track_status === '22. Job Completed';
+        const carIncluded = job.car_included === true || job.car_included === 'Yes' || job.car_included === 'yes';
+
+        if (!carIncluded) {
+          return !goodsCompleted; // Active if goods NOT completed
+        } else {
+          const carCompleted = job.car_track_status === '16. Job Completed';
+          return !(goodsCompleted && carCompleted); // Active if EITHER is NOT completed
+        }
+      });
+      
+      setJobs(activeJobs);
     } catch (error: any) {
       console.error('Error fetching jobs:', error.message);
     } finally {
@@ -408,8 +423,6 @@ function JobsTable() {
   };
 
   const getTitle = () => {
-    if (currentView === 'billed') return 'Billed Jobs Dashboard';
-    if (currentView === 'cancelled') return 'Cancelled Jobs Dashboard';
     return 'Active Jobs Dashboard';
   };
   return (

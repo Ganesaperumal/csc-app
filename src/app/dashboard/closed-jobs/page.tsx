@@ -180,7 +180,27 @@ export default function ClosedJobsPage() {
       else if (typeFilter === 'COM') query = query.ilike('goods_type', '%Commercial%');
       const { data, error } = await query;
       if (error) throw error;
-      setJobs(data || []);
+      
+      const closedJobs = (data || []).filter(job => {
+        // Canceled jobs are always closed
+        if (job.erp_status?.toLowerCase().includes('cancel')) return true;
+        
+        // If not billed, it's not closed (shouldn't happen with the SQL filter, but to be safe)
+        if (job.erp_status?.toLowerCase() !== 'billed') return false;
+        
+        // For billed jobs, check completion status
+        const goodsCompleted = job.goods_track_status === '22. Job Completed';
+        const carIncluded = job.car_included === true || job.car_included === 'Yes' || job.car_included === 'yes';
+        
+        if (!carIncluded) {
+          return goodsCompleted;
+        } else {
+          const carCompleted = job.car_track_status === '16. Job Completed';
+          return goodsCompleted && carCompleted;
+        }
+      });
+      
+      setJobs(closedJobs);
     } catch (err: any) {
       console.error('Error fetching closed jobs:', err.message);
     } finally {

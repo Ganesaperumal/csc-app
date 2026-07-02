@@ -85,7 +85,11 @@ export async function POST(request: Request) {
         });
       } else {
         // Insert all data for new jobs
-        const newJob = { ...job };
+        const newJob = { 
+          ...job,
+          goods_track_status: '00. New Order',
+          car_track_status: '00. New Order'
+        };
         if (job.company && spocMap[job.company]) {
           (newJob as any).spoc_name = spocMap[job.company];
         }

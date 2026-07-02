@@ -50,6 +50,7 @@ const ToggleSwitch = ({ name, value, onChange }: { name: string, value: any, onC
 };
 
 const GOODS_TRACK_OPTIONS = [
+  "00. New Order",
   "01. Packing Not Scheduled",
   "02. Packing Scheduled",
   "03. Packing in Progress",
@@ -67,20 +68,19 @@ const GOODS_TRACK_OPTIONS = [
   "15. JTR Collected",
   "16. Complaints",
   "17. Damages",
-  "18. Customer Ratings",
-  "19. POD Sent to branch",
-  "20. Job # taken for Billing ",
+  "18. Issues Resolved",
+  "19. Customer Ratings",
+  "20. POD Sent to branch",
   "21. Storage",
   "22. Job Completed",
   "23. Job # taken for Billing",
-  "24. Damage solved",
-  "25. Customer Cancelled",
-  "26. Job # to be Cancelled",
-  "27. Billing Pending",
-  "28. Free Job"
+  "24. Customer Cancelled",
+  "25. Job # to be Cancelled",
+  "26. Billing Pending"
 ];
 
 const CAR_TRACK_OPTIONS = [
+  "00. New Order",
   "01. Car Pickup Not Scheduled",
   "02. Car Pickup Scheduled",
   "03. Car Picked",
@@ -95,7 +95,8 @@ const CAR_TRACK_OPTIONS = [
   "12. Complaints",
   "13. Damages",
   "14. POD Sent to the branch",
-  "15. Damage Resolved"
+  "15. Damage Resolved",
+  "16. Job Completed"
 ];
 
 const StatusSlider = ({ name, options, value, onChange }: { name: string, options: string[], value: any, onChange: (e: any) => void }) => {
@@ -756,7 +757,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           <div className={styles.verticalSteps}>
             {GOODS_TRACK_OPTIONS.map((option, idx) => {
               const isActive = job.goods_track_status === option;
-              const currentIndex = GOODS_TRACK_OPTIONS.indexOf(job.goods_track_status || '01. Packing Not Scheduled');
+              const currentIndex = GOODS_TRACK_OPTIONS.indexOf(job.goods_track_status || '00. New Order');
               const isCompleted = idx <= currentIndex;
               return (
                 <div 
