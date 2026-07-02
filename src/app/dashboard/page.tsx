@@ -76,11 +76,27 @@ function ColumnFilterDropdown({
   onSort: (direction: 'asc' | 'desc') => void,
   currentSort: 'asc' | 'desc' | null
 }) {
+  const dateColumns = ['job_date', 'packing_date', 'dispatch_date', 'expected_to_reach_dest', 'reached_destination', 'planned_delivery', 'actual_delivery', 'car_pickup_date', 'car_delivery_date', 'follow_up_date', 'last_comm_date', 'invoice_date'];
+
+  const getDisplayValue = (val: any) => {
+    if (dateColumns.includes(colId) && val) {
+      const date = new Date(val);
+      if (!isNaN(date.getTime())) {
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const dd = String(date.getDate()).padStart(2, '0');
+        const mmm = months[date.getMonth()];
+        const yy = String(date.getFullYear()).slice(-2);
+        return `${dd}-${mmm}-${yy}`;
+      }
+    }
+    return String(val);
+  };
+
   const allUniqueValues = Array.from(new Set(jobs.map(j => j[colId]).filter(v => v !== null && v !== undefined && v !== ''))).sort();
   
   const [searchQuery, setSearchQuery] = useState('');
 
-  const displayedValues = allUniqueValues.filter(val => String(val).toLowerCase().includes(searchQuery.toLowerCase()));
+  const displayedValues = allUniqueValues.filter(val => getDisplayValue(val).toLowerCase().includes(searchQuery.toLowerCase()));
 
   const handleSelectAll = () => onApply(allUniqueValues as string[]);
   const handleClear = () => onApply([]);
@@ -120,7 +136,7 @@ function ColumnFilterDropdown({
         />
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
       </div>
-
+      
       <div className={styles.gsFilterList}>
         {displayedValues.length === 0 ? (
           <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-secondary)' }}>No matches</div>
@@ -132,7 +148,7 @@ function ColumnFilterDropdown({
                 <div className={styles.gsCheckbox}>
                   {isChecked && <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f472b6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
                 </div>
-                <span>{val as string}</span>
+                <span>{getDisplayValue(val)}</span>
               </div>
             );
           })
