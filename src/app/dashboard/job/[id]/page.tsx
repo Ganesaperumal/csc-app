@@ -241,8 +241,6 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const [commForm, setCommForm] = useState({
     call_type: 'Customer' as 'Customer' | 'Internal',
     regarding: 'Pre-Packing',
-    contact_person: '',
-    contact_number: '',
     summary: '',
     follow_up_required: false,
     follow_up_date: ''
@@ -453,14 +451,12 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           agent_name: agentName,
           call_type: commForm.call_type,
           regarding: commForm.regarding,
-          contact_person: commForm.contact_person || null,
-          contact_number: commForm.contact_number || null,
           summary: commForm.summary,
           follow_up_required: commForm.follow_up_required,
           follow_up_date: commForm.follow_up_required && commForm.follow_up_date ? commForm.follow_up_date : null
         });
       if (error) throw error;
-      setCommForm({ call_type: 'Customer', regarding: 'Pre-Packing', contact_person: '', contact_number: '', summary: '', follow_up_required: false, follow_up_date: '' });
+      setCommForm({ call_type: 'Customer', regarding: 'Pre-Packing', summary: '', follow_up_required: false, follow_up_date: '' });
       setCommFormOpen(false);
       fetchComms();
       fetchJobDetails();
@@ -955,23 +951,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                     </select>
                   </div>
                 </div>
-                {/* Row 2: Contact Person & Number */}
-                <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1, minWidth: '140px' }}>
-                    <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem', display: 'block' }}>Contact Person</label>
-                    <input type="text" placeholder="Name" value={commForm.contact_person}
-                      onChange={e => setCommForm(f => ({ ...f, contact_person: e.target.value }))}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', fontSize: '0.85rem', background: 'rgba(255,255,255,0.9)', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                  <div style={{ flex: 1, minWidth: '140px' }}>
-                    <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem', display: 'block' }}>Contact Number</label>
-                    <input type="tel" placeholder="Phone" value={commForm.contact_number}
-                      onChange={e => setCommForm(f => ({ ...f, contact_number: e.target.value }))}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', fontSize: '0.85rem', background: 'rgba(255,255,255,0.9)', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                </div>
+
                 {/* Row 3: Summary */}
                 <div>
                   <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem', display: 'block' }}>Call Summary *</label>
@@ -1049,12 +1029,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                           {new Date(c.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true })}
                         </span>
                       </div>
-                      {(c.contact_person || c.contact_number) && (
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '0.35rem', display: 'flex', gap: '0.7rem', flexWrap: 'wrap' }}>
-                          {c.contact_person && <span>👤 {c.contact_person}</span>}
-                          {c.contact_number && <span>📱 {c.contact_number}</span>}
-                        </div>
-                      )}
+
                       <div className={styles.logMessage}>{c.summary}</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.4rem' }}>
                         <span className={styles.logAgent} style={{ color: getUserColor(c.agent_name).text }}>{c.agent_name}</span>
