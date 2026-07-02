@@ -15,6 +15,11 @@ const formatDate = (dateStr: string) => {
   return `${day}-${month}-${year}`;
 };
 
+const toProperCase = (str: string) => {
+  if (!str) return '';
+  return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+};
+
 const DateInput = ({ name, value, onChange }: { name: string, value: string, onChange: (e: any) => void }) => {
   const [isFocused, setIsFocused] = useState(false);
   const displayValue = (!isFocused && value) ? formatDate(value) : value;
@@ -238,6 +243,24 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const [newShipmentLocation, setNewShipmentLocation] = useState('');
   const [agentName, setAgentName] = useState('Agent');
   const [supervisors, setSupervisors] = useState<string[]>([]);
+
+  const trackingLogs = logs
+    .filter(log => log.log_type === 'Shipment Tracking')
+    .map(log => {
+      const msg = log.message || '';
+      const dateMatch = msg.match(/Date:\s*([^|]+)/);
+      const locMatch = msg.match(/Location:\s*([^|]+)/);
+      const remMatch = msg.match(/Remarks:\s*(.*)/);
+      
+      return {
+        id: log.id,
+        date: dateMatch ? dateMatch[1].trim() : '',
+        location: locMatch ? locMatch[1].trim() : '',
+        remarks: remMatch ? remMatch[1].trim() : '',
+        rawDate: dateMatch ? new Date(dateMatch[1].trim()) : new Date(0)
+      };
+    })
+    .sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
 
   useEffect(() => {
     // Fetch the real username from profiles table
@@ -484,7 +507,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                 <defs><linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#60a5fa" /><stop offset="100%" stopColor="#a78bfa" /></linearGradient></defs>
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line>
               </svg>
-              <span className={styles.textPrimary}>Primary Details</span>
+              <span className={styles.textPrimary}>Customer Details</span>
             </h3>
             <div className={styles.grid}>
               <div className={styles.inputGroup}><label>👤 NAME</label><input name="customer_name" value={job.customer_name || ''} onChange={handleChange} /></div>
@@ -494,30 +517,6 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <div className={styles.inputGroup}><label>🛫 ORIGIN</label><input name="origin" value={job.origin || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>🛬 DESTINATION</label><input name="destination" value={job.destination || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>🎯 SPOC</label><input name="spoc_name" value={job.spoc_name || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}>
-                <label>🤝 OPERATION BY</label>
-                <div style={{ display: 'flex', gap: '1.5rem', flexGrow: 1, alignItems: 'center' }}>
-                  <label style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', textTransform: 'none', fontSize: '0.9rem', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 400 }}>
-                    <input type="radio" name="operation_by" value="TI" checked={job.operation_by === 'TI'} onChange={handleChange} style={{ width: '16px', height: '16px', margin: 0, cursor: 'pointer', accentColor: '#4f46e5' }} /> 
-                    TI
-                  </label>
-                  <label style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', textTransform: 'none', fontSize: '0.9rem', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 400 }}>
-                    <input type="radio" name="operation_by" value="Outsourced" checked={job.operation_by === 'Outsourced'} onChange={handleChange} style={{ width: '16px', height: '16px', margin: 0, cursor: 'pointer', accentColor: '#4f46e5' }} /> 
-                    Outsourced
-                  </label>
-                </div>
-              </div>
-              {job.operation_by === 'Outsourced' && (
-                <div className={styles.inputGroup}><label>🤝 OUTSOURCING PARTNER</label><input name="outsourcing_partner" value={job.outsourcing_partner || ''} onChange={handleChange} placeholder="Partner name" /></div>
-              )}
-              <div className={styles.inputGroup}>
-                <label>🚗 CAR INCLUDED?</label>
-                <ToggleSwitch name="car_included" value={job.car_included === true} onChange={(val) => handleFieldChange('car_included', val)} />
-              </div>
-              <div className={styles.inputGroup}>
-                <label>🏋️‍♂️ HEAVY ITEMS</label>
-                <ToggleSwitch name="heavy_items" value={job.heavy_items === true || job.heavy_items === 'Yes'} onChange={(val) => handleFieldChange('heavy_items', val)} />
-              </div>
               {/* ERP-synced invoice fields — read-only, shown only when erp_status is Billed */}
               {job.erp_status?.toLowerCase() === 'billed' && (
                 <>
@@ -531,6 +530,77 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   </div>
                 </>
               )}
+            </div>
+          </div>
+
+          <div className={`glass ${styles.section} ${styles.sectionPrimary}`}>
+            <h3>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="url(#operationGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <defs><linearGradient id="operationGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#a78bfa" /><stop offset="100%" stopColor="#ec4899" /></linearGradient></defs>
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+              </svg>
+              <span style={{ background: 'linear-gradient(90deg, #a78bfa, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontWeight: 600 }}>Operation Site Details</span>
+            </h3>
+            <div className={styles.grid}>
+              <div className={styles.inputGroup}>
+                <label>🤝 OPERATION BY</label>
+                <div style={{ display: 'flex', gap: '1.5rem', flexGrow: 1, alignItems: 'center' }}>
+                  <label style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', textTransform: 'none', fontSize: '0.9rem', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 400 }}>
+                    <input type="radio" name="operation_by" value="TI" checked={job.operation_by === 'TI'} onChange={handleChange} style={{ width: '16px', height: '16px', margin: 0, cursor: 'pointer', accentColor: '#4f46e5' }} /> 
+                    TI
+                  </label>
+                  <label style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', textTransform: 'none', fontSize: '0.9rem', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 400 }}>
+                    <input type="radio" name="operation_by" value="Outsourced" checked={job.operation_by === 'Outsourced'} onChange={handleChange} style={{ width: '16px', height: '16px', margin: 0, cursor: 'pointer', accentColor: '#4f46e5' }} /> 
+                    Outsourced
+                  </label>
+                </div>
+              </div>
+              <div className={styles.inputGroup}>
+                <label style={job.operation_by !== 'Outsourced' ? { opacity: 0.6 } : undefined}>🤝 OUTSOURCING PARTNER</label>
+                <input 
+                  name="outsourcing_partner" 
+                  value={job.operation_by === 'Outsourced' ? (job.outsourcing_partner || '') : ''} 
+                  onChange={handleChange} 
+                  disabled={job.operation_by !== 'Outsourced'} 
+                  placeholder={job.operation_by === 'Outsourced' ? "Partner name" : "N/A"} 
+                  style={job.operation_by !== 'Outsourced' ? { opacity: 0.6, cursor: 'not-allowed', background: 'rgba(255, 255, 255, 0.3)' } : undefined}
+                />
+              </div>
+              <div className={styles.inputGroup}>
+                <label>🚗 CAR INCLUDED?</label>
+                <ToggleSwitch name="car_included" value={job.car_included === true} onChange={(val) => handleFieldChange('car_included', val)} />
+              </div>
+              <div className={styles.inputGroup}>
+                <label>🏋️‍♂️ HEAVY ITEMS</label>
+                <ToggleSwitch name="heavy_items" value={job.heavy_items === true || job.heavy_items === 'Yes'} onChange={(val) => handleFieldChange('heavy_items', val)} />
+              </div>
+
+              {/* Subheadings for site details */}
+              <div style={{ gridColumn: '1', fontWeight: 'bold', fontSize: '0.9rem', color: '#8b5cf6', textTransform: 'uppercase', borderBottom: '1px solid rgba(139, 92, 246, 0.2)', paddingBottom: '0.3rem', marginTop: '0.6rem', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                🛫 ORIGIN SITE:
+              </div>
+              <div style={{ gridColumn: '2', fontWeight: 'bold', fontSize: '0.9rem', color: '#ec4899', textTransform: 'uppercase', borderBottom: '1px solid rgba(236, 72, 153, 0.2)', paddingBottom: '0.3rem', marginTop: '0.6rem', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                🛬 DESTINATION SITE:
+              </div>
+
+              <div className={styles.inputGroup}><label>🏢 FLOOR</label><input type="number" name="origin_floor" value={job.origin_floor || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>🏢 FLOOR</label><input type="number" name="dest_floor" value={job.dest_floor || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}>
+                <label>🛗 SERVICE LIFT</label>
+                <ToggleSwitch name="origin_service_lift" value={job.origin_service_lift === true || job.origin_service_lift === 'Yes'} onChange={(val) => handleFieldChange('origin_service_lift', val)} />
+              </div>
+              <div className={styles.inputGroup}>
+                <label>🛗 SERVICE LIFT</label>
+                <ToggleSwitch name="dest_service_lift" value={job.dest_service_lift === true || job.dest_service_lift === 'Yes'} onChange={(val) => handleFieldChange('dest_service_lift', val)} />
+              </div>
+              <div className={styles.inputGroup}>
+                <label>🅿️ PARKING</label>
+                <ToggleSwitch name="origin_parking" value={job.origin_parking === true || job.origin_parking === 'Yes'} onChange={(val) => handleFieldChange('origin_parking', val)} />
+              </div>
+              <div className={styles.inputGroup}>
+                <label>🅿️ PARKING</label>
+                <ToggleSwitch name="dest_parking" value={job.dest_parking === true || job.dest_parking === 'Yes'} onChange={(val) => handleFieldChange('dest_parking', val)} />
+              </div>
             </div>
           </div>
 
@@ -590,15 +660,6 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <div className={styles.inputGroup}><label>👔 SUPERVISOR</label><input name="packing_team_supervisor" value={job.packing_team_supervisor || ''} onChange={handleChange} list="supervisors-list" /></div>
               <div className={styles.inputGroup}><label>👷‍♂️ HANDYMAN</label><input name="handyman_origin" value={job.handyman_origin || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>📝 REMARKS ON HANDYMAN</label><input name="handyman_origin_remarks" value={job.handyman_origin_remarks || ''} onChange={handleChange} placeholder="Remarks on handyman" /></div>
-              <div className={styles.inputGroup}><label>🏢 FLOOR</label><input type="number" name="origin_floor" value={job.origin_floor || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}>
-                <label>🛗 SERVICE LIFT</label>
-                <ToggleSwitch name="origin_service_lift" value={job.origin_service_lift === true || job.origin_service_lift === 'Yes'} onChange={(val) => handleFieldChange('origin_service_lift', val)} />
-              </div>
-              <div className={styles.inputGroup}>
-                <label>🅿️ PARKING</label>
-                <ToggleSwitch name="origin_parking" value={job.origin_parking === true || job.origin_parking === 'Yes'} onChange={(val) => handleFieldChange('origin_parking', val)} />
-              </div>
               <div className={styles.inputGroup}><label>⌚ COMMITTED TIME</label><input type="time" name="committed_time" value={job.committed_time || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>⏱️ REPORTED TIME</label><input type="time" name="reported_time" value={job.reported_time || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>📝 INSTRUCTIONS</label><textarea name="origin_instructions" value={job.origin_instructions || ''} onChange={handleChange} /></div>
@@ -614,41 +675,32 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <span className={styles.textLogistics}>Cargo Service</span>
             </h3>
             <div className={styles.grid}>
-              {/* Row 0: Vehicle Type full-width */}
-              <div className={styles.inputGroup}><label>🚗 VEHICLE TYPE</label><input type="text" name="vehicle_type" value={job.vehicle_type || ''} onChange={handleChange} placeholder="e.g. 20ft, 40ft, Trailer" /></div>
-              {/* Row 1: Dispatch Date | Transit Days */}
               <div className={styles.inputGroup}><label>🚀 DISPATCH DATE</label><DateInput name="dispatch_date" value={job.dispatch_date || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>⏳ TRANSIT DAYS</label><input type="number" name="transit_days" value={job.transit_days || ''} onChange={handleChange} /></div>
 
-              {/* Row 2: Shipment Type | Pre-Alert */}
+              <div className={styles.inputGroup}><label>🚗 VEHICLE TYPE</label><input type="text" name="vehicle_type" value={job.vehicle_type || ''} onChange={handleChange} placeholder="e.g. 20ft, 40ft, Trailer" /></div>
               <div className={styles.inputGroup}><label>🚚 SHIPMENT TYPE</label><input type="text" name="shipment_type" value={job.shipment_type || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>🔔 PRE-ALERT</label><input type="text" name="pre_alert_status" value={job.pre_alert_status || ''} onChange={handleChange} /></div>
 
-              {/* Row 3: Truck Number | Driver Details */}
               <div className={styles.inputGroup}><label>🚛 TRUCK NUMBER</label><input type="text" name="truck_number" value={job.truck_number || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>👨‍✈️ DRIVER DETAILS</label><input type="text" name="driver_details" value={job.driver_details || ''} onChange={handleChange} placeholder="e.g. Ram - 9876543210" /></div>
 
-              {/* Row 4: Expected Reaching Date | Actual Reached Date */}
               <div className={styles.inputGroup}><label>🎯 EXPECTED REACHING DATE</label><DateInput name="expected_to_reach_dest" value={job.expected_to_reach_dest || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>🏁 ACTUAL REACHED DATE</label><DateInput name="reached_destination" value={job.reached_destination || ''} onChange={handleChange} /></div>
 
-              {/* Row 5: Deviation | Reason */}
               <div className={styles.inputGroup}>
                 <label>⚠️ DEVIATION</label>
                 <ToggleSwitch name="deviation" value={job.deviation === true} onChange={(val) => handleFieldChange('deviation', val)} />
               </div>
               <div className={styles.inputGroup}><label>✍️ REASON</label><input name="deviation_reason" value={job.deviation_reason || ''} onChange={handleChange} /></div>
 
-              {/* Row 6: Remarks full-width */}
-              <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}>
-                <label>💬 REMARKS</label>
-                <textarea name="remarks" value={job.remarks || ''} onChange={handleChange} rows={3} style={{ resize: 'vertical', minHeight: '72px' }} />
-              </div>
+              <div className={styles.inputGroup}><label>🔔 PRE-ALERT</label><input type="text" name="pre_alert_status" value={job.pre_alert_status || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>💬 REMARKS</label><input type="text" name="remarks" value={job.remarks || ''} onChange={handleChange} placeholder="Remarks" /></div>
             </div>
+
 
           </div>
 
-          <div className={`glass ${styles.section} ${styles.sectionPrimary}`} style={{ borderLeftColor: '#34d399' }}>
+          <div className={`glass ${styles.section} ${styles.sectionPrimary}`}>
             <h3>
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="url(#destGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <defs><linearGradient id="destGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#10b981" /><stop offset="100%" stopColor="#0ea5e9" /></linearGradient></defs>
@@ -665,16 +717,6 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <div className={styles.inputGroup}><label>📝 REMARKS ON HANDYMAN</label><input name="handyman_dest_remarks" value={job.handyman_dest_remarks || ''} onChange={handleChange} placeholder="Remarks on handyman" /></div>
               
               <div className={styles.inputGroup}>
-                <label>🛗 SERVICE LIFT</label>
-                <ToggleSwitch name="dest_service_lift" value={job.dest_service_lift === true || job.dest_service_lift === 'Yes'} onChange={(val) => handleFieldChange('dest_service_lift', val)} />
-              </div>
-              <div className={styles.inputGroup}>
-                <label>🅿️ PARKING</label>
-                <ToggleSwitch name="dest_parking" value={job.dest_parking === true || job.dest_parking === 'Yes'} onChange={(val) => handleFieldChange('dest_parking', val)} />
-              </div>
-              
-              <div className={styles.inputGroup}><label>🏢 FLOOR</label><input type="number" name="dest_floor" value={job.dest_floor || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}>
                 <label>🚨 INCIDENTS</label>
                 <select name="incidents" value={job.incidents || ''} onChange={handleChange}>
                   <option value="">None</option>
@@ -682,14 +724,25 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   <option value="Complaints">Complaints</option>
                 </select>
               </div>
-              
+              <div className={styles.inputGroup}><label>📝 INSTRUCTIONS</label><textarea name="dest_instructions" value={job.dest_instructions || ''} onChange={handleChange} /></div>
+            </div>
+          </div>
+
+          <div className={`glass ${styles.section} ${styles.sectionPrimary}`}>
+            <h3>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="url(#feedbackGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <defs><linearGradient id="feedbackGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#f43f5e" /><stop offset="100%" stopColor="#eab308" /></linearGradient></defs>
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+              </svg>
+              <span style={{ background: 'linear-gradient(90deg, #f43f5e, #eab308)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontWeight: 600 }}>Customer Service</span>
+            </h3>
+            <div className={styles.grid}>
               <div className={styles.inputGroup}><label>💯 JTR %</label><input type="number" name="jtr_percentage" value={job.jtr_percentage || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}>
                 <label>⭐ GOOGLE REVIEW</label>
                 <ToggleSwitch name="google_review_taken" value={job.google_review_taken === true || job.google_review_taken === 'Yes'} onChange={(val) => handleFieldChange('google_review_taken', val)} />
               </div>
               
-              <div className={styles.inputGroup}><label>📝 INSTRUCTIONS</label><textarea name="dest_instructions" value={job.dest_instructions || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>📢 REFERRALS</label><textarea name="referrals" value={job.referrals || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}><label>💬 CUSTOMER FEEDBACK</label><textarea name="customer_feedback" value={job.customer_feedback || ''} onChange={handleChange} rows={4} style={{ resize: 'vertical', minHeight: '90px' }} placeholder="Customer feedback and comments..." /></div>
             </div>
@@ -722,85 +775,79 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
           {/* Shipment Tracking Section */}
           <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(148, 163, 184, 0.2)' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 1rem 0', color: '#f59e0b', textTransform: 'uppercase', display: 'flex', alignItems: 'center' }}>
-              <span style={{ marginRight: '8px' }}>🚚</span>
-              Shipment Tracking
-            </h3>
-            
-            <form onSubmit={handleAddShipmentLog} className={styles.addLogForm}>
-              <div className={styles.inputWrapper} style={{ flexDirection: 'column', gap: '8px' }}>
-                <input 
-                  type="date" 
-                  value={newShipmentDate} 
-                  onChange={(e) => setNewShipmentDate(e.target.value)} 
-                  required
-                  style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'rgba(255, 255, 255, 0.5)', fontFamily: 'inherit' }}
-                />
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input 
-                    type="text"
-                    value={newShipmentLocation} 
-                    onChange={(e) => setNewShipmentLocation(e.target.value)} 
-                    placeholder="Enter location/status update..."
-                    required
-                    style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'rgba(255, 255, 255, 0.5)', fontFamily: 'inherit' }}
-                  />
-                  <button type="submit" className={`${styles.sendButton} ${styles.sendButtonShipment}`} title="Save Shipment Update" style={{ position: 'static', borderRadius: '4px', width: '36px', height: '36px', flexShrink: 0 }}>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
-                      <line x1="22" y1="2" x2="11" y2="13"></line>
-                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
-                  </button>
+            {/* Visual Tracking Timeline */}
+            <div style={{ marginTop: '1rem' }}>
+              <h4 style={{ color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                Shipment Tracking
+              </h4>
+              
+              <div style={{ position: 'relative', paddingLeft: '2.5rem', margin: '0 auto', maxWidth: '300px' }}>
+                {/* Vertical Line */}
+                <div style={{ position: 'absolute', left: '7px', top: '10px', bottom: '20px', width: '2px', background: 'linear-gradient(to bottom, #f59e0b, #3b82f6)' }}></div>
+                
+                {/* Origin Point */}
+                <div style={{ position: 'relative', marginBottom: '2rem' }}>
+                  <div style={{ position: 'absolute', left: '-2.5rem', top: '2px', width: '16px', height: '16px', borderRadius: '50%', background: '#f59e0b', border: '3px solid white', boxShadow: '0 0 0 1px #f59e0b', zIndex: 2 }}></div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>Origin (Dispatch)</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                    {job.dispatch_date ? formatDate(job.dispatch_date) : 'Pending Date'} • {job.origin ? toProperCase(job.origin) : 'Pending Origin'}
+                  </div>
+                </div>
+
+                {/* Tracking Updates (Middle Points) */}
+                {trackingLogs.map((track: any) => (
+                  <div key={track.id} style={{ position: 'relative', marginBottom: '2rem' }}>
+                    <div style={{ position: 'absolute', left: '-2.5rem', top: '2px', width: '16px', height: '16px', borderRadius: '50%', background: '#3b82f6', border: '3px solid white', boxShadow: '0 0 0 1px #3b82f6', zIndex: 2 }}></div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>{track.location ? toProperCase(track.location) : ''}</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>{track.date ? formatDate(track.date) : ''}</div>
+                    {track.remarks && <div style={{ fontSize: '0.85rem', color: '#64748b', fontStyle: 'italic', marginTop: '0.4rem', padding: '0.5rem 0.7rem', background: 'rgba(0,0,0,0.02)', borderRadius: '6px', borderLeft: '3px solid #3b82f6' }}>{track.remarks}</div>}
+                  </div>
+                ))}
+                
+                <div style={{ position: 'relative', marginBottom: '2.5rem', background: 'rgba(255,255,255,0.6)', padding: '1.2rem', borderRadius: '12px', border: '1px dashed rgba(148, 163, 184, 0.5)', width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ position: 'absolute', left: '-3.7rem', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', borderRadius: '50%', background: 'transparent', border: '2px dashed #94a3b8', zIndex: 2 }}></div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', width: '100%' }}>
+                    <input type="date" id="new_track_date" style={{ padding: '0.6rem', fontSize: '0.85rem', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.3)' }} />
+                    <input type="text" id="new_track_location" placeholder="Current Location" style={{ padding: '0.6rem', fontSize: '0.85rem', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.3)' }} />
+                    <input type="text" id="new_track_remarks" placeholder="Status / Remarks (optional)" style={{ padding: '0.6rem', fontSize: '0.85rem', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.3)' }} />
+                    <button type="button" onClick={async () => {
+                      const d = (document.getElementById('new_track_date') as HTMLInputElement).value;
+                      const l = (document.getElementById('new_track_location') as HTMLInputElement).value;
+                      const r = (document.getElementById('new_track_remarks') as HTMLInputElement).value;
+                      if (!d || !l) return alert('Date and Location are required to add an update');
+                      
+                      const message = `Date: ${d} | Location: ${l} | Remarks: ${r}`;
+                      const { error } = await supabase
+                        .from('job_logs')
+                        .insert({
+                          job_number: decodedId,
+                          agent_name: agentName,
+                          log_type: 'Shipment Tracking',
+                          message: message
+                        });
+                      
+                      if (!error) {
+                        fetchLogs();
+                        (document.getElementById('new_track_date') as HTMLInputElement).value = '';
+                        (document.getElementById('new_track_location') as HTMLInputElement).value = '';
+                        (document.getElementById('new_track_remarks') as HTMLInputElement).value = '';
+                      } else {
+                        alert('Failed to save shipment tracking update');
+                      }
+                    }} style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '0.7rem 1rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 2px 8px rgba(59,130,246,0.3)', marginTop: '0.5rem' }}>+ Add Update</button>
+                  </div>
+                </div>
+
+                {/* Destination Point */}
+                <div style={{ position: 'relative' }}>
+                  <div style={{ position: 'absolute', left: '-2.5rem', top: '2px', width: '16px', height: '16px', borderRadius: '50%', background: job.reached_destination ? '#10b981' : '#cbd5e1', border: '3px solid white', boxShadow: `0 0 0 1px ${job.reached_destination ? '#10b981' : '#cbd5e1'}`, zIndex: 2 }}></div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>Destination {job.reached_destination ? '(Reached)' : '(Expected)'}</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                    {job.reached_destination ? `Reached: ${formatDate(job.reached_destination)}` : (job.expected_to_reach_dest ? `Expected: ${formatDate(job.expected_to_reach_dest)}` : 'Pending Date')} • {job.destination ? toProperCase(job.destination) : 'Pending Destination'}
+                  </div>
                 </div>
               </div>
-            </form>
-
-            <div className={styles.logsList} style={{ maxHeight: '250px', overflowY: 'auto', marginTop: '1rem', paddingRight: '4px' }}>
-              {logs
-                .filter(log => log.log_type === 'Shipment Tracking' || log.log_type === 'Truck Tracking')
-                .sort((a, b) => {
-                  const getTimestamp = (log: any) => {
-                    const match = log.message.match(/Date:\s*(.*?)\s*\|/i);
-                    if (match) {
-                      const d = new Date(match[1]);
-                      if (!isNaN(d.getTime())) return d.getTime();
-                    }
-                    return new Date(log.created_at).getTime();
-                  };
-                  return getTimestamp(b) - getTimestamp(a);
-                })
-                .map((log) => {
-                let displayDate = '';
-                let displayLoc = log.message;
-                
-                const match = log.message.match(/Date:\s*(.*?)\s*\|\s*Location:\s*(.*)/i);
-                if (match) {
-                  const d = new Date(match[1]);
-                  if (!isNaN(d.getTime())) {
-                    const day = String(d.getDate()).padStart(2, '0');
-                    const mon = d.toLocaleString('en-US', { month: 'short' });
-                    const yr = String(d.getFullYear()).slice(-2);
-                    displayDate = `${day}-${mon}-${yr}`;
-                  } else {
-                    displayDate = match[1];
-                  }
-                  displayLoc = match[2];
-                } else {
-                  const d = new Date(log.created_at);
-                  const day = String(d.getDate()).padStart(2, '0');
-                  const mon = d.toLocaleString('en-US', { month: 'short' });
-                  const yr = String(d.getFullYear()).slice(-2);
-                  displayDate = `${day}-${mon}-${yr}`;
-                }
-
-                return (
-                  <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid rgba(148,163,184,0.2)' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>{displayDate}</span>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a', textAlign: 'right' }}>{displayLoc}</span>
-                  </div>
-                );
-              })}
-              {logs.filter(log => log.log_type === 'Shipment Tracking' || log.log_type === 'Truck Tracking').length === 0 && <div className="text-muted" style={{ fontSize: '0.85rem' }}>No shipment tracking records yet.</div>}
             </div>
           </div>
         </div>
