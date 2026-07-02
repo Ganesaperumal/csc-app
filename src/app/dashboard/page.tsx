@@ -400,6 +400,8 @@ function JobsTable() {
     return 'badge active';
   };
 
+  const hasAppliedFilters = Object.values(filters).some(arr => arr && arr.length > 0);
+
   const clearAllFilters = () => {
     setFilters({});
     localStorage.removeItem('csc_column_filters');
@@ -430,10 +432,10 @@ function JobsTable() {
             title="Clear all filters"
             onClick={clearAllFilters}
             style={{
-              background: 'none',
+              background: hasAppliedFilters ? '#fee2e2' : 'none',
               border: 'none',
               cursor: 'pointer',
-              color: '#64748b',
+              color: hasAppliedFilters ? '#ef4444' : '#64748b',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -442,7 +444,7 @@ function JobsTable() {
               transition: 'all 0.2s',
             }}
             onMouseOver={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fee2e2'; }}
-            onMouseOut={(e) => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.background = 'none'; }}
+            onMouseOut={(e) => { e.currentTarget.style.color = hasAppliedFilters ? '#ef4444' : '#64748b'; e.currentTarget.style.background = hasAppliedFilters ? '#fee2e2' : 'none'; }}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
