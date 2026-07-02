@@ -551,17 +551,17 @@ function JobsTable() {
 
             {showNotifications && (
               <div style={{ 
-                position: 'absolute', top: '100%', right: 0, marginTop: '0.5rem', width: '320px', 
-                background: '#fff', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', 
-                border: '1px solid rgba(0,0,0,0.05)', zIndex: 100, overflow: 'hidden', display: 'flex', flexDirection: 'column'
+                position: 'absolute', top: '100%', right: 0, marginTop: '0.5rem', width: '340px', 
+                background: 'rgba(241, 245, 249, 0.85)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.15)', 
+                border: '1px solid rgba(255,255,255,0.6)', zIndex: 100, overflow: 'hidden', display: 'flex', flexDirection: 'column'
               }}>
-                <div style={{ padding: '1rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontWeight: 600, color: '#0f172a', display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ padding: '1rem', background: 'transparent', borderBottom: '1px solid rgba(0,0,0,0.05)', fontWeight: 700, color: '#0f172a', display: 'flex', justifyContent: 'space-between' }}>
                   <span>Pending Follow-ups</span>
-                  <span style={{ background: '#ef4444', color: '#fff', padding: '0.1rem 0.5rem', borderRadius: '10px', fontSize: '0.75rem' }}>{notifications.length}</span>
+                  <span style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: '#fff', padding: '0.1rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', boxShadow: '0 2px 8px rgba(239,68,68,0.3)' }}>{notifications.length}</span>
                 </div>
-                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                <div style={{ maxHeight: '420px', overflowY: 'auto', paddingBottom: '0.5rem' }}>
                   {notifications.length === 0 ? (
-                    <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>You're all caught up!</div>
+                    <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.9rem', fontWeight: 500 }}>You're all caught up! ✨</div>
                   ) : (
                     notifications.map(n => {
                       let isUrgent = false;
@@ -577,28 +577,32 @@ function JobsTable() {
                       
                       return (
                         <div key={n.id} style={{ 
-                          padding: '0.8rem', cursor: 'pointer', transition: 'all 0.2s',
-                          background: isUrgent ? '#fef2f2' : '#fff', margin: '0.5rem', borderRadius: '8px',
-                          boxShadow: '0 2px 5px rgba(0,0,0,0.05)', border: `1px solid ${isUrgent ? '#fca5a5' : '#e2e8f0'}`
+                          padding: '1rem', cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                          background: '#ffffff', margin: '0.6rem', borderRadius: '14px',
+                          boxShadow: isUrgent ? '0 4px 15px rgba(239,68,68,0.1)' : '0 4px 15px rgba(0,0,0,0.04)', border: 'none',
+                          display: 'flex', flexDirection: 'column', gap: '0.4rem'
                         }} onClick={() => {
                           setShowNotifications(false);
                           router.push('/dashboard/job/' + encodeURIComponent(n.job_number));
-                        }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', alignItems: 'center' }}>
-                            <span style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.85rem' }}>{jobDetails.customer_name || 'Unknown Customer'}</span>
-                            <span style={{ fontSize: '0.7rem', color: isUrgent ? '#ef4444' : '#64748b', fontWeight: isUrgent ? 700 : 500, background: isUrgent ? '#fee2e2' : '#f1f5f9', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', letterSpacing: '-0.02em' }}>{jobDetails.customer_name || 'Unknown Customer'}</span>
+                            <span style={{ fontSize: '0.75rem', color: isUrgent ? '#ef4444' : '#64748b', fontWeight: 800 }}>
                               {n.follow_up_date ? new Date(n.follow_up_date).toLocaleDateString() : 'ASAP'}
                             </span>
                           </div>
                           
-                          <div style={{ fontSize: '0.7rem', color: '#475569', marginBottom: '0.5rem', display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                            {jobDetails.branch && <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>🏢 {jobDetails.branch}</span>}
-                            {jobDetails.erp_job_id && <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>#{jobDetails.erp_job_id}</span>}
-                            <span style={{ fontWeight: 600, background: n.call_type === 'Customer' ? '#fef3c7' : '#dbeafe', color: n.call_type === 'Customer' ? '#d97706' : '#2563eb', padding: '0.1rem 0.3rem', borderRadius: '4px', border: '1px solid rgba(0,0,0,0.05)' }}>{n.call_type}</span>
-                            {n.regarding && <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>{n.regarding}</span>}
+                          <div style={{ fontSize: '0.75rem', fontWeight: 600, display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                            {jobDetails.branch && <span style={{ color: '#8b5cf6' }}>🏢 {jobDetails.branch}</span>}
+                            {jobDetails.erp_job_id && <span style={{ color: '#3b82f6' }}>#{jobDetails.erp_job_id}</span>}
+                            <span style={{ color: n.call_type === 'Customer' ? '#f59e0b' : '#0ea5e9' }}>{n.call_type === 'Customer' ? '👤 Customer' : '🏢 Internal'}</span>
+                            {n.regarding && <span style={{ color: '#10b981' }}>{n.regarding}</span>}
                           </div>
 
-                          <div style={{ fontSize: '0.8rem', color: '#334155', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontStyle: 'italic', marginBottom: '0.2rem' }}>
+                          <div style={{ fontSize: '0.85rem', color: '#475569', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontStyle: 'italic', marginTop: '0.2rem' }}>
                             "{n.summary.split('\n')[0]}"
                           </div>
                         </div>
