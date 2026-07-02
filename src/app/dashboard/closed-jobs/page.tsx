@@ -59,7 +59,11 @@ function ColumnFilterDropdown({ colId, jobs, currentFilters, onApply, onSort, cu
     return String(val);
   };
 
+  const hasBlanks = jobs.some(j => j[colId] === null || j[colId] === undefined || j[colId] === '');
   const allValues = Array.from(new Set(jobs.map(j => j[colId]).filter(v => v !== null && v !== undefined && v !== ''))).sort();
+  if (hasBlanks) {
+    allValues.push('(Blank)');
+  }
   const [q, setQ] = useState('');
   const displayed = allValues.filter(v => getDisplayValue(v).toLowerCase().includes(q.toLowerCase()));
 
@@ -230,7 +234,10 @@ export default function ClosedJobsPage() {
     jobs.filter(job => {
       for (const colId of Object.keys(filters)) {
         if (colId === targetColId) continue;
-        if (filters[colId]?.length > 0 && !filters[colId].includes(job[colId])) return false;
+        if (filters[colId]?.length > 0) {
+          const val = job[colId] === null || job[colId] === undefined || job[colId] === '' ? '(Blank)' : job[colId];
+          if (!filters[colId].includes(val)) return false;
+        }
       }
       return true;
     });
@@ -239,7 +246,10 @@ export default function ClosedJobsPage() {
     if (statusFilter === 'billed' && !['billed'].includes(job.erp_status?.toLowerCase())) return false;
     if (statusFilter === 'cancelled' && !['cancelled', 'canceled'].includes(job.erp_status?.toLowerCase())) return false;
     for (const colId of Object.keys(filters)) {
-      if (filters[colId]?.length > 0 && !filters[colId].includes(job[colId])) return false;
+      if (filters[colId]?.length > 0) {
+        const val = job[colId] === null || job[colId] === undefined || job[colId] === '' ? '(Blank)' : job[colId];
+        if (!filters[colId].includes(val)) return false;
+      }
     }
     return true;
   });
