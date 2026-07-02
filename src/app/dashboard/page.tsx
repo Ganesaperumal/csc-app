@@ -598,10 +598,16 @@ function JobsTable() {
                             </div>
                           </div>
                           
-                          <div style={{ fontSize: '0.75rem', fontWeight: 600, display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                            {jobDetails.branch && <span style={{ color: '#8b5cf6' }}>🏢 {jobDetails.branch}</span>}
-                            <span style={{ color: n.call_type === 'Customer' ? '#f59e0b' : '#0ea5e9' }}>{n.call_type === 'Customer' ? '👤 Customer' : '🏢 Internal'}</span>
-                            {n.regarding && <span style={{ color: '#10b981' }}>{n.regarding}</span>}
+                          <div style={{ fontSize: '0.75rem', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                            <div style={{ flex: 1, textAlign: 'left' }}>
+                              {jobDetails.branch && <span style={{ color: '#8b5cf6' }}>🏢 {jobDetails.branch}</span>}
+                            </div>
+                            <div style={{ flex: 1, textAlign: 'center' }}>
+                              <span style={{ color: n.call_type === 'Customer' ? '#f59e0b' : '#0ea5e9' }}>{n.call_type === 'Customer' ? '👤 Customer' : '🏢 Internal'}</span>
+                            </div>
+                            <div style={{ flex: 1, textAlign: 'right' }}>
+                              {n.regarding && <span style={{ color: '#10b981' }}>{n.regarding}</span>}
+                            </div>
                           </div>
 
                           <div style={{ fontSize: '0.85rem', color: '#475569', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontStyle: 'italic', marginTop: '0.2rem' }}>
