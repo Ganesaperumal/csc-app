@@ -6,7 +6,6 @@ export default function SyncERPButton({ user: initialUser }: { user?: any }) {
   const [user, setUser] = useState(initialUser);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncingBy, setSyncingBy] = useState('');
-  const [isAdminOrManager, setIsAdminOrManager] = useState(false);
   
   useEffect(() => {
     // Fetch user if not passed
@@ -18,15 +17,6 @@ export default function SyncERPButton({ user: initialUser }: { user?: any }) {
   }, [user]);
 
   useEffect(() => {
-    // Check role from profiles
-    if (user?.id) {
-      supabase.from('profiles').select('role').eq('id', user.id).single().then(({ data }) => {
-        if (data && (data.role === 'Admin' || data.role === 'Manager')) {
-          setIsAdminOrManager(true);
-        }
-      });
-    }
-
     // Initial fetch of lock status
     const checkStatus = async () => {
       const { data } = await supabase.from('sync_lock').select('*').eq('id', 1).single();
@@ -125,8 +115,6 @@ export default function SyncERPButton({ user: initialUser }: { user?: any }) {
       setIsSyncing(false);
     }
   };
-
-  if (!isAdminOrManager) return null;
 
   return (
     <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
