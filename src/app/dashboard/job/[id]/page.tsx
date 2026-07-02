@@ -461,6 +461,25 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
     }
   };
 
+  const handleToggleFollowUp = async (id: number, currentStatus: boolean) => {
+    try {
+      setComms(prev => prev.map(c => c.id === id ? { ...c, follow_up_completed: !currentStatus } : c));
+      
+      const { error } = await supabase
+        .from('job_communications')
+        .update({ follow_up_completed: !currentStatus })
+        .eq('id', id);
+        
+      if (error) {
+        setComms(prev => prev.map(c => c.id === id ? { ...c, follow_up_completed: currentStatus } : c));
+        throw error;
+      }
+    } catch (err) {
+      console.error('Error updating follow-up:', err);
+      alert('Failed to update follow-up status.');
+    }
+  };
+
   const handleAddShipmentLog = async (e?: React.FormEvent, date?: string, location?: string, remark?: string) => {
     if (e) e.preventDefault();
     const d = date || newShipmentDate;
@@ -479,8 +498,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
       setNewShipmentDate('');
       setNewShipmentLocation('');
       fetchTrackingLogs();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert(`Error saving shipment update: ${err.message || 'Check browser console'}`);
     }
   };
 
@@ -503,6 +523,28 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className={styles.container}>
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes pulse-ring {
+          0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+          70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .animate-pulse-ring {
+          animation: pulse-ring 2s infinite;
+        }
+        @keyframes wiggle-bell {
+          0%, 100% { transform: rotate(0deg); }
+          10% { transform: rotate(15deg); }
+          20% { transform: rotate(-10deg); }
+          30% { transform: rotate(5deg); }
+          40% { transform: rotate(-5deg); }
+          50% { transform: rotate(0deg); }
+        }
+        .animate-wiggle {
+          display: inline-block;
+          animation: wiggle-bell 3s infinite ease-in-out;
+        }
+      `}} />
       <datalist id="supervisors-list">
         {supervisors.map(sup => (
           <option key={sup} value={sup} />
@@ -1029,13 +1071,54 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                       <div className={styles.logMessage}>{c.summary}</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.4rem' }}>
                         <span className={styles.logAgent} style={{ color: getUserColor(c.agent_name).text }}>{c.agent_name}</span>
-                        {c.follow_up_required && (
-                          <span style={{
-                            padding: '0.15rem 0.5rem', borderRadius: '20px', fontSize: '0.68rem', fontWeight: 700,
-                            background: 'rgba(239,68,68,0.1)', color: '#dc2626', border: '1px solid rgba(239,68,68,0.2)',
-                            display: 'flex', alignItems: 'center', gap: '0.25rem'
-                          }}>🔔 Follow-up{c.follow_up_date ? `: ${formatDate(c.follow_up_date)}` : ''}</span>
-                        )}
+                        {c.follow_up_required && (() => {
+                          const isCompleted = c.follow_up_completed;
+                          let isUrgent = false;
+                          let isFuture = false;
+                          
+                          if (!isCompleted && c.follow_up_date) {
+                            const fDate = new Date(c.follow_up_date);
+                            const today = new Date();
+                            today.setHours(0,0,0,0);
+                            if (fDate <= today) isUrgent = true;
+                            else isFuture = true;
+                          } else if (!isCompleted && !c.follow_up_date) {
+                            isUrgent = true;
+                          }
+
+                          let bg = 'rgba(239,68,68,0.1)';
+                          let text = '#dc2626';
+                          let icon = '🔔';
+                          let textDec = 'none';
+
+                          if (isCompleted) {
+                            bg = 'rgba(16,185,129,0.12)';
+                            text = '#10b981';
+                            icon = '✅';
+                            textDec = 'line-through';
+                          } else if (isFuture) {
+                            bg = 'rgba(59,130,246,0.12)';
+                            text = '#3b82f6';
+                            icon = '📅';
+                          }
+
+                          return (
+                            <span 
+                              onClick={() => handleToggleFollowUp(c.id, c.follow_up_completed)}
+                              className={isUrgent ? 'animate-pulse-ring' : ''}
+                              style={{
+                                padding: '0.2rem 0.6rem', borderRadius: '20px', fontSize: '0.68rem', fontWeight: 700,
+                                background: bg, color: text, border: `1px solid ${text}30`,
+                                display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer',
+                                transition: 'all 0.2s ease', textDecoration: textDec
+                              }}
+                              title={isCompleted ? "Mark as pending" : "Mark as completed"}
+                            >
+                              <span className={isUrgent ? 'animate-wiggle' : ''}>{icon}</span> 
+                              Follow-up{c.follow_up_date ? `: ${formatDate(c.follow_up_date)}` : ''}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                   );
