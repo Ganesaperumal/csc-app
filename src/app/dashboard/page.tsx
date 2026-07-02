@@ -588,16 +588,18 @@ function JobsTable() {
                         onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
                         onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                         >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', letterSpacing: '-0.02em' }}>{jobDetails.customer_name || 'Unknown Customer'}</span>
-                            <span style={{ fontSize: '0.75rem', color: isUrgent ? '#ef4444' : '#64748b', fontWeight: 800 }}>
-                              {n.follow_up_date ? new Date(n.follow_up_date).toLocaleDateString() : 'ASAP'}
-                            </span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', letterSpacing: '-0.02em', flex: 1, paddingRight: '0.5rem' }}>{jobDetails.customer_name || 'Unknown Customer'}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.1rem' }}>
+                              {jobDetails.erp_job_id && <span style={{ color: '#3b82f6', fontWeight: 700, fontSize: '0.75rem' }}>#{jobDetails.erp_job_id}</span>}
+                              <span style={{ fontSize: '0.75rem', color: isUrgent ? '#ef4444' : '#64748b', fontWeight: 800, whiteSpace: 'nowrap' }}>
+                                {n.follow_up_date ? new Date(n.follow_up_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).replace(' ', '-') : 'ASAP'}
+                              </span>
+                            </div>
                           </div>
                           
                           <div style={{ fontSize: '0.75rem', fontWeight: 600, display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
                             {jobDetails.branch && <span style={{ color: '#8b5cf6' }}>🏢 {jobDetails.branch}</span>}
-                            {jobDetails.erp_job_id && <span style={{ color: '#3b82f6' }}>#{jobDetails.erp_job_id}</span>}
                             <span style={{ color: n.call_type === 'Customer' ? '#f59e0b' : '#0ea5e9' }}>{n.call_type === 'Customer' ? '👤 Customer' : '🏢 Internal'}</span>
                             {n.regarding && <span style={{ color: '#10b981' }}>{n.regarding}</span>}
                           </div>
