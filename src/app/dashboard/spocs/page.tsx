@@ -24,11 +24,18 @@ export default function SpocsPage() {
   const [assigning, setAssigning] = useState(false);
   const [showCompanySuggestions, setShowCompanySuggestions] = useState(false);
 
+  const mappedCompanyNames = useMemo(() => {
+    return new Set(spocs.map(s => s.company_name.trim().toLowerCase()));
+  }, [spocs]);
+
   const filteredJobCompanies = useMemo(() => {
     const searchLower = companyName.toLowerCase().trim();
-    if (!searchLower) return jobCompanies;
-    return jobCompanies.filter(comp => comp.toLowerCase().includes(searchLower));
-  }, [jobCompanies, companyName]);
+    const availableCompanies = jobCompanies.filter(comp => {
+      return !mappedCompanyNames.has(comp.trim().toLowerCase());
+    });
+    if (!searchLower) return availableCompanies;
+    return availableCompanies.filter(comp => comp.toLowerCase().includes(searchLower));
+  }, [jobCompanies, companyName, mappedCompanyNames]);
 
   const handleAssignSpocs = async () => {
     if (!window.confirm('Are you sure you want to assign SPOCs to all existing jobs based on the company mappings?')) return;
