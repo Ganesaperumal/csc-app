@@ -173,6 +173,7 @@ function JobsTable() {
   const [showColumnSelector, setShowColumnSelector] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [agentName, setAgentName] = useState<string>('');
+  const [userRole, setUserRole] = useState<string>('Executive');
   const [filters, setFilters] = useState<Record<string, string[]>>(() => {
     try {
       const saved = localStorage.getItem('csc_column_filters');
@@ -274,6 +275,7 @@ function JobsTable() {
       if (data.user) {
         supabase.from('profiles').select('role, name, username').eq('id', data.user.id).single().then(({ data: profileData }) => {
           if (profileData) {
+            setUserRole(profileData.role || 'Executive');
             if (profileData.role === 'Admin') {
               setIsAdmin(true);
             }
@@ -344,18 +346,22 @@ function JobsTable() {
     if (agentName) {
       fetchNotifications();
     }
-  }, [agentName]);
+  }, [agentName, userRole]);
 
   const fetchNotifications = async () => {
     if (!agentName) return;
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('job_communications')
       .select('*')
       .eq('follow_up_required', true)
-      .eq('follow_up_completed', false)
-      .eq('agent_name', agentName)
-      .order('follow_up_date', { ascending: true });
+      .eq('follow_up_completed', false);
+
+    if (userRole !== 'Admin' && userRole !== 'Manager') {
+      query = query.eq('agent_name', agentName);
+    }
+
+    const { data, error } = await query.order('follow_up_date', { ascending: true });
     
     if (!error && data) {
       const today = new Date();
@@ -654,6 +660,17 @@ function JobsTable() {
                           <div style={{ fontSize: '0.85rem', color: '#475569', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontStyle: 'italic', marginTop: '0.2rem' }}>
                             "{n.summary.split('\n')[0]}"
                           </div>
+
+                          {n.agent_name && (
+                            <div style={{ 
+                              fontSize: '0.72rem', color: '#64748b', fontWeight: 700, 
+                              display: 'flex', alignItems: 'center', gap: '4px', 
+                              borderTop: '1px solid rgba(148,163,184,0.08)', paddingTop: '0.4rem', marginTop: '0.2rem' 
+                            }}>
+                              <span>👤 Assigned to:</span>
+                              <span style={{ color: '#4f46e5' }}>{n.agent_name}</span>
+                            </div>
+                          )}
                         </div>
                       )
                     })
