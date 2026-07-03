@@ -515,7 +515,6 @@ export default function ReportsPage() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterGoodsType, setFilterGoodsType] = useState('');
   const [filterOperationBy, setFilterOperationBy] = useState('');
-  const [filterSpoc, setFilterSpoc] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -602,7 +601,6 @@ export default function ReportsPage() {
     const branches = new Set<string>();
     const statuses = new Set<string>();
     const goodsTypes = new Set<string>();
-    const spocs = new Set<string>();
 
     activeJobsRaw.forEach(job => {
       if (job.branch) branches.add(job.branch.trim());
@@ -617,14 +615,12 @@ export default function ReportsPage() {
           goodsTypes.add(job.goods_type.trim());
         }
       }
-      if (job.spoc_name) spocs.add(job.spoc_name.trim());
     });
 
     return {
       branches: Array.from(branches).sort(),
       statuses: Array.from(statuses).sort(),
       goodsTypes: Array.from(goodsTypes).sort(),
-      spocs: Array.from(spocs).sort(),
     };
   }, [activeJobsRaw]);
 
@@ -667,10 +663,6 @@ export default function ReportsPage() {
       result = result.filter(j => j.operation_by === filterOperationBy);
     }
 
-    if (filterSpoc) {
-      result = result.filter(j => j.spoc_name === filterSpoc);
-    }
-
     if (startDate) {
       result = result.filter(j => j.job_date && j.job_date >= startDate);
     }
@@ -698,7 +690,7 @@ export default function ReportsPage() {
       return 0;
     });
 
-  }, [activeJobsRaw, jobSearch, filterBranch, filterStatus, filterGoodsType, filterOperationBy, filterSpoc, startDate, endDate, jobsSortField, jobsSortOrder]);
+  }, [activeJobsRaw, jobSearch, filterBranch, filterStatus, filterGoodsType, filterOperationBy, startDate, endDate, jobsSortField, jobsSortOrder]);
 
   // Compute Active Jobs Reports Metrics
   const jobsMetrics = useMemo(() => {
@@ -711,7 +703,6 @@ export default function ReportsPage() {
     const branchCounts: Record<string, number> = {};
     const statusCounts: Record<string, number> = {};
     const goodsTypeCounts: Record<string, number> = {};
-    const spocWorkload: Record<string, number> = {};
 
     filteredActiveJobs.forEach(j => {
       if (j.deviation === true || j.deviation === 'Yes') deviationCount++;
@@ -741,17 +732,12 @@ export default function ReportsPage() {
         }
       }
       goodsTypeCounts[gt] = (goodsTypeCounts[gt] || 0) + 1;
-
-      // SPOC
-      const sp = j.spoc_name || 'Unassigned';
-      spocWorkload[sp] = (spocWorkload[sp] || 0) + 1;
     });
 
     // Format chart ready data
     const branchChart = Object.entries(branchCounts).map(([label, value]) => ({ label, value }));
     const statusChart = Object.entries(statusCounts).map(([label, value]) => ({ label, value })).sort((a,b) => b.value - a.value).slice(0, 5);
     const goodsTypeChart = Object.entries(goodsTypeCounts).map(([label, value]) => ({ label, value }));
-    const spocList = Object.entries(spocWorkload).map(([spoc, count]) => ({ spoc, count })).sort((a, b) => b.count - a.count);
 
     return {
       totalJobs,
@@ -760,8 +746,7 @@ export default function ReportsPage() {
       avgTransitDays: transitDaysCount > 0 ? (totalTransitDays / transitDaysCount) : 0,
       branchChart,
       statusChart,
-      goodsTypeChart,
-      spocList
+      goodsTypeChart
     };
   }, [filteredActiveJobs]);
 
@@ -780,7 +765,11 @@ export default function ReportsPage() {
 
   // Compute stats per agent
   const agentActivityData = useMemo(() => {
-    const activityMap: Record<string, { edits: number; comms: number; notes: number; total: number; callType: Record<string, number>; regarding: Record<string, number> }> = {};
+    const activityMap: Record<string, { edits: number; comms: number; notes: number; total: number; callType: Record<string, number>; regarding: Record<string, number> }> = {
+      'Shruti': { edits: 0, comms: 0, notes: 0, total: 0, callType: {}, regarding: {} },
+      'Rabecca': { edits: 0, comms: 0, notes: 0, total: 0, callType: {}, regarding: {} },
+      'Chandrama': { edits: 0, comms: 0, notes: 0, total: 0, callType: {}, regarding: {} },
+    };
 
     const getCleanName = (name: string) => {
       if (!name) return 'Unknown';
@@ -833,11 +822,15 @@ export default function ReportsPage() {
       activityMap[agent].total++;
     });
 
-    // Convert map to list and sort by total activity
-    return Object.entries(activityMap).map(([agent, stats]) => ({
-      label: agent,
-      ...stats
-    })).sort((a, b) => b.total - a.total);
+    // Convert map to list and sort by total activity, keeping only the 3 allowed agents
+    const allowedAgents = ['shruti', 'rabecca', 'chandrama'];
+    return Object.entries(activityMap)
+      .map(([agent, stats]) => ({
+        label: agent,
+        ...stats
+      }))
+      .filter(item => allowedAgents.includes(item.label.toLowerCase()))
+      .sort((a, b) => b.total - a.total);
   }, [auditLogs, comms, notes, userMap]);
 
   // Set default selected agent once agentActivityData is ready
@@ -1132,7 +1125,6 @@ export default function ReportsPage() {
                   setFilterStatus('');
                   setFilterGoodsType('');
                   setFilterOperationBy('');
-                  setFilterSpoc('');
                   setStartDate('');
                   setEndDate('');
                 }}
@@ -1210,18 +1202,7 @@ export default function ReportsPage() {
                 </select>
               </div>
 
-              {/* SPOC Filter */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>SPOC Assignment</label>
-                <select 
-                  value={filterSpoc} 
-                  onChange={e => setFilterSpoc(e.target.value)}
-                  style={{ padding: '0.5rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', background: 'white', color: '#0f172a', fontSize: '0.85rem', outline: 'none' }}
-                >
-                  <option value="">All SPOCs</option>
-                  {filterOptions.spocs.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
+
 
               {/* Date Start */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -1271,24 +1252,9 @@ export default function ReportsPage() {
             <DonutChart data={jobsMetrics.statusChart} title="Top 5 Goods Status Distribution" />
           </div>
 
-          {/* SPOC workload list & detailed filtered jobs table */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 3fr', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'stretch' }}>
+          {/* Detailed filtered jobs table */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'stretch' }}>
             
-            {/* SPOC Workload */}
-            <div style={{ background: 'rgba(255,255,255,0.5)', border: '1px solid rgba(148, 163, 184, 0.2)', padding: '1.25rem', borderRadius: '16px', display: 'flex', flexDirection: 'column', maxHeight: '450px', overflowY: 'auto' }}>
-              <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', fontWeight: 700, color: '#1e293b' }}>👤 SPOC Workloads</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                {jobsMetrics.spocList.map(item => (
-                  <div key={item.spoc} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.6rem', background: 'white', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.1)' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155' }}>{item.spoc}</span>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 800, background: '#e0e7ff', color: '#4f46e5', padding: '0.2rem 0.5rem', borderRadius: '20px' }}>
-                      {item.count} Jobs
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Jobs Details table */}
             <div style={{ background: 'rgba(255,255,255,0.5)', border: '1px solid rgba(148, 163, 184, 0.2)', padding: '1.25rem', borderRadius: '16px', display: 'flex', flexDirection: 'column', minHeight: '350px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -1306,7 +1272,6 @@ export default function ReportsPage() {
                         { label: 'Date', key: 'job_date' },
                         { label: 'Customer Name', key: 'customer_name' },
                         { label: 'Branch', key: 'branch' },
-                        { label: 'SPOC', key: 'spoc_name' },
                         { label: 'Goods Status', key: 'goods_track_status' }
                       ].map(col => (
                         <th 
@@ -1322,7 +1287,7 @@ export default function ReportsPage() {
                   <tbody>
                     {filteredActiveJobs.length === 0 ? (
                       <tr>
-                        <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>No jobs match filter criteria.</td>
+                        <td colSpan={6} style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>No jobs match filter criteria.</td>
                       </tr>
                     ) : (
                       filteredActiveJobs.map(job => (
@@ -1347,9 +1312,6 @@ export default function ReportsPage() {
                           </td>
                           <td style={{ padding: '0.8rem 0.9rem', color: '#475569', fontWeight: 600 }}>
                             {job.branch || '—'}
-                          </td>
-                          <td style={{ padding: '0.8rem 0.9rem', color: '#475569', fontWeight: 600 }}>
-                            {job.spoc_name || '—'}
                           </td>
                           <td style={{ padding: '0.8rem 0.9rem', color: '#0f172a', fontWeight: 600, fontSize: '0.8rem' }}>
                             {job.goods_track_status ? job.goods_track_status.split('. ')[1] || job.goods_track_status : 'Pending'}
