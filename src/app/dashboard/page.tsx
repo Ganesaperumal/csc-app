@@ -173,7 +173,6 @@ function JobsTable() {
   const [showColumnSelector, setShowColumnSelector] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [agentName, setAgentName] = useState<string>('');
-  const [userRole, setUserRole] = useState<string>('Executive');
   const [filters, setFilters] = useState<Record<string, string[]>>(() => {
     try {
       const saved = localStorage.getItem('csc_column_filters');
@@ -275,7 +274,6 @@ function JobsTable() {
       if (data.user) {
         supabase.from('profiles').select('role, name, username').eq('id', data.user.id).single().then(({ data: profileData }) => {
           if (profileData) {
-            setUserRole(profileData.role || 'Executive');
             if (profileData.role === 'Admin') {
               setIsAdmin(true);
             }
@@ -346,7 +344,7 @@ function JobsTable() {
     if (agentName) {
       fetchNotifications();
     }
-  }, [agentName, userRole]);
+  }, [agentName, isAdmin]);
 
   const fetchNotifications = async () => {
     if (!agentName) return;
@@ -357,7 +355,7 @@ function JobsTable() {
       .eq('follow_up_required', true)
       .eq('follow_up_completed', false);
 
-    if (userRole !== 'Admin' && userRole !== 'Manager') {
+    if (!isAdmin) {
       query = query.eq('agent_name', agentName);
     }
 
@@ -622,6 +620,36 @@ function JobsTable() {
 
                       const jobDetails = jobs.find(j => j.job_number === n.job_number) || {};
                       
+                      const isOthersCard = isAdmin && n.agent_name && n.agent_name.toLowerCase().trim() !== agentName.toLowerCase().trim();
+
+                      if (isOthersCard) {
+                        return (
+                          <div key={n.id} style={{ 
+                            padding: '0.85rem 1rem', cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                            background: 'rgba(239, 246, 255, 0.95)', margin: '0.6rem', borderRadius: '12px',
+                            boxShadow: '0 2px 10px rgba(59, 130, 246, 0.05)', border: '1px dashed rgba(59, 130, 246, 0.3)',
+                            display: 'flex', flexDirection: 'column', gap: '0.3rem'
+                          }} onClick={() => {
+                            setShowNotifications(false);
+                            router.push('/dashboard/job/' + encodeURIComponent(n.job_number));
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                          >
+                            <div style={{ fontSize: '0.88rem', color: '#1e293b', lineHeight: '1.4', textAlign: 'left' }}>
+                              <strong style={{ color: '#2563eb', fontWeight: 800 }}>{n.agent_name}:</strong>{" "}
+                              <span style={{ color: '#475569', fontStyle: 'italic' }}>
+                                "{n.summary.split('\n')[0]}"
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: '#64748b', fontWeight: 600, marginTop: '0.1rem' }}>
+                              <span>🏢 {jobDetails.customer_name || '—'} ({n.job_number})</span>
+                              {n.follow_up_date && <span style={{ color: '#ef4444', fontWeight: 700 }}>📅 {new Date(n.follow_up_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).replace(' ', '-')}</span>}
+                            </div>
+                          </div>
+                        );
+                      }
+
                       return (
                         <div key={n.id} style={{ 
                           padding: '1rem', cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -657,16 +685,7 @@ function JobsTable() {
                             </div>
                           </div>
 
-                          <div style={{ 
-                            fontSize: '0.85rem', color: '#475569', display: '-webkit-box', 
-                            WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', 
-                            fontStyle: 'italic', marginTop: '0.2rem', lineHeight: '1.4'
-                          }}>
-                            {n.agent_name && (
-                              <span style={{ fontWeight: 700, color: '#0f172a', fontStyle: 'normal', marginRight: '4px' }}>
-                                {n.agent_name}:
-                              </span>
-                            )}
+                          <div style={{ fontSize: '0.85rem', color: '#475569', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontStyle: 'italic', marginTop: '0.2rem' }}>
                             "{n.summary.split('\n')[0]}"
                           </div>
                         </div>
