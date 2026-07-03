@@ -172,6 +172,7 @@ function JobsTable() {
   const [orderedColumns, setOrderedColumns] = useState<string[]>(ALL_COLUMNS.map(c => c.id));
   const [showColumnSelector, setShowColumnSelector] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [agentName, setAgentName] = useState<string>('');
   const [filters, setFilters] = useState<Record<string, string[]>>(() => {
     try {
       const saved = localStorage.getItem('csc_column_filters');
@@ -268,12 +269,19 @@ function JobsTable() {
       } catch (e) {}
     }
     
-    // Check if user is admin
+    // Check if user is admin and get their name
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
-        supabase.from('profiles').select('role').eq('id', data.user.id).single().then(({ data: profileData }) => {
-          if (profileData && profileData.role === 'Admin') {
-            setIsAdmin(true);
+        supabase.from('profiles').select('role, name, username').eq('id', data.user.id).single().then(({ data: profileData }) => {
+          if (profileData) {
+            if (profileData.role === 'Admin') {
+              setIsAdmin(true);
+            }
+            const name = profileData.name || profileData.username || data.user.email?.split('@')[0] || 'Agent';
+            setAgentName(name);
+          } else {
+            const name = data.user.email?.split('@')[0] || 'Agent';
+            setAgentName(name);
           }
         });
       }
@@ -330,19 +338,35 @@ function JobsTable() {
 
   useEffect(() => {
     fetchJobs();
-    fetchNotifications();
   }, [typeFilter]);
 
+  useEffect(() => {
+    if (agentName) {
+      fetchNotifications();
+    }
+  }, [agentName]);
+
   const fetchNotifications = async () => {
+    if (!agentName) return;
+
     const { data, error } = await supabase
       .from('job_communications')
       .select('*')
       .eq('follow_up_required', true)
       .eq('follow_up_completed', false)
+      .eq('agent_name', agentName)
       .order('follow_up_date', { ascending: true });
     
     if (!error && data) {
-      setNotifications(data);
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      
+      const filtered = data.filter(n => {
+        if (!n.follow_up_date) return true;
+        return n.follow_up_date <= todayStr;
+      });
+      
+      setNotifications(filtered);
     }
   };
 
