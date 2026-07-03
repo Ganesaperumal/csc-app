@@ -657,20 +657,18 @@ function JobsTable() {
                             </div>
                           </div>
 
-                          <div style={{ fontSize: '0.85rem', color: '#475569', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontStyle: 'italic', marginTop: '0.2rem' }}>
+                          <div style={{ 
+                            fontSize: '0.85rem', color: '#475569', display: '-webkit-box', 
+                            WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', 
+                            fontStyle: 'italic', marginTop: '0.2rem', lineHeight: '1.4'
+                          }}>
+                            {n.agent_name && (
+                              <span style={{ fontWeight: 700, color: '#0f172a', fontStyle: 'normal', marginRight: '4px' }}>
+                                {n.agent_name}:
+                              </span>
+                            )}
                             "{n.summary.split('\n')[0]}"
                           </div>
-
-                          {n.agent_name && (
-                            <div style={{ 
-                              fontSize: '0.72rem', color: '#64748b', fontWeight: 700, 
-                              display: 'flex', alignItems: 'center', gap: '4px', 
-                              borderTop: '1px solid rgba(148,163,184,0.08)', paddingTop: '0.4rem', marginTop: '0.2rem' 
-                            }}>
-                              <span>👤 Assigned to:</span>
-                              <span style={{ color: '#4f46e5' }}>{n.agent_name}</span>
-                            </div>
-                          )}
                         </div>
                       )
                     })
