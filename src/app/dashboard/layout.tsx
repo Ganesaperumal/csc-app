@@ -25,6 +25,9 @@ function DashboardNav({ role }: { role: string | null }) {
       <Link href="/dashboard/spocs" className={`${styles.navItem} ${pathname === '/dashboard/spocs' ? styles.active : ''}`}>
         SPOC Management
       </Link>
+      <Link href="/dashboard/reports" className={`${styles.navItem} ${pathname === '/dashboard/reports' ? styles.active : ''}`}>
+        Reports & Analytics
+      </Link>
       {role === 'Admin' && (
         <Link href="/dashboard/activity-log" className={`${styles.navItem} ${pathname === '/dashboard/activity-log' ? styles.active : ''}`}>
           Activity Log
