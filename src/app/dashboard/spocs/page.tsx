@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import styles from '../jobs.module.css';
 
@@ -22,6 +22,13 @@ export default function SpocsPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [assigning, setAssigning] = useState(false);
+  const [showCompanySuggestions, setShowCompanySuggestions] = useState(false);
+
+  const filteredJobCompanies = useMemo(() => {
+    const searchLower = companyName.toLowerCase().trim();
+    if (!searchLower) return jobCompanies;
+    return jobCompanies.filter(comp => comp.toLowerCase().includes(searchLower));
+  }, [jobCompanies, companyName]);
 
   const handleAssignSpocs = async () => {
     if (!window.confirm('Are you sure you want to assign SPOCs to all existing jobs based on the company mappings?')) return;
@@ -213,7 +220,6 @@ export default function SpocsPage() {
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem', letterSpacing: '0.02em', textTransform: 'uppercase' }}>Company Name <span style={{color: '#ef4444'}}>*</span></label>
               <div style={{ position: 'relative' }}>
                 <input 
-                  list="company-list"
                   style={{ 
                     width: '100%', padding: '0.85rem 1rem 0.85rem 2.8rem', 
                     borderRadius: '10px', border: '1px solid #cbd5e1', 
@@ -223,13 +229,71 @@ export default function SpocsPage() {
                   value={companyName} 
                   onChange={(e) => setCompanyName(e.target.value)} 
                   placeholder="Select or type company..."
-                  onFocus={(e) => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)'; e.currentTarget.style.background = '#fff'; }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = '#f8fafc'; }}
+                  onFocus={(e) => { 
+                    e.currentTarget.style.borderColor = '#6366f1'; 
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)'; 
+                    e.currentTarget.style.background = '#fff'; 
+                    setShowCompanySuggestions(true);
+                  }}
+                  onBlur={(e) => { 
+                    e.currentTarget.style.borderColor = '#cbd5e1'; 
+                    e.currentTarget.style.boxShadow = 'none'; 
+                    e.currentTarget.style.background = '#f8fafc'; 
+                    setShowCompanySuggestions(false);
+                  }}
                 />
                 <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.5, fontSize: '1.1rem' }}>🏢</span>
-                <datalist id="company-list">
-                  {jobCompanies.map((comp, idx) => <option key={idx} value={comp} />)}
-                </datalist>
+                
+                {showCompanySuggestions && filteredJobCompanies.length > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(148, 163, 184, 0.3)',
+                    borderRadius: '10px',
+                    marginTop: '6px',
+                    maxHeight: '220px',
+                    overflowY: 'auto',
+                    zIndex: 100,
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}>
+                    {filteredJobCompanies.map((comp, idx) => (
+                      <div 
+                        key={idx}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setCompanyName(comp);
+                          setShowCompanySuggestions(false);
+                        }}
+                        style={{
+                          padding: '0.75rem 1rem',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem',
+                          color: '#1e293b',
+                          fontWeight: 500,
+                          textAlign: 'left',
+                          transition: 'all 0.15s ease',
+                          borderBottom: idx < filteredJobCompanies.length - 1 ? '1px solid rgba(241, 245, 249, 0.8)' : 'none'
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.backgroundColor = '#f1f5f9';
+                          e.currentTarget.style.color = '#4f46e5';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.color = '#1e293b';
+                        }}
+                      >
+                        🏢 {comp}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
