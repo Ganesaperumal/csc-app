@@ -68,8 +68,8 @@ function DonutChart({
   const circumference = 2 * Math.PI * radius;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '280px', padding: '1rem', background: 'rgba(255,255,255,0.4)', borderRadius: '16px', border: '1px solid rgba(148,163,184,0.15)' }}>
-      <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', fontWeight: 700, color: '#1e293b', alignSelf: 'flex-start' }}>{title}</h4>
+    <div className="glass" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '280px', padding: '1rem' }}>
+      <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', alignSelf: 'flex-start' }}>{title}</h4>
       
       {total === 0 ? (
         <div style={{ height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '0.85rem' }}>
@@ -208,9 +208,9 @@ function GroupedBarChart({
   const keyColors = ['#4f46e5', '#a78bfa', '#f472b6'];
 
   return (
-    <div style={{ flex: 1, minWidth: '320px', padding: '1.5rem', background: 'rgba(255,255,255,0.4)', borderRadius: '16px', border: '1px solid rgba(148,163,184,0.15)', display: 'flex', flexDirection: 'column' }}>
+    <div className="glass" style={{ flex: 1, minWidth: '320px', padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#1e293b' }}>{title}</h4>
+        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>{title}</h4>
         
         {/* Legend */}
         <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -378,8 +378,8 @@ function TimelineChart({
   }, [points]);
 
   return (
-    <div style={{ flex: 1, minWidth: '320px', padding: '1.5rem', background: 'rgba(255,255,255,0.4)', borderRadius: '16px', border: '1px solid rgba(148,163,184,0.15)', display: 'flex', flexDirection: 'column' }}>
-      <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', fontWeight: 700, color: '#1e293b' }}>{title}</h4>
+    <div className="glass" style={{ flex: 1, minWidth: '320px', padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+      <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>{title}</h4>
       
       {data.length === 0 ? (
         <div style={{ height: chartHeight, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '0.85rem' }}>
@@ -1041,27 +1041,20 @@ export default function ReportsPage() {
           { label: 'Agent Audit Trails', val: globalStats.totalEdits, color: '#8b5cf6', icon: '📝' },
           { label: 'Comm Logs Stored', val: globalStats.totalComms, color: '#ec4899', icon: '💬' },
         ].map(card => (
-          <div key={card.label} style={{
-            background: 'rgba(255, 255, 255, 0.65)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: '1px solid rgba(148, 163, 184, 0.15)',
-            borderRadius: '16px',
+          <div key={card.label} className="glass" style={{
             padding: '1.25rem',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
             display: 'flex',
             alignItems: 'center',
             gap: '1rem',
-            transition: 'transform 0.2s',
           }}>
             <div style={{ fontSize: '2rem', padding: '0.5rem', background: `${card.color}10`, borderRadius: '12px' }}>
               {card.icon}
             </div>
             <div>
-              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {card.label}
               </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginTop: '0.2rem' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.2rem' }}>
                 {card.val}
               </div>
             </div>
@@ -1112,11 +1105,11 @@ export default function ReportsPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
           {/* 360-Degree Filter Panel */}
-          <div style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(20px)', border: '1px solid rgba(148, 163, 184, 0.2)', borderRadius: '16px', padding: '1.25rem 1.5rem', boxShadow: '0 8px 30px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid rgba(148,163,184,0.1)', paddingBottom: '0.5rem' }}>
+          <div className="glass" style={{ padding: '1.25rem 1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ fontSize: '1.1rem' }}>🎛️</span>
-                <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#1e293b' }}>360-Degree Filters</span>
+                <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>360-Degree Filters</span>
               </div>
               <button 
                 onClick={() => {
@@ -1236,8 +1229,8 @@ export default function ReportsPage() {
               { label: 'Average Lead Transit', val: jobsMetrics.avgTransitDays.toFixed(1), suffix: ' Days', color: '#10b981', labelColor: '#047857' },
               { label: 'Car Services Included', val: jobsMetrics.carServiceRate.toFixed(1), suffix: '%', color: '#06b6d4', labelColor: '#0891b2' },
             ].map(m => (
-              <div key={m.label} style={{ background: 'rgba(255,255,255,0.45)', border: '1px solid rgba(148, 163, 184, 0.15)', padding: '1.25rem', borderRadius: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{m.label}</span>
+              <div key={m.label} className="glass" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{m.label}</span>
                 <span style={{ fontSize: '1.8rem', fontWeight: 800, color: m.color, marginTop: '0.3rem' }}>
                   {m.val}{m.suffix}
                 </span>
@@ -1256,10 +1249,10 @@ export default function ReportsPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'stretch' }}>
             
             {/* Jobs Details table */}
-            <div style={{ background: 'rgba(255,255,255,0.5)', border: '1px solid rgba(148, 163, 184, 0.2)', padding: '1.25rem', borderRadius: '16px', display: 'flex', flexDirection: 'column', minHeight: '350px' }}>
+            <div className="glass" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', minHeight: '350px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#1e293b' }}>📄 Filtered Jobs Details</h4>
-                <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Showing {filteredActiveJobs.length} active jobs</span>
+                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>📄 Filtered Jobs Details</h4>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Showing {filteredActiveJobs.length} active jobs</span>
               </div>
 
               <div style={{ overflowX: 'auto', flex: 1 }}>
@@ -1347,8 +1340,8 @@ export default function ReportsPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 3fr', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'stretch' }}>
             
             {/* Master list of Agents */}
-            <div style={{ background: 'rgba(255,255,255,0.5)', border: '1px solid rgba(148, 163, 184, 0.2)', padding: '1.25rem', borderRadius: '16px', display: 'flex', flexDirection: 'column', maxHeight: '550px', overflowY: 'auto' }}>
-              <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', fontWeight: 700, color: '#1e293b' }}>👤 Select Agent</h4>
+            <div className="glass" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', maxHeight: '550px', overflowY: 'auto' }}>
+              <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>👤 Select Agent</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {agentActivityData.map(agent => {
                   const isSelected = selectedAgent === agent.label;
@@ -1391,7 +1384,7 @@ export default function ReportsPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 
                 {/* Agent Header and Mini Cards */}
-                <div style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(148, 163, 184, 0.15)', padding: '1.5rem', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="glass" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <span style={{
                       background: getUserColor(selectedAgent).bg,
@@ -1403,8 +1396,8 @@ export default function ReportsPage() {
                       {selectedAgent[0].toUpperCase()}
                     </span>
                     <div>
-                      <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.25rem', fontWeight: 800 }}>{selectedAgent} Activity Insight</h3>
-                      <p style={{ margin: '0.2rem 0 0 0', color: '#64748b', fontSize: '0.82rem', fontWeight: 600 }}>Overview of recent edits, logs, and communication histories</p>
+                      <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.25rem', fontWeight: 800 }}>{selectedAgent} Activity Insight</h3>
+                      <p style={{ margin: '0.2rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: 600 }}>Overview of recent edits, logs, and communication histories</p>
                     </div>
                   </div>
 
@@ -1415,8 +1408,8 @@ export default function ReportsPage() {
                       { label: 'Comm Entries', val: selectedAgentStats.comms, color: '#ec4899' },
                       { label: 'Notes Written', val: selectedAgentStats.notes, color: '#10b981' }
                     ].map(st => (
-                      <div key={st.label} style={{ background: 'white', borderRadius: '12px', border: '1px solid rgba(148,163,184,0.12)', padding: '0.75rem 1rem' }}>
-                        <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{st.label}</div>
+                      <div key={st.label} className="glass" style={{ padding: '0.75rem 1rem', borderRadius: '12px' }}>
+                        <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{st.label}</div>
                         <div style={{ fontSize: '1.25rem', fontWeight: 800, color: st.color, marginTop: '0.15rem' }}>{st.val}</div>
                       </div>
                     ))}
@@ -1438,9 +1431,9 @@ export default function ReportsPage() {
                 </div>
 
                 {/* Agent Activity Detail logs Table */}
-                <div style={{ background: 'rgba(255,255,255,0.5)', border: '1px solid rgba(148, 163, 184, 0.2)', padding: '1.25rem', borderRadius: '16px', display: 'flex', flexDirection: 'column' }}>
+                <div className="glass" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#1e293b' }}>📋 Activity Detail Logs</h4>
+                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>📋 Activity Detail Logs</h4>
                     
                     <input 
                       type="text"

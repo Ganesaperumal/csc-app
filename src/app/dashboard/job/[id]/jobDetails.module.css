@@ -8,7 +8,6 @@
   gap: 1.25rem;
 }
 
-/* ── HEADER ── */
 .header {
   display: flex;
   justify-content: space-between;
@@ -16,10 +15,11 @@
   margin-bottom: 0.5rem;
   padding: 1rem 1.5rem;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(30px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 10px 40px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,1);
+  background: var(--surface-color);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--glass-shadow);
 }
 
 .headerTitle {
@@ -56,17 +56,19 @@
   border-radius: 20px;
   position: relative;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(30px) saturate(200%);
-  -webkit-backdrop-filter: blur(30px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  box-shadow: 0 10px 40px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.9);
+  background: var(--surface-color);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--glass-shadow);
   transition: box-shadow 0.3s ease, transform 0.2s ease, background 0.2s ease;
 }
 
 .section:hover {
   transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+  box-shadow: var(--glass-shadow-hover);
 }
 
 /* Top colour bar */
@@ -264,10 +266,18 @@
   display: flex;
   flex-direction: column;
   height: calc(100vh - 160px);
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(24px);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+  background: var(--surface-color);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--glass-shadow);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.logsSection:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+  box-shadow: var(--glass-shadow-hover);
 }
 
 .addLogForm {
@@ -352,9 +362,9 @@
 .logItem {
   padding: 1rem 1.15rem;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.02), inset 0 1px 0 rgba(255,255,255,0.9);
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--glass-shadow);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
@@ -368,7 +378,12 @@
   bottom: 0;
   width: 4px;
 }
-.logItem:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.04); background: rgba(255, 255, 255, 0.8); }
+.logItem:hover { 
+  transform: translateY(-2px); 
+  box-shadow: var(--glass-shadow-hover); 
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+}
 
 .logComm::before { background: linear-gradient(180deg, #4f46e5, #9333ea); }
 .logNote::before { background: linear-gradient(180deg, #f59e0b, #f97316); }
@@ -511,12 +526,20 @@
   width: 100%;
   height: 100%;
   align-self: stretch;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(24px);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: var(--surface-color);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 1.25rem;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+  box-shadow: var(--glass-shadow);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.verticalTrackContainer:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+  box-shadow: var(--glass-shadow-hover);
 }
 
 

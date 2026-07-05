@@ -595,18 +595,17 @@ function JobsTable() {
             </button>
 
             {showNotifications && (
-              <div style={{ 
+              <div className="glass" style={{ 
                 position: 'absolute', top: '100%', right: 0, marginTop: '0.5rem', width: '340px', 
-                background: 'rgba(241, 245, 249, 0.85)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.15)', 
-                border: '1px solid rgba(255,255,255,0.6)', zIndex: 100, overflow: 'hidden', display: 'flex', flexDirection: 'column'
+                zIndex: 100, overflow: 'hidden', display: 'flex', flexDirection: 'column'
               }}>
-                <div style={{ padding: '1rem', background: 'transparent', borderBottom: '1px solid rgba(0,0,0,0.05)', fontWeight: 700, color: '#0f172a', display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ padding: '1rem', background: 'transparent', borderBottom: '1px solid var(--border-color)', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between' }}>
                   <span>Pending Follow-ups</span>
                   <span style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: '#fff', padding: '0.1rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', boxShadow: '0 2px 8px rgba(239,68,68,0.3)' }}>{notifications.length}</span>
                 </div>
                 <div style={{ maxHeight: '420px', overflowY: 'auto', paddingBottom: '0.5rem' }}>
                   {notifications.length === 0 ? (
-                    <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.9rem', fontWeight: 500 }}>You're all caught up! ✨</div>
+                    <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>You're all caught up! ✨</div>
                   ) : (
                     notifications.map(n => {
                       let isUrgent = false;
@@ -623,15 +622,24 @@ function JobsTable() {
                       return (
                         <div key={n.id} style={{ 
                           padding: '1rem', cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                          background: '#ffffff', margin: '0.6rem', borderRadius: '14px',
-                          boxShadow: isUrgent ? '0 4px 15px rgba(239,68,68,0.1)' : '0 4px 15px rgba(0,0,0,0.04)', border: 'none',
+                          background: 'var(--surface-color)', margin: '0.6rem', borderRadius: '14px',
+                          boxShadow: isUrgent ? '0 4px 15px rgba(239,68,68,0.1)' : 'var(--glass-shadow)', 
+                          border: '1px solid var(--border-color)',
                           display: 'flex', flexDirection: 'column', gap: '0.4rem'
                         }} onClick={() => {
                           setShowNotifications(false);
                           router.push('/dashboard/job/' + encodeURIComponent(n.job_number));
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.background = 'var(--surface-hover)';
+                          e.currentTarget.style.borderColor = 'var(--border-hover)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.background = 'var(--surface-color)';
+                          e.currentTarget.style.borderColor = 'var(--border-color)';
+                        }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', letterSpacing: '-0.02em', flex: 1, paddingRight: '0.5rem' }}>{jobDetails.customer_name || 'Unknown Customer'}</span>
