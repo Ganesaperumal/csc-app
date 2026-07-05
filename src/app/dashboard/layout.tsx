@@ -22,6 +22,9 @@ function DashboardNav({ role }: { role: string | null }) {
       <Link href="/dashboard/closed-jobs" className={`${styles.navItem} ${pathname === '/dashboard/closed-jobs' ? styles.active : ''}`}>
         Closed Jobs
       </Link>
+      <Link href="/dashboard/follow-ups" className={`${styles.navItem} ${pathname === '/dashboard/follow-ups' ? styles.active : ''}`}>
+        Follow-up Tasks
+      </Link>
       <Link href="/dashboard/spocs" className={`${styles.navItem} ${pathname === '/dashboard/spocs' ? styles.active : ''}`}>
         SPOC Management
       </Link>

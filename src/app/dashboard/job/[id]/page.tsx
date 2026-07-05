@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import styles from './jobDetails.module.css';
 import { getUserColor } from '@/lib/colorUtils';
+import JobMap from '../../components/JobMap';
+import CustomSelect from '../../components/CustomSelect';
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
@@ -226,6 +228,113 @@ const CarStatusSlider = ({ name, options, value, onChange }: { name: string, opt
   );
 };
 
+
+
+const WhatsAppStageRow = ({
+  stageName,
+  stageLabel,
+  messageText,
+  sentInfo,
+  customerPhone,
+  isLast,
+  onSend
+}: {
+  stageName: string;
+  stageLabel: string;
+  messageText: string;
+  sentInfo?: { sent_at: string; sent_by: string };
+  customerPhone?: string;
+  isLast?: boolean;
+  onSend: () => void;
+}) => {
+  const [showPreview, setShowPreview] = useState(false);
+
+  const formatSentDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = date.toLocaleString('en-US', { month: 'short' });
+      return `${day}-${month}`;
+    } catch {
+      return '';
+    }
+  };
+
+  return (
+    <div style={{
+      padding: '0.85rem 0',
+      borderBottom: isLast ? 'none' : '1px solid rgba(148, 163, 184, 0.12)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0.65rem'
+    }}>
+      {/* Row 1: Title/Subtitle and Status Badge */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <div>
+          <span style={{ fontSize: '0.85rem', fontWeight: 805, color: 'var(--text-primary)' }}>{stageName}</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', fontWeight: 500, marginTop: '2px' }}>{stageLabel}</span>
+        </div>
+        
+        {/* Status Badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {sentInfo ? (
+            <span style={{ 
+              fontSize: '0.72rem', fontWeight: 700, color: '#10b981', 
+              background: 'rgba(16, 185, 129, 0.1)', padding: '0.25rem 0.6rem', borderRadius: '12px' 
+            }}>
+              ✓ Sent on {formatSentDate(sentInfo.sent_at)}
+            </span>
+          ) : (
+            <span style={{ 
+              fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', 
+              background: 'rgba(148, 163, 184, 0.1)', padding: '0.25rem 0.6rem', borderRadius: '12px' 
+            }}>
+              🔘 Not Sent
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Row 2: Preview and Action Button */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', gap: '1rem' }}>
+        <button 
+          onClick={() => setShowPreview(!showPreview)}
+          style={{ 
+            background: 'none', border: 'none', color: '#818cf8', fontSize: '0.75rem', 
+            fontWeight: 700, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '2px' 
+          }}
+        >
+          {showPreview ? 'Hide Message Preview ▲' : 'Show Message Preview ▼'}
+        </button>
+
+        <button
+          onClick={onSend}
+          style={{
+            padding: '0.4rem 0.9rem', borderRadius: '8px', border: 'none',
+            background: sentInfo ? '#3b82f6' : '#10b981', color: 'white',
+            fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
+            boxShadow: sentInfo ? '0 2px 6px rgba(59,130,246,0.15)' : '0 2px 6px rgba(16,185,129,0.15)',
+            whiteSpace: 'nowrap',
+            flexShrink: 0
+          }}
+        >
+          {sentInfo ? 'Resend Update' : 'Send Update'}
+        </button>
+      </div>
+
+      {showPreview && (
+        <div style={{ 
+          padding: '0.75rem', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(148, 163, 184, 0.1)', 
+          borderRadius: '8px', fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: '1.4',
+          whiteSpace: 'pre-wrap', fontStyle: 'italic'
+        }}>
+          {messageText}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function JobDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const id = resolvedParams.id;
@@ -252,7 +361,82 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const [newShipmentLocation, setNewShipmentLocation] = useState('');
   const [agentName, setAgentName] = useState('Agent');
   const [supervisors, setSupervisors] = useState<string[]>([]);
+  const [viewingAgents, setViewingAgents] = useState<string[]>([]);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [whatsappLogs, setWhatsappLogs] = useState<any[]>([]);
 
+  const [copied, setCopied] = useState(false);
+  const handleCopyLink = () => {
+    if (!job) return;
+    const url = `${window.location.origin}/track/${job.job_number}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  const getWhatsAppMessageText = (stage: string) => {
+    if (!job) return '';
+    const custName = job.customer_name || 'Customer';
+    const originCity = job.origin || '';
+    const destCity = job.destination || '';
+    const coordinator = currentCoordinator || agentName;
+    const trackingLink = `${window.location.origin}/track/${job.job_number}`;
+    
+    switch (stage) {
+      case 'Pre-Packing':
+        return `Hi ${custName}, thank you for choosing Transworld International for your relocation from ${originCity} to ${destCity}. Our assigned CSC coordinator is ${coordinator}. We are preparing your relocation schedule and will keep you updated every step of the way!`;
+      case 'Packing Day':
+        return `Hi ${custName}, this is a reminder that your packing is scheduled for today. The Transworld packing team must report by 9:00 a.m. sharp in complete uniform. Please contact your coordinator ${coordinator} for any immediate assistance.`;
+      case 'Post-Packing':
+        return `Hi ${custName}, we are pleased to inform you that the packing for your shipment to ${destCity} has been successfully completed today. Your goods are secure and prepared for dispatch.`;
+      case 'Despatch / In Transit':
+        return `Hi ${custName}, your shipment from ${originCity} to ${destCity} has been successfully dispatched and is now in transit. You can track your shipment status, vehicle checkpoints, and timeline in real-time here: ${trackingLink} - Transworld International.`;
+      case 'Delivery Scheduled':
+        return `Hi ${custName}, your delivery schedule to ${destCity} is confirmed. Our delivery team will contact you shortly.`;
+      case 'Delivery Day':
+        return `Hi ${custName}, your delivery is scheduled for today. The reporting team is on their way. Please contact your coordinator ${coordinator} if you need any support.`;
+      case 'Delivered & Feedback':
+        return `Hi ${custName}, your relocation has been successfully completed and delivered! We hope you had a smooth experience. Please take a moment to leave a review here: https://g.page/r/transworld-review/review. Thank you for choosing Transworld!`;
+      default:
+        return '';
+    }
+  };
+
+  const fetchWhatsAppLogs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_logs')
+        .select('*')
+        .eq('job_number', decodedId)
+        .order('sent_at', { ascending: false });
+      if (!error && data) {
+        setWhatsappLogs(data);
+      }
+    } catch (err) {
+      console.error('Error fetching WhatsApp logs:', err);
+    }
+  };
+
+  const handleMarkWhatsAppStageSent = async (stageName: string, messageText: string) => {
+    try {
+      const cleanPhone = (job?.customer_phone || '').replace(/[^0-9]/g, '');
+      const { error } = await supabase
+        .from('whatsapp_logs')
+        .insert({
+          job_number: decodedId,
+          stage_name: stageName,
+          sent_by: agentName,
+          phone_number: cleanPhone,
+          message_text: messageText
+        });
+
+      if (error) throw error;
+
+      await fetchWhatsAppLogs();
+    } catch (err) {
+      console.error('Error logging WhatsApp sent stage:', err);
+      alert('Error updating WhatsApp sent status: ' + (err as any).message);
+    }
+  };
 
   useEffect(() => {
     // Fetch the real username from profiles table
@@ -277,11 +461,36 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   }, []);
 
   useEffect(() => {
+    if (!decodedId || !agentName) return;
+
+    const channel = supabase.channel(`presence-job-${decodedId}`, {
+      config: { presence: { key: agentName } }
+    });
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        const activeUsers = Object.keys(state);
+        setViewingAgents(activeUsers);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({ online_at: new Date().toISOString() });
+        }
+      });
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [decodedId, agentName]);
+
+  useEffect(() => {
     fetchJobDetails();
     fetchNotes();
     fetchTrackingLogs();
     fetchComms();
     fetchSupervisors();
+    fetchWhatsAppLogs();
   }, [decodedId]);
 
   const fetchSupervisors = async () => {
@@ -433,7 +642,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
       .select('*')
       .eq('job_number', decodedId)
       .order('created_at', { ascending: false });
-    if (!error && data) setComms(data);
+    if (!error && data) {
+      setComms(data.filter((c: any) => !c.summary?.startsWith('[WhatsApp Sent]')));
+    }
   };
 
   const handleAddComm = async (e: React.FormEvent) => {
@@ -441,6 +652,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
     if (!commForm.call_type) return alert('Please select a Call Type (Customer or Internal)');
     if (!commForm.summary.trim()) return;
     try {
+      const now = new Date().toISOString();
       const { error } = await supabase
         .from('job_communications')
         .insert({
@@ -453,6 +665,23 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           follow_up_date: commForm.follow_up_required && commForm.follow_up_date ? commForm.follow_up_date : null
         });
       if (error) throw error;
+
+      // Update the jobs table with the last comm date and agent only if it is a Customer communication
+      if (commForm.call_type === 'Customer') {
+        const updates: any = {
+          last_comm_date: now,
+          last_comm_by: agentName
+        };
+        // Only write csc_coordinator if it is currently empty
+        if (!job.csc_coordinator) {
+          updates.csc_coordinator = agentName;
+        }
+        await supabase
+          .from('jobs')
+          .update(updates)
+          .eq('job_number', decodedId);
+      }
+
       setCommForm({ call_type: '', regarding: '', summary: '', follow_up_required: false, follow_up_date: '' });
       setCommFormOpen(false);
       fetchComms();
@@ -510,6 +739,10 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
   const isHHG = job.goods_type?.toLowerCase().includes('household') || job.goods_type?.toLowerCase().includes('vehicle');
   const isCOM = job.goods_type?.toLowerCase().includes('commercial') || job.goods_type?.toLowerCase().includes('monitor') || job.goods_type?.toLowerCase().includes('vaults');
+
+  const latestCustomerComm = comms.find(c => c.call_type === 'Customer');
+  const lastCommDate = job.last_comm_date || (latestCustomerComm ? latestCustomerComm.created_at : null);
+  const currentCoordinator = job.csc_coordinator || job.last_comm_by || (latestCustomerComm ? latestCustomerComm.agent_name : '');
 
   const handleBack = () => {
     if (typeof window !== 'undefined') {
@@ -575,20 +808,35 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
             {job.customer_name && <span style={{ color: '#8b5cf6', fontSize: '1.6rem', fontWeight: 600 }}>{job.customer_name}</span>}
           </h1>
         </div>
-        <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {saving ? (
-            <>
-              <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
-              Saving...
-            </>
-          ) : (
-            <>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              Saved
-            </>
-          )}
+        <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {/* Live Viewing Agents */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginRight: '0.5rem' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Viewing:</span>
+            {viewingAgents.map((agent, i) => (
+              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(99, 102, 241, 0.12)', color: '#4f46e5', border: '1px solid rgba(99, 102, 241, 0.2)', padding: '0.2rem 0.5rem', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 600 }}>
+                <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
+                {agent} {agent === agentName ? '(You)' : ''}
+              </span>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', borderLeft: '1px solid rgba(148, 163, 184, 0.3)', paddingLeft: '1rem' }}>
+            {saving ? (
+              <>
+                <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
+                Saving...
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                Saved
+              </>
+            )}
+          </div>
         </div>
       </div>
+
+
 
       <div className={styles.layout}>
         <div className={styles.mainForm}>
@@ -705,13 +953,69 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <span className={styles.textTracking}>Tracking Details</span>
             </h3>
             <div className={styles.grid}>
-              <div className={styles.inputGroup}><label>🕒 LAST COMM DATE</label><input value={job.last_comm_date ? new Date(job.last_comm_date).toLocaleString() : 'N/A'} disabled /></div>
-              <div className={styles.inputGroup}><label>📅 FOLLOW-UP DATE</label><DateInput name="follow_up_date" value={job.follow_up_date || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}>
+                <label>👤 CSC Coordinator</label>
+                <CustomSelect
+                  placeholder="- Select CSC Coordinator-"
+                  value={currentCoordinator}
+                  onChange={(val) => handleFieldChange('csc_coordinator', val)}
+                  options={[
+                    { value: '', label: '- Select CSC Coordinator-' },
+                    { value: 'Shruti', label: 'Shruti' },
+                    { value: 'Rabecca', label: 'Rabecca' },
+                    { value: 'Chandrama', label: 'Chandrama' }
+                  ]}
+                />
+              </div>
+              <div className={styles.inputGroup}>
+                <label>📅 FOLLOW-UP DATE</label>
+                <DateInput name="follow_up_date" value={job.follow_up_date || ''} onChange={handleChange} />
+              </div>
 
+              <div className={styles.inputGroup}>
+                <label>🔗 Tracking Link</label>
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  style={{
+                    flexGrow: 1,
+                    width: '62%',
+                    background: copied ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#ffffff',
+                    border: copied ? 'none' : '1px solid rgba(148, 163, 184, 0.25)',
+                    color: copied ? '#fff' : '#4f46e5',
+                    borderRadius: '10px',
+                    padding: '0.55rem 0.85rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    textAlign: 'center',
+                    boxShadow: copied ? '0 2px 6px rgba(16, 185, 129, 0.2)' : 'inset 0 2px 5px rgba(0,0,0,0.015), 0 1px 2px rgba(0,0,0,0.05)',
+                  }}
+                  onMouseOver={(e) => {
+                    if (!copied) {
+                      e.currentTarget.style.background = '#f8fafc';
+                      e.currentTarget.style.borderColor = 'rgba(79, 70, 229, 0.4)';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (!copied) {
+                      e.currentTarget.style.background = '#ffffff';
+                      e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.25)';
+                    }
+                  }}
+                >
+                  {copied ? '✓ Copied!' : '🔗 Copy Tracking Link'}
+                </button>
+              </div>
+              <div className={styles.inputGroup}>
+                <label>🕒 LAST COMM DATE</label>
+                <input value={lastCommDate ? formatDate(lastCommDate) : 'N/A'} disabled />
+              </div>
 
               <div className={styles.inputGroupFullWidth} style={{ gridColumn: 'span 2' }}>
                 <label>💬 LAST COMMUNICATION DETAILS WITH CUSTOMERS</label>
-                <textarea value={comms.length > 0 ? comms[0].summary : 'N/A'} disabled rows={3} style={{ opacity: 0.8 }} />
+                <textarea value={latestCustomerComm ? latestCustomerComm.summary : 'N/A'} disabled rows={3} style={{ opacity: 0.8 }} />
               </div>
             </div>
           </div>
@@ -810,11 +1114,16 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               
               <div className={styles.inputGroup}>
                 <label>🚨 INCIDENTS</label>
-                <select name="incidents" value={job.incidents || ''} onChange={handleChange}>
-                  <option value="">None</option>
-                  <option value="Damages">Damages</option>
-                  <option value="Complaints">Complaints</option>
-                </select>
+                <CustomSelect
+                  placeholder="None"
+                  value={job.incidents || ''}
+                  onChange={(val) => handleFieldChange('incidents', val)}
+                  options={[
+                    { value: '', label: 'None' },
+                    { value: 'Damages', label: 'Damages' },
+                    { value: 'Complaints', label: 'Complaints' }
+                  ]}
+                />
               </div>
               <div className={styles.inputGroup}><label>📝 INSTRUCTIONS</label><textarea name="dest_instructions" value={job.dest_instructions || ''} onChange={handleChange} /></div>
             </div>
@@ -865,8 +1174,10 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
             })}
           </div>
 
+
+
           {/* Shipment Tracking Section */}
-          <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(148, 163, 184, 0.2)' }}>
+          <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid rgba(148, 163, 184, 0.15)' }}>
             {/* Visual Tracking Timeline */}
             <div style={{ marginTop: '1rem' }}>
               <h4 style={{ color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>
@@ -928,12 +1239,15 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                 </div>
               </div>
             </div>
+            
+            {/* Interactive transit map */}
+            <JobMap origin={job.origin} destination={job.destination} checkpoints={trackingLogs} />
           </div>
         </div>
 
         <div className={styles.sidePanel}>
           {/* Communications Section */}
-          <div className={`glass ${styles.logsSection}`} style={{ marginBottom: '1.5rem' }}>
+          <div className={`glass ${styles.logsSection}`} style={{ height: 'auto', display: 'flex', flexDirection: 'column', marginBottom: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
               <h3 style={{ margin: 0 }}>📞 Communications</h3>
               <button
@@ -980,14 +1294,23 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                     </div>
                   </div>
                   <div style={{ flex: 1.5, minWidth: '180px', display: 'flex', alignItems: 'flex-end' }}>
-                    <select required value={commForm.regarding} onChange={e => setCommForm(f => ({ ...f, regarding: e.target.value }))}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', fontSize: '0.85rem', background: 'rgba(255,255,255,0.9)', color: 'var(--text-primary)', cursor: 'pointer' }}
-                    >
-                      <option value="" disabled>- Regarding -</option>
-                      {['Pre-Packing', 'Packing', 'In Transit', 'Delivery', 'Feedback', 'Damages', 'Complaints', 'Billing', 'Storage'].map(r => (
-                        <option key={r} value={r}>{r}</option>
-                      ))}
-                    </select>
+                    <CustomSelect
+                      placeholder="- Regarding -"
+                      value={commForm.regarding}
+                      onChange={(val) => setCommForm(f => ({ ...f, regarding: val }))}
+                      options={[
+                        { value: 'Pre-Packing', label: 'Pre-Packing' },
+                        { value: 'Packing', label: 'Packing' },
+                        { value: 'In Transit', label: 'In Transit' },
+                        { value: 'Delivery', label: 'Delivery' },
+                        { value: 'Feedback', label: 'Feedback' },
+                        { value: 'Damages', label: 'Damages' },
+                        { value: 'Complaints', label: 'Complaints' },
+                        { value: 'Billing', label: 'Billing' },
+                        { value: 'Storage', label: 'Storage' }
+                      ]}
+                      style={{ width: '100%' }}
+                    />
                   </div>
                 </div>
 
@@ -1134,11 +1457,55 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
 
-
+          {/* WhatsApp Status Updates Section */}
+          <div className={`glass ${styles.logsSection}`} style={{ height: 'auto', display: 'flex', flexDirection: 'column', padding: '1rem 1.25rem', marginBottom: '1.5rem' }}>
+            <h3 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid rgba(148, 163, 184, 0.12)', paddingBottom: '0.5rem', marginBottom: '0.5rem' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" width="20" height="20" style={{ flexShrink: 0 }}>
+                <path fill="#25D366" d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+              </svg>
+              WhatsApp Updates
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', paddingRight: '4px' }}>
+              {[
+                { name: 'Pre-Packing', label: 'Onboarding & Coordinator Info' },
+                { name: 'Packing Day', label: 'Packing Day Reminder' },
+                { name: 'Post-Packing', label: 'Post-Packing Completion' },
+                { name: 'Despatch / In Transit', label: 'Shipment Dispatch & Tracking' },
+                { name: 'Delivery Scheduled', label: 'Delivery Schedule Confirmation' },
+                { name: 'Delivery Day', label: 'Delivery Day Alert' },
+                { name: 'Delivered & Feedback', label: 'Relocation Completed & Review' }
+              ].map((stageItem, idx, arr) => {
+                const messageText = getWhatsAppMessageText(stageItem.name);
+                const sentInfo = whatsappLogs.find((log: any) => log.stage_name === stageItem.name);
+                
+                return (
+                  <WhatsAppStageRow
+                    key={stageItem.name}
+                    stageName={stageItem.name}
+                    stageLabel={stageItem.label}
+                    messageText={messageText}
+                    sentInfo={sentInfo}
+                    customerPhone={job.customer_phone}
+                    isLast={idx === arr.length - 1}
+                    onSend={async () => {
+                      const cleanPhone = (job.customer_phone || '').replace(/[^0-9]/g, '');
+                      if (!cleanPhone) {
+                        alert('Customer phone number is missing or invalid.');
+                        return;
+                      }
+                      const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}`;
+                      window.open(whatsappUrl, '_blank');
+                      await handleMarkWhatsAppStageSent(stageItem.name, messageText);
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
 
           {/* Notes Section */}
-          <div className={`glass ${styles.logsSection}`}>
-            <h3>Notes</h3>
+          <div className={`glass ${styles.logsSection}`} style={{ height: 'auto', display: 'flex', flexDirection: 'column' }}>
+            <h3 style={{ margin: 0, marginBottom: '0.75rem' }}>Notes</h3>
             
             <form onSubmit={handleAddNote} className={styles.addLogForm}>
               <div className={styles.inputWrapper}>
@@ -1173,6 +1540,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           </div>
         </div>
       </div>
+
+
     </div>
   );
 }

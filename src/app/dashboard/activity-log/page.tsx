@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { getUserColor } from '@/lib/colorUtils';
+import CustomSelect from '../components/CustomSelect';
 
 const cardStyle: React.CSSProperties = {
   background: 'rgba(255, 255, 255, 0.6)',
@@ -245,10 +246,15 @@ export default function ActivityLogPage() {
             
             {/* Left Column: Users & Date */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <select value={agentFilter} onChange={e => setAgentFilter(e.target.value)} style={{ ...inputStyle, width: '100%' }}>
-                <option value="">All Users</option>
-                {agents.map(a => <option key={a} value={a}>{userMap[a.toLowerCase()] || a}</option>)}
-              </select>
+              <CustomSelect
+                placeholder="All Users"
+                value={agentFilter}
+                onChange={(val) => setAgentFilter(val)}
+                options={[
+                  { value: '', label: 'All Users' },
+                  ...agents.map(a => ({ value: a, label: userMap[a.toLowerCase()] || a }))
+                ]}
+              />
               <input
                 type="date"
                 value={dateFilter}
@@ -259,10 +265,15 @@ export default function ActivityLogPage() {
 
             {/* Right Column: Fields & Controls */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <select value={fieldFilter} onChange={e => setFieldFilter(e.target.value)} style={{ ...inputStyle, width: '100%' }}>
-                <option value="">All Fields</option>
-                {fields.map(f => <option key={f} value={f}>{FIELD_LABELS[f] || f}</option>)}
-              </select>
+              <CustomSelect
+                placeholder="All Fields"
+                value={fieldFilter}
+                onChange={(val) => setFieldFilter(val)}
+                options={[
+                  { value: '', label: 'All Fields' },
+                  ...fields.map(f => ({ value: f, label: FIELD_LABELS[f] || f }))
+                ]}
+              />
               
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '100%' }}>
                 {(search || agentFilter || fieldFilter || dateFilter) ? (

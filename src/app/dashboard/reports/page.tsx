@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { getUserColor } from '@/lib/colorUtils';
+import CustomSelect from '../components/CustomSelect';
 
 // HSL-based beautiful color palette for charts
 const CHART_COLORS = [
@@ -1145,54 +1146,62 @@ export default function ReportsPage() {
               {/* Branch Filter */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Branch</label>
-                <select 
-                  value={filterBranch} 
-                  onChange={e => setFilterBranch(e.target.value)}
-                  style={{ padding: '0.5rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', background: 'white', color: '#0f172a', fontSize: '0.85rem', outline: 'none' }}
-                >
-                  <option value="">All Branches</option>
-                  {filterOptions.branches.map(b => <option key={b} value={b}>{b}</option>)}
-                </select>
+                <CustomSelect
+                  placeholder="All Branches"
+                  value={filterBranch}
+                  onChange={(val) => setFilterBranch(val)}
+                  options={[
+                    { value: '', label: 'All Branches' },
+                    ...filterOptions.branches.map(b => ({ value: b, label: b }))
+                  ]}
+                  style={{ minWidth: '130px' }}
+                />
               </div>
 
               {/* Status Filter */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Goods Track Status</label>
-                <select 
-                  value={filterStatus} 
-                  onChange={e => setFilterStatus(e.target.value)}
-                  style={{ padding: '0.5rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', background: 'white', color: '#0f172a', fontSize: '0.85rem', outline: 'none' }}
-                >
-                  <option value="">All Statuses</option>
-                  {filterOptions.statuses.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <CustomSelect
+                  placeholder="All Statuses"
+                  value={filterStatus}
+                  onChange={(val) => setFilterStatus(val)}
+                  options={[
+                    { value: '', label: 'All Statuses' },
+                    ...filterOptions.statuses.map(s => ({ value: s, label: s }))
+                  ]}
+                  style={{ minWidth: '150px' }}
+                />
               </div>
 
               {/* Goods Type Filter */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Goods Type</label>
-                <select 
-                  value={filterGoodsType} 
-                  onChange={e => setFilterGoodsType(e.target.value)}
-                  style={{ padding: '0.5rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', background: 'white', color: '#0f172a', fontSize: '0.85rem', outline: 'none' }}
-                >
-                  <option value="">All Types</option>
-                  {filterOptions.goodsTypes.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
+                <CustomSelect
+                  placeholder="All Types"
+                  value={filterGoodsType}
+                  onChange={(val) => setFilterGoodsType(val)}
+                  options={[
+                    { value: '', label: 'All Types' },
+                    ...filterOptions.goodsTypes.map(t => ({ value: t, label: t }))
+                  ]}
+                  style={{ minWidth: '130px' }}
+                />
               </div>
 
               {/* Operation By Filter */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Operation By</label>
-                <select 
-                  value={filterOperationBy} 
-                  onChange={e => setFilterOperationBy(e.target.value)}
-                  style={{ padding: '0.5rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', background: 'white', color: '#0f172a', fontSize: '0.85rem', outline: 'none' }}
-                >
-                  <option value="">All Partners</option>
-                  <option value="TI">TI</option>
-                  <option value="Outsourced">Outsourced</option>
-                </select>
+                <CustomSelect
+                  placeholder="All Partners"
+                  value={filterOperationBy}
+                  onChange={(val) => setFilterOperationBy(val)}
+                  options={[
+                    { value: '', label: 'All Partners' },
+                    { value: 'TI', label: 'TI' },
+                    { value: 'Outsourced', label: 'Outsourced' }
+                  ]}
+                  style={{ minWidth: '130px' }}
+                />
               </div>
 
 

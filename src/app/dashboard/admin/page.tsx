@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Papa from 'papaparse';
+import CustomSelect from '../components/CustomSelect';
 
 const cardStyle: React.CSSProperties = {
   background: 'rgba(255, 255, 255, 0.75)',
@@ -304,11 +305,16 @@ export default function AdminPage() {
                   <td style={{ padding: '0.85rem 1rem 0.85rem 0', fontWeight: 600, color: '#0f172a' }}>{u.name || '—'}</td>
                   <td style={{ padding: '0.85rem 1rem 0.85rem 0', color: '#475569' }}>{displayUsername}</td>
                   <td style={{ padding: '0.85rem 1rem 0.85rem 0' }}>
-                    <select value={role} onChange={(e) => updateUser(u.id, e.target.value, chat_access)} style={selectStyle}>
-                      <option value="Executive">Executive</option>
-                      <option value="Manager">Manager</option>
-                      <option value="Admin">Admin</option>
-                    </select>
+                    <CustomSelect
+                      value={role}
+                      onChange={(val) => updateUser(u.id, val, chat_access)}
+                      options={[
+                        { value: 'Executive', label: 'Executive' },
+                        { value: 'Manager', label: 'Manager' },
+                        { value: 'Admin', label: 'Admin' }
+                      ]}
+                      style={{ maxWidth: '140px' }}
+                    />
                   </td>
                   <td style={{ padding: '0.85rem 1rem 0.85rem 0' }}>
                     <button

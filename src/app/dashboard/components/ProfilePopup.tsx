@@ -11,6 +11,7 @@ export default function ProfilePopup({ user }: { user: any }) {
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || '');
   const [newPassword, setNewPassword] = useState('');
   const [avatar, setAvatar] = useState(user?.user_metadata?.avatar_url || null);
+  const [phone, setPhone] = useState(user?.user_metadata?.phone || '');
   const [loading, setLoading] = useState(false);
   const [isLightMode, setIsLightMode] = useState(false);
   const router = useRouter();
@@ -33,6 +34,7 @@ export default function ProfilePopup({ user }: { user: any }) {
           setProfile(data);
           setFullName(data.name || '');
           setAvatar(data.photo || null);
+          setPhone(data.phone || '');
         }
       });
     }
@@ -83,11 +85,26 @@ export default function ProfilePopup({ user }: { user: any }) {
     }
   };
 
+  const formatPhoneNumber = (input: string): string => {
+    const trimmed = input.trim();
+    if (!trimmed) return '';
+    const digits = trimmed.replace(/\D/g, '');
+    if (digits.length === 10) {
+      return `+91 ${digits.substring(0, 5)} ${digits.substring(5)}`;
+    }
+    if (digits.length === 12 && digits.startsWith('91')) {
+      return `+91 ${digits.substring(2, 7)} ${digits.substring(7)}`;
+    }
+    return trimmed;
+  };
+
   const handleSaveProfile = async () => {
     setLoading(true);
     
+    const formattedPhone = formatPhoneNumber(phone);
+    
     // Create an object to hold auth updates dynamically
-    const authUpdates: any = { data: { full_name: fullName, avatar_url: avatar } };
+    const authUpdates: any = { data: { full_name: fullName, avatar_url: avatar, phone: formattedPhone } };
     if (newPassword.trim().length >= 6) {
       authUpdates.password = newPassword.trim();
     }
@@ -98,14 +115,16 @@ export default function ProfilePopup({ user }: { user: any }) {
     // Update profiles table
     const { error } = await supabase.from('profiles').update({
       name: fullName,
-      photo: avatar
+      photo: avatar,
+      phone: formattedPhone
     }).eq('id', user.id);
     
     setLoading(false);
     if (!error && !authError) {
       setIsManageMode(false);
       setNewPassword(''); // clear it
-      // Optional: router.refresh() if needed to propagate
+      setPhone(formattedPhone);
+      setProfile((prev: any) => prev ? { ...prev, phone: formattedPhone } : { phone: formattedPhone });
     } else {
       alert("Error saving profile: " + (error?.message || authError?.message));
     }
@@ -140,7 +159,7 @@ export default function ProfilePopup({ user }: { user: any }) {
         <div style={{
           position: 'fixed', top: '5rem', left: '1rem', width: '240px', zIndex: 9999,
           borderRadius: '16px', padding: '1.5rem', boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-          backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)', border: '1px solid rgba(148, 163, 184, 0.3)',
+          backgroundColor: '#ffffff', backdropFilter: 'none', border: '1px solid rgba(148, 163, 184, 0.3)',
           display: 'flex', flexDirection: 'column', alignItems: 'center'
         }}>
           
@@ -153,7 +172,12 @@ export default function ProfilePopup({ user }: { user: any }) {
                 <AvatarComponent size={140} />
               </label>
               <h3 style={{ marginTop: '1rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>{displayName}!</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>{role}</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: profile?.phone ? '0.25rem' : '1.5rem' }}>{role}</p>
+              {profile?.phone && (
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>📞</span> <span>{profile.phone}</span>
+                </p>
+              )}
 
               <button 
                 onClick={() => setIsManageMode(true)}
@@ -196,6 +220,17 @@ export default function ProfilePopup({ user }: { user: any }) {
                   type="text" 
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)' }}
+                />
+              </div>
+
+              <div style={{ width: '100%', marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Phone Number</label>
+                <input 
+                  type="text" 
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="e.g. +91 98765 43210"
                   style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)' }}
                 />
               </div>

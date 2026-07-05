@@ -597,7 +597,8 @@ function JobsTable() {
             {showNotifications && (
               <div className="glass" style={{ 
                 position: 'absolute', top: '100%', right: 0, marginTop: '0.5rem', width: '340px', 
-                zIndex: 100, overflow: 'hidden', display: 'flex', flexDirection: 'column'
+                zIndex: 100, overflow: 'hidden', display: 'flex', flexDirection: 'column',
+                backgroundColor: '#ffffff', backdropFilter: 'none', WebkitBackdropFilter: 'none'
               }}>
                 <div style={{ padding: '1rem', background: 'transparent', borderBottom: '1px solid var(--border-color)', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between' }}>
                   <span>Pending Follow-ups</span>
