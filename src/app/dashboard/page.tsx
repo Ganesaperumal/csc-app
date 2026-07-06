@@ -362,10 +362,6 @@ function JobsTable() {
     try { localStorage.setItem('csc_type_filter', typeFilter); } catch {}
   }, [typeFilter]);
 
-  useEffect(() => {
-    fetchJobs();
-  }, [typeFilter]);
-
   // Reset infinite scroll count when any filters or sorting changes
   useEffect(() => {
     setVisibleCount(50);
@@ -396,6 +392,10 @@ function JobsTable() {
       }
     };
   }, [loading, visibleCount]);
+
+  useEffect(() => {
+    fetchJobs();
+  }, [typeFilter]);
 
   // ── Supabase Realtime subscription ──────────────────────────────
   useEffect(() => {
@@ -555,7 +555,16 @@ function JobsTable() {
         }
       }
     }
-    return true;
+    
+    // Check if the job is completed but not closed
+    const isCompleted = job.goods_track_status === '22. Job Completed';
+
+    if (typeFilter === 'COMPLETED') {
+      return isCompleted;
+    } else {
+      // Standard views exclude completed jobs
+      return !isCompleted;
+    }
   });
 
   const sortedJobs = [...filteredJobs].sort((a, b) => {
@@ -726,6 +735,27 @@ function JobsTable() {
               All
             </button>
           </div>
+
+          {/* Completed Toggle Button */}
+          <button 
+            className={styles.toggleBtn}
+            onClick={() => setTypeFilter('COMPLETED')}
+            style={{
+              padding: '0.6rem 1.25rem',
+              borderRadius: '99px',
+              border: typeFilter === 'COMPLETED' ? 'none' : '1px solid rgba(148, 163, 184, 0.25)',
+              background: typeFilter === 'COMPLETED' ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(255, 255, 255, 0.45)',
+              color: typeFilter === 'COMPLETED' ? 'white' : 'var(--text-secondary)',
+              fontWeight: 700,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              boxShadow: typeFilter === 'COMPLETED' ? '0 4px 12px rgba(16,185,129,0.3)' : 'none',
+              fontFamily: "'Outfit', sans-serif",
+            }}
+          >
+            ✅ Completed
+          </button>
           <div className={styles.columnSelectorContainer}>
             <button className={styles.columnsBtn} onClick={() => setShowColumnSelector(!showColumnSelector)} style={{ padding: '0.6rem 1rem' }}>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
