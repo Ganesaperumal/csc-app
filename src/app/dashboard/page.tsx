@@ -58,7 +58,8 @@ const ALL_COLUMNS = [
   { id: 'last_comm_by', label: 'Last Comm By' },
   { id: 'last_comm_date', label: 'Last Comm Date' },
   { id: 'invoice_number', label: 'Invoice Number' },
-  { id: 'invoice_date', label: 'Invoice Date' }
+  { id: 'invoice_date', label: 'Invoice Date' },
+  { id: 'csc_coordinator', label: 'CSC Coordinator' }
 ];
 
 function ColumnFilterDropdown({ 
