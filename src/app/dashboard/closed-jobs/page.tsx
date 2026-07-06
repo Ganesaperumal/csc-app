@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import styles from '../jobs.module.css';
-import { isJobClosed } from '@/lib/jobFilters';
 
 const ALL_COLUMNS = [
   { id: 'erp_job_id', label: 'Job ID' },
@@ -180,13 +179,30 @@ export default function ClosedJobsPage() {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('jobs').select('*').order('erp_job_id', { ascending: false, nullsFirst: false });
-      if (typeFilter === 'HHG') query = query.or('goods_type.ilike.%Household%,goods_type.ilike.%hhg%');
+      let query = supabase.from('jobs').select('*').in('erp_status', ['Billed', 'Canceled', 'Cancelled']).order('erp_job_id', { ascending: false, nullsFirst: false });
+      if (typeFilter === 'HHG') query = query.ilike('goods_type', '%Household%');
       else if (typeFilter === 'COM') query = query.ilike('goods_type', '%Commercial%');
       const { data, error } = await query;
       if (error) throw error;
       
-      const closedJobs = (data || []).filter(job => isJobClosed(job));
+      const closedJobs = (data || []).filter(job => {
+        // Canceled jobs are always closed
+        if (job.erp_status?.toLowerCase().includes('cancel')) return true;
+        
+        // If not billed, it's not closed (shouldn't happen with the SQL filter, but to be safe)
+        if (job.erp_status?.toLowerCase() !== 'billed') return false;
+        
+        // For billed jobs, check completion status
+        const goodsCompleted = job.goods_track_status === '22. Job Completed';
+        const carIncluded = job.car_included === true || job.car_included === 'Yes' || job.car_included === 'yes';
+        
+        if (!carIncluded) {
+          return goodsCompleted;
+        } else {
+          const carCompleted = job.car_track_status === '16. Job Completed';
+          return goodsCompleted && carCompleted;
+        }
+      });
       
       setJobs(closedJobs);
     } catch (err: any) {

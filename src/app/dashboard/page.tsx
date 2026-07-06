@@ -4,7 +4,6 @@ import { useEffect, useState, Suspense, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import styles from './jobs.module.css';
-import { isJobClosed } from '@/lib/jobFilters';
 
 const ALL_COLUMNS = [
   { id: 'erp_job_id', label: 'Job ID' },
@@ -210,9 +209,10 @@ function JobsTable() {
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // Infinite Scroll states
+  // Infinite Scroll & viewMode states
   const [visibleCount, setVisibleCount] = useState(50);
   const loaderRef = useRef<HTMLDivElement>(null);
+  const [viewMode, setViewMode] = useState<'active' | 'completed'>('active');
 
   const handleMouseEnterNotification = () => {
     if (notificationTimeout.current) clearTimeout(notificationTimeout.current);
@@ -365,12 +365,12 @@ function JobsTable() {
 
   useEffect(() => {
     fetchJobs();
-  }, [typeFilter]);
+  }, [typeFilter, viewMode]);
 
-  // Reset infinite scroll count when any filters or sorting changes
+  // Reset infinite scroll count when any filters, sorting, or viewMode changes
   useEffect(() => {
     setVisibleCount(50);
-  }, [filters, typeFilter, sortConfig]);
+  }, [filters, typeFilter, sortConfig, viewMode]);
 
   // Infinite scroll IntersectionObserver setup
   useEffect(() => {
@@ -407,7 +407,7 @@ function JobsTable() {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [typeFilter]);
+  }, [typeFilter, viewMode]);
 
   useEffect(() => {
     if (agentName) {
@@ -460,18 +460,46 @@ function JobsTable() {
 
       const { data, error } = await query;
       if (error) throw error;
-      
-      const activeJobs = (data || []).filter(job => !isJobClosed(job));
-      
+
+      const COMPLETED_STATUSES = [
+        '22. Job Completed', 
+        '23. Job # taken for Billing', 
+        '24. Customer Cancelled', 
+        '25. Job # to be Cancelled'
+      ];
+
+      const isClosedJob = (job: any) => {
+        const erpStatus = job.erp_status?.toLowerCase() || '';
+        if (erpStatus.includes('cancel') || erpStatus.includes('cancelled') || erpStatus.includes('canceled')) {
+          return true;
+        }
+        if (erpStatus === 'billed') {
+          const goodsCompleted = job.goods_track_status === '22. Job Completed';
+          const carIncluded = job.car_included === true || job.car_included === 'Yes' || job.car_included === 'yes';
+          if (!carIncluded) {
+            return goodsCompleted;
+          } else {
+            const carCompleted = job.car_track_status === '16. Job Completed';
+            return goodsCompleted && carCompleted;
+          }
+        }
+        return false;
+      };
+
+      const dashboardJobs = (data || []).filter(job => !isClosedJob(job));
+      const activeJobsList = dashboardJobs.filter(job => !COMPLETED_STATUSES.includes(job.goods_track_status));
+      const completedJobsList = dashboardJobs.filter(job => COMPLETED_STATUSES.includes(job.goods_track_status));
+
+      const activeJobs = viewMode === 'completed' ? completedJobsList : activeJobsList;
       setJobs(activeJobs);
 
-      // ── Compute KPIs ─────────────────────────────────────────────
+      // ── Compute KPIs (Based on active jobs) ───────────────────────
       const todayStr = new Date().toISOString().slice(0, 10);
-      const inTransit = activeJobs.filter(j => j.goods_track_status?.toLowerCase().includes('transit')).length;
+      const inTransit = activeJobsList.filter(j => j.goods_track_status?.toLowerCase().includes('transit')).length;
       const deliveredToday = (data || []).filter(j => j.actual_delivery === todayStr).length;
       const packingToday = (data || []).filter(j => j.packing_date === todayStr).length;
       const dispatchToday = (data || []).filter(j => j.dispatch_date === todayStr).length;
-      const damagesComplaints = activeJobs.filter(j => {
+      const damagesComplaints = activeJobsList.filter(j => {
         const goodsStatus = (j.goods_track_status || '').toLowerCase();
         const carStatus = (j.car_track_status || '').toLowerCase();
         return (
@@ -487,7 +515,7 @@ function JobsTable() {
       }).length;
 
       // Filter to only include Household moves for Active Jobs and Unassigned metrics
-      const householdActiveJobs = activeJobs.filter(j => {
+      const householdActiveJobs = activeJobsList.filter(j => {
         const type = (j.goods_type || '').toLowerCase();
         return type.includes('household') || type.includes('hhg');
       });
@@ -588,7 +616,7 @@ function JobsTable() {
   };
 
   const getTitle = () => {
-    return 'Active Jobs Dashboard';
+    return viewMode === 'completed' ? 'Completed Jobs Dashboard' : 'Active Jobs Dashboard';
   };
 
   // Infinite scroll calculations
@@ -719,28 +747,39 @@ function JobsTable() {
             </button>
           </div>
 
-          <button 
-            className={styles.columnsBtn} 
-            onClick={() => router.push('/dashboard/closed-jobs')} 
-            style={{ 
-              padding: '0.6rem 1.1rem',
-              background: 'linear-gradient(135deg, #475569, #334155)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '0.82rem',
+          <button
+            onClick={() => setViewMode(prev => prev === 'active' ? 'completed' : 'active')}
+            style={{
+              padding: '0.6rem 1.2rem',
+              borderRadius: '99px',
+              border: '1px solid var(--border-color)',
+              background: viewMode === 'completed' 
+                ? 'linear-gradient(135deg, #a855f7, #7e22ce)' 
+                : 'var(--surface-color)',
+              color: viewMode === 'completed' ? 'white' : 'var(--text-secondary)',
               fontWeight: 700,
-              boxShadow: '0 4px 12px rgba(71, 85, 105, 0.15)',
+              fontSize: '0.85rem',
               cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              transition: 'transform 0.15s, opacity 0.15s'
+              boxShadow: viewMode === 'completed' 
+                ? '0 4px 12px rgba(168,85,247,0.35)' 
+                : 'none',
+              transition: 'all 0.3s ease',
+              fontFamily: "'Outfit', sans-serif",
             }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.opacity = '0.95'; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.opacity = '1'; }}
+            onMouseOver={(e) => {
+              if (viewMode !== 'completed') {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.6)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (viewMode !== 'completed') {
+                e.currentTarget.style.background = 'var(--surface-color)';
+                e.currentTarget.style.color = 'var(--text-secondary)';
+              }
+            }}
           >
-            🗃️ Closed
+            {viewMode === 'completed' ? '✓ Completed' : 'Completed'}
           </button>
 
           <div className={styles.columnSelectorContainer}>
