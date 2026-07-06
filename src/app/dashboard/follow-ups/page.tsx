@@ -96,7 +96,7 @@ export default function FollowUpsPage() {
       const activeComms = comms || [];
 
       // 3. Fetch job details mapping for only those jobs that have active follow-ups
-      const jobMap: Record<string, { customer: string; spoc: string }> = {};
+      const jobMap: Record<string, { customer: string; spoc: string; company: string }> = {};
       const jobNumbers = Array.from(new Set(activeComms.map(c => c.job_number)));
 
       if (jobNumbers.length > 0) {
