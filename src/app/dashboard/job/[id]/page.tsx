@@ -365,6 +365,72 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [whatsappLogs, setWhatsappLogs] = useState<any[]>([]);
 
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSummary, setAiSummary] = useState('');
+
+  const handleGenerateAISummary = async () => {
+    if (!job) return;
+    setAiLoading(true);
+    setAiSummary('');
+    try {
+      const commHistory = comms.map(c => `[${c.call_type} / ${c.regarding}] ${c.summary}`).join('\n');
+      const trackHistory = trackingLogs.map(t => `[${t.date}] ${t.location}: ${t.remark}`).join('\n');
+      
+      const context = `Job Number: ${job.job_number}\nStatus: ${job.goods_track_status}\n\nTracking History:\n${trackHistory}\n\nCommunication History:\n${commHistory}`;
+      
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          prompt: "Write a short 2-3 sentence summary of the current status and health of this job based on its tracking and communication history.",
+          context
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.result) {
+        setAiSummary(data.result);
+      } else if (res.status === 429) {
+        setAiSummary(data.message || 'I am currently processing a high volume of requests. Please give me a minute and try again!');
+      } else {
+        setAiSummary('Failed to generate AI summary.');
+      }
+    } catch (err) {
+      setAiSummary('Network error during AI generation.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleDraftAIReply = async () => {
+    if (comms.length === 0) return;
+    setAiLoading(true);
+    try {
+      const lastComm = comms[0];
+      const context = `Last communication:\nType: ${lastComm.call_type}\nRegarding: ${lastComm.regarding}\nSummary: ${lastComm.summary}`;
+      
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          prompt: "Draft a polite, professional reply or follow-up to this communication. Return ONLY the drafted message.",
+          context
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.result) {
+        setCommForm(f => ({ ...f, summary: data.result }));
+      } else if (res.status === 429) {
+        alert(data.message || 'Rate limit hit. Wait a minute.');
+      } else {
+        alert('Failed to draft reply.');
+      }
+    } catch (err) {
+      alert('Network error.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const [copied, setCopied] = useState(false);
   const handleCopyLink = () => {
     if (!job) return;
@@ -801,13 +867,41 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             Back
           </button>
-          <h1 style={{ display: 'flex', gap: '2rem', alignItems: 'baseline', margin: 0 }}>
-            {job.job_date && <span style={{ color: '#ec4899' }}>{formatDate(job.job_date)}</span>}
-            <span style={{ color: '#10b981' }}>{job.job_number}</span>
-            {job.enq_number && <span style={{ color: '#3b82f6' }}>{job.enq_number}</span>}
-            {job.customer_name && <span style={{ color: '#8b5cf6', fontSize: '1.6rem', fontWeight: 600 }}>{job.customer_name}</span>}
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <h1 style={{ display: 'flex', gap: '2rem', alignItems: 'baseline', margin: 0 }}>
+              {job.job_date && <span style={{ color: '#ec4899' }}>{formatDate(job.job_date)}</span>}
+              <span style={{ color: '#10b981' }}>{job.job_number}</span>
+              {job.enq_number && <span style={{ color: '#3b82f6' }}>{job.enq_number}</span>}
+              {job.customer_name && <span style={{ color: '#8b5cf6', fontSize: '1.6rem', fontWeight: 600 }}>{job.customer_name}</span>}
+            </h1>
+            <button 
+              onClick={handleGenerateAISummary}
+              disabled={aiLoading}
+              style={{
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                color: '#fff', border: 'none', borderRadius: '20px', padding: '0.4rem 0.8rem',
+                fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
+                boxShadow: '0 2px 10px rgba(16,185,129,0.3)', opacity: aiLoading ? 0.6 : 1
+              }}
+            >
+              {aiLoading ? '✨ Thinking...' : '✨ AI Summary'}
+            </button>
+          </div>
         </div>
+        
+        {aiSummary && (
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(5,150,105,0.15))',
+            borderLeft: '4px solid #10b981',
+            borderRadius: '0 8px 8px 0', padding: '1rem', marginTop: '0.5rem', marginBottom: '1rem',
+            color: '#1e293b', fontSize: '0.9rem', lineHeight: '1.5'
+          }}>
+            <div style={{ fontWeight: 700, color: '#059669', marginBottom: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span>✨</span> Ti AI Summary
+            </div>
+            {aiSummary}
+          </div>
+        )}
         <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           {/* Live Viewing Agents */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginRight: '0.5rem' }}>
@@ -1316,7 +1410,22 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
                 {/* Row 3: Summary */}
                 <div>
-                  <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem', display: 'block' }}>Call Summary *</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                    <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Call Summary *</label>
+                    <button 
+                      type="button" 
+                      onClick={handleDraftAIReply}
+                      disabled={aiLoading || comms.length === 0}
+                      style={{
+                        background: 'none', border: '1px solid #10b981', color: '#10b981',
+                        borderRadius: '12px', padding: '0.2rem 0.6rem', fontSize: '0.7rem', fontWeight: 600,
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem',
+                        opacity: (aiLoading || comms.length === 0) ? 0.5 : 1
+                      }}
+                    >
+                      ✨ Draft AI Reply
+                    </button>
+                  </div>
                   <textarea required value={commForm.summary} onChange={e => setCommForm(f => ({ ...f, summary: e.target.value }))} rows={3}
                     placeholder="Describe what was discussed..."
                     style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', fontSize: '0.85rem', background: 'rgba(255,255,255,0.9)', resize: 'none', boxSizing: 'border-box' }}
