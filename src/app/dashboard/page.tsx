@@ -1036,9 +1036,41 @@ function JobsTable() {
             >
               Previous
             </button>
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Page {currentPage} of {totalPages}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Page</span>
+              <input 
+                type="number" 
+                min={1} 
+                max={totalPages}
+                value={currentPage || ''}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  if (!isNaN(val) && val >= 1 && val <= totalPages) {
+                    setCurrentPage(val);
+                  } else if (e.target.value === '') {
+                    setCurrentPage('' as any);
+                  }
+                }}
+                onBlur={(e) => {
+                  if (e.target.value === '' || isNaN(parseInt(e.target.value, 10))) {
+                    setCurrentPage(1);
+                  }
+                }}
+                style={{
+                  width: '48px',
+                  padding: '0.25rem 0.35rem',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border-color)',
+                  background: 'rgba(255,255,255,0.8)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  textAlign: 'center',
+                  outline: 'none',
+                }}
+              />
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>of {totalPages}</span>
+            </div>
             <button 
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
               disabled={currentPage === totalPages}
