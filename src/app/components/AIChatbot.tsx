@@ -30,7 +30,7 @@ export default function AIChatbot() {
         body: JSON.stringify({ 
           prompt: userMsg,
           context: `Conversation History:\n${messages.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n')}`,
-          provider: 'groq'
+          provider: window.location.pathname.startsWith('/dashboard') ? 'groq' : 'gemini'
         })
       });
 
