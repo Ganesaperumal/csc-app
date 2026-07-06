@@ -383,8 +383,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           prompt: "Write a short 2-3 sentence summary of the current status and health of this job based on its tracking and communication history.",
-          context,
-          provider: 'groq'
+          context
         })
       });
       const data = await res.json();
