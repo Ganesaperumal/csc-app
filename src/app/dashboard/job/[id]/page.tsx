@@ -1241,7 +1241,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
             </div>
             
             {/* Interactive transit map */}
-            <JobMap origin={job.origin} destination={job.destination} checkpoints={trackingLogs} />
+            <JobMap origin={job.origin} destination={job.destination} checkpoints={trackingLogs} title="Route" />
           </div>
         </div>
 

@@ -126,6 +126,7 @@ interface JobMapProps {
   origin: string;
   destination: string;
   checkpoints?: Checkpoint[];
+  title?: string;
 }
 
 declare global {
@@ -134,7 +135,7 @@ declare global {
   }
 }
 
-export default function JobMap({ origin, destination, checkpoints = [] }: JobMapProps) {
+export default function JobMap({ origin, destination, checkpoints = [], title = "Live Route & Checkpoints" }: JobMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const [leafletLoaded, setLeafletLoaded] = useState(false);

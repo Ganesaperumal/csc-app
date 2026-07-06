@@ -38,6 +38,16 @@ export default function PublicTrackingPage({ params }: { params: Promise<{ id: s
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [coordinatorPhone, setCoordinatorPhone] = useState<string | null>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  // Fire confetti when delivered
+  useEffect(() => {
+    if (job?.goods_track_status?.toLowerCase().includes('delivered')) {
+      setShowConfetti(true);
+      const timer = setTimeout(() => setShowConfetti(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [job?.goods_track_status]);
 
   useEffect(() => {
     const fetchPublicTracking = async () => {
@@ -270,14 +280,15 @@ export default function PublicTrackingPage({ params }: { params: Promise<{ id: s
                   
                   {/* Step bubble */}
                   <div style={{
-                    width: '32px', height: '32px', borderRadius: '50%',
+                    width: '40px', height: '40px', borderRadius: '50%',
                     background: bubbleBg, border: `2px solid ${borderCol}`,
                     color: isPast || isCurrent ? 'white' : '#64748b',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '0.8rem', fontWeight: 'bold', zIndex: 2,
-                    boxShadow: isCurrent ? '0 0 12px rgba(79, 70, 229, 0.4)' : 'none',
-                    transition: 'all 0.3s ease'
-                  }}>
+                    fontSize: isCurrent ? '1.1rem' : '0.85rem', fontWeight: 'bold', zIndex: 2,
+                    boxShadow: isCurrent ? '0 0 12px rgba(79,70,229,0.4)' : 'none',
+                    transition: 'all 0.4s ease'
+                  }}
+                  className={isCurrent ? 'stage-active-pulse' : ''}>
                     {dotDisplay}
                   </div>
                   
@@ -402,6 +413,51 @@ export default function PublicTrackingPage({ params }: { params: Promise<{ id: s
         </section>
 
       </main>
+
+      {/* Floating WhatsApp Button */}
+      {coordinatorPhone && (
+        <a
+          href={`https://wa.me/${coordinatorPhone.replace(/\D/g, '')}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 999,
+            width: '56px', height: '56px', borderRadius: '50%',
+            background: 'linear-gradient(135deg, #25d366, #128c7e)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1.6rem', textDecoration: 'none',
+            boxShadow: '0 4px 20px rgba(37,211,102,0.4)',
+            transition: 'transform 0.2s, box-shadow 0.2s',
+          }}
+          title={`Chat with your coordinator on WhatsApp`}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(37,211,102,0.6)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(37,211,102,0.4)'; }}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.125.558 4.119 1.532 5.845L.063 23.5l5.834-1.53A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.844 0-3.587-.492-5.091-1.352l-.366-.214-3.773.99 1.01-3.684-.234-.38A9.934 9.934 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+        </a>
+      )}
+
+      {/* Confetti */}
+      {showConfetti && (
+        <>
+          {Array.from({ length: 60 }).map((_, i) => (
+            <div
+              key={i}
+              className="confetti-piece"
+              style={{
+                left: `${Math.random() * 100}vw`,
+                top: '-20px',
+                background: ['#4f46e5','#10b981','#f59e0b','#ec4899','#06b6d4','#8b5cf6'][i % 6],
+                width: `${6 + Math.random() * 8}px`,
+                height: `${6 + Math.random() * 8}px`,
+                animationDuration: `${2.5 + Math.random() * 3}s`,
+                animationDelay: `${Math.random() * 1.5}s`,
+                borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+              }}
+            />
+          ))}
+        </>
+      )}
 
       {/* Footer Branding */}
       <footer style={{ textAlign: 'center', padding: '2rem 1rem 1rem 1rem', borderTop: '1px solid rgba(148,163,184,0.1)', color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: 'auto' }}>

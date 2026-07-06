@@ -317,7 +317,7 @@ export default function FollowUpsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 'bold', backgroundImage: 'linear-gradient(45deg, #4f46e5, #7c3aed)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
-            ⏰ Follow-up Tasks Kanban
+            ⏰ Follow-up Tasks
           </h1>
           <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
             {isAdmin ? `Admin Dashboard — Managing follow-ups for all active coordinators` : `Coordinator Portal — Managing follow-up reminders for ${agentName}`}
@@ -353,7 +353,6 @@ export default function FollowUpsPage() {
           )}
         </div>
       </div>
-
       {loading ? (
         <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', height: '300px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>

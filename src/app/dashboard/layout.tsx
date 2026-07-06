@@ -8,6 +8,7 @@ import styles from './dashboard.module.css';
 import GroupChat from './components/GroupChat';
 import ProfilePopup from './components/ProfilePopup';
 import SyncERPButton from './components/SyncERPButton';
+import CommandPalette from './components/CommandPalette';
 
 function DashboardNav({ role }: { role: string | null }) {
   const pathname = usePathname();
@@ -17,23 +18,23 @@ function DashboardNav({ role }: { role: string | null }) {
   return (
     <nav className={styles.nav}>
       <Link href="/dashboard?view=active" className={`${styles.navItem} ${currentView === 'active' && pathname === '/dashboard' ? styles.active : ''}`}>
-        Active Jobs
+        <span>📋</span> Active Jobs
       </Link>
       <Link href="/dashboard/closed-jobs" className={`${styles.navItem} ${pathname === '/dashboard/closed-jobs' ? styles.active : ''}`}>
-        Closed Jobs
+        <span>🗃️</span> Closed Jobs
       </Link>
       <Link href="/dashboard/follow-ups" className={`${styles.navItem} ${pathname === '/dashboard/follow-ups' ? styles.active : ''}`}>
-        Follow-up Tasks
+        <span>⏰</span> Follow-ups
       </Link>
       <Link href="/dashboard/spocs" className={`${styles.navItem} ${pathname === '/dashboard/spocs' ? styles.active : ''}`}>
-        SPOC Management
+        <span>👥</span> SPOC Management
       </Link>
       <Link href="/dashboard/reports" className={`${styles.navItem} ${pathname === '/dashboard/reports' ? styles.active : ''}`}>
-        Reports & Analytics
+        <span>📊</span> Reports &amp; Analytics
       </Link>
       {role === 'Admin' && (
         <Link href="/dashboard/activity-log" className={`${styles.navItem} ${pathname === '/dashboard/activity-log' ? styles.active : ''}`}>
-          Activity Log
+          <span>📝</span> Activity Log
         </Link>
       )}
     </nav>
@@ -132,6 +133,7 @@ export default function DashboardLayout({
       <main className="main-content">
         {children}
       </main>
+      <CommandPalette />
     </div>
   );
 }

@@ -163,6 +163,19 @@ function ColumnFilterDropdown({
   );
 }
 
+// ── Status badge helper ──────────────────────────────────────────
+function getStatusBadge(status: string) {
+  if (!status) return <span className="status-badge default">—</span>;
+  const s = status.toLowerCase();
+  if (s.includes('delivered') || s.includes('job completed')) return <span className="status-badge delivered" title={status}>✓ Delivered</span>;
+  if (s.includes('in transit')) return <span className="status-badge in-transit" title={status}>🔵 In Transit</span>;
+  if (s.includes('despatch') || s.includes('dispatch')) return <span className="status-badge dispatched" title={status}>📦 Dispatched</span>;
+  if (s.includes('out for delivery')) return <span className="status-badge out-delivery" title={status}>🚀 Out for Delivery</span>;
+  if (s.includes('packing')) return <span className="status-badge packing" title={status}>📦 Packing</span>;
+  if (s.includes('deviation')) return <span className="status-badge deviation" title={status}>⚠ Deviation</span>;
+  return <span className="status-badge default" title={status}>{status.replace(/^\d+\.\s*/, '')}</span>;
+}
+
 function JobsTable() {
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -182,9 +195,23 @@ function JobsTable() {
   });
   const [activeFilterColumn, setActiveFilterColumn] = useState<string | null>(null);
 
+  const [kpi, setKpi] = useState({ 
+    total: 0, 
+    inTransit: 0, 
+    deliveredToday: 0, 
+    followUpsToday: 0,
+    packingToday: 0,
+    dispatchToday: 0,
+    damagesComplaints: 0,
+    unattended: 0
+  });
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
 
   const handleMouseEnterNotification = () => {
     if (notificationTimeout.current) clearTimeout(notificationTimeout.current);
@@ -339,6 +366,22 @@ function JobsTable() {
     fetchJobs();
   }, [typeFilter]);
 
+  // Reset pagination to first page when any filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, typeFilter]);
+
+  // ── Supabase Realtime subscription ──────────────────────────────
+  useEffect(() => {
+    const channel = supabase
+      .channel('jobs-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => {
+        fetchJobs();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [typeFilter]);
+
   useEffect(() => {
     if (agentName) {
       fetchNotifications();
@@ -379,41 +422,82 @@ function JobsTable() {
       let query = supabase
         .from('jobs')
         .select('*')
-        // Exclude clearly cancelled jobs to reduce payload size
         .not('erp_status', 'ilike', '%cancel%')
         .order('erp_job_id', { ascending: false, nullsFirst: false });
 
       if (typeFilter === 'HHG') {
-        query = query.ilike('goods_type', '%Household%');
+        query = query.or('goods_type.ilike.%Household%,goods_type.ilike.%hhg%');
       } else if (typeFilter === 'COM') {
         query = query.ilike('goods_type', '%Commercial%');
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
       
       const activeJobs = (data || []).filter(job => {
-        // If it's cancelled, it shouldn't be here (already filtered in SQL, but just in case)
         if (job.erp_status?.toLowerCase().includes('cancel')) return false;
-
-        // If it's not billed, it's definitely active
         const isBilled = job.erp_status?.toLowerCase() === 'billed';
         if (!isBilled) return true;
-
-        // If it IS billed, we check completion status
         const goodsCompleted = job.goods_track_status === '22. Job Completed';
         const carIncluded = job.car_included === true || job.car_included === 'Yes' || job.car_included === 'yes';
-
-        if (!carIncluded) {
-          return !goodsCompleted; // Active if goods NOT completed
-        } else {
-          const carCompleted = job.car_track_status === '16. Job Completed';
-          return !(goodsCompleted && carCompleted); // Active if EITHER is NOT completed
-        }
+        if (!carIncluded) return !goodsCompleted;
+        const carCompleted = job.car_track_status === '16. Job Completed';
+        return !(goodsCompleted && carCompleted);
       });
       
       setJobs(activeJobs);
+
+      // ── Compute KPIs ─────────────────────────────────────────────
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const inTransit = activeJobs.filter(j => j.goods_track_status?.toLowerCase().includes('transit')).length;
+      const deliveredToday = (data || []).filter(j => j.actual_delivery === todayStr).length;
+      const packingToday = (data || []).filter(j => j.packing_date === todayStr).length;
+      const dispatchToday = (data || []).filter(j => j.dispatch_date === todayStr).length;
+      const damagesComplaints = activeJobs.filter(j => {
+        const goodsStatus = (j.goods_track_status || '').toLowerCase();
+        const carStatus = (j.car_track_status || '').toLowerCase();
+        return (
+          j.deviation === true || 
+          j.deviation === 'Yes' || 
+          j.deviation === 'yes' ||
+          (j.incidents && j.incidents.trim() !== '') ||
+          goodsStatus.includes('complaint') ||
+          goodsStatus.includes('damage') ||
+          carStatus.includes('complaint') ||
+          carStatus.includes('damage')
+        );
+      }).length;
+
+      // Filter to only include Household moves for Active Jobs and Unassigned metrics
+      const householdActiveJobs = activeJobs.filter(j => {
+        const type = (j.goods_type || '').toLowerCase();
+        return type.includes('household') || type.includes('hhg');
+      });
+
+      const unattended = householdActiveJobs.filter(j => {
+        const status = (j.goods_track_status || '').trim().toLowerCase();
+        const coord = (j.csc_coordinator || '').trim();
+        return (status === '' || status === 'pending' || status.includes('pending')) && coord === '';
+      }).length;
+
+      // Follow-ups due today (from all job_communications)
+      const { data: fuData } = await supabase
+        .from('job_communications')
+        .select('follow_up_date')
+        .eq('follow_up_required', true)
+        .eq('follow_up_completed', false)
+        .lte('follow_up_date', todayStr);
+      
+      setKpi({ 
+        total: householdActiveJobs.length, 
+        inTransit, 
+        deliveredToday, 
+        followUpsToday: fuData?.length || 0,
+        packingToday,
+        dispatchToday,
+        damagesComplaints,
+        unattended
+      });
     } catch (error: any) {
       console.error('Error fetching jobs:', error.message);
     } finally {
@@ -488,8 +572,81 @@ function JobsTable() {
   const getTitle = () => {
     return 'Active Jobs Dashboard';
   };
+
+  // Pagination calculations
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = sortedJobs.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(sortedJobs.length / itemsPerPage);
+
   return (
-    <div>
+    <div className="page-enter">
+      <div className="kpi-grid">
+        {/* 1. Active Jobs */}
+        <div className="kpi-card" style={{ background: 'linear-gradient(135deg, #312e81, #4f46e5)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '1.2rem' }}>📋</span>
+            <span className="kpi-label">Active Jobs</span>
+          </div>
+          <span className="kpi-value" style={{ marginTop: '0.4rem' }}>{loading ? '—' : kpi.total}</span>
+        </div>
+        {/* 2. Unattended Jobs */}
+        <div className="kpi-card" style={{ background: 'linear-gradient(135deg, #1e293b, #475569)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '1.2rem' }}>⏳</span>
+            <span className="kpi-label">Unassigned</span>
+          </div>
+          <span className="kpi-value" style={{ marginTop: '0.4rem' }}>{loading ? '—' : kpi.unattended}</span>
+        </div>
+        {/* 3. Follow-Ups Due */}
+        <div className="kpi-card" style={{ background: 'linear-gradient(135deg, #ea580c, #f59e0b)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '1.2rem' }}>⏰</span>
+            <span className="kpi-label">Follow-Ups Due</span>
+          </div>
+          <span className="kpi-value" style={{ marginTop: '0.4rem' }}>{loading ? '—' : kpi.followUpsToday}</span>
+        </div>
+        {/* 3. Packing Today */}
+        <div className="kpi-card" style={{ background: 'linear-gradient(135deg, #701a75, #d946ef)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '1.2rem' }}>📦</span>
+            <span className="kpi-label">Packing Today</span>
+          </div>
+          <span className="kpi-value" style={{ marginTop: '0.4rem' }}>{loading ? '—' : kpi.packingToday}</span>
+        </div>
+        {/* 4. Dispatch Today */}
+        <div className="kpi-card" style={{ background: 'linear-gradient(135deg, #0e7490, #06b6d4)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '1.2rem' }}>📤</span>
+            <span className="kpi-label">Dispatch Today</span>
+          </div>
+          <span className="kpi-value" style={{ marginTop: '0.4rem' }}>{loading ? '—' : kpi.dispatchToday}</span>
+        </div>
+        {/* 5. In Transit */}
+        <div className="kpi-card" style={{ background: 'linear-gradient(135deg, #1d4ed8, #60a5fa)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '1.2rem' }}>🚛</span>
+            <span className="kpi-label">In Transit</span>
+          </div>
+          <span className="kpi-value" style={{ marginTop: '0.4rem' }}>{loading ? '—' : kpi.inTransit}</span>
+        </div>
+        {/* 6. Delivered Today */}
+        <div className="kpi-card" style={{ background: 'linear-gradient(135deg, #15803d, #22c55e)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '1.2rem' }}>✅</span>
+            <span className="kpi-label">Delivered Today</span>
+          </div>
+          <span className="kpi-value" style={{ marginTop: '0.4rem' }}>{loading ? '—' : kpi.deliveredToday}</span>
+        </div>
+        {/* 7. Damages & Complaints */}
+        <div className="kpi-card" style={{ background: 'linear-gradient(135deg, #be123c, #f43f5e)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '1.2rem' }}>🚨</span>
+            <span className="kpi-label">Damages &amp; Complaints</span>
+          </div>
+          <span className="kpi-value" style={{ marginTop: '0.4rem' }}>{loading ? '—' : kpi.damagesComplaints}</span>
+        </div>
+      </div>
       <div className={styles.header}>
         <h1 style={{ 
             margin: 0, 
@@ -685,7 +842,11 @@ function JobsTable() {
 
       <div className={`glass ${styles.tableContainer}`}>
         {loading ? (
-          <div className={styles.loading}>Loading jobs...</div>
+          <div style={{ padding: '1rem' }}>
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="skeleton skeleton-row" style={{ opacity: 1 - i * 0.08 }} />
+            ))}
+          </div>
         ) : (
           <table className={styles.table}>
             <thead>
@@ -746,12 +907,18 @@ function JobsTable() {
               </tr>
             </thead>
             <tbody>
-              {sortedJobs.length === 0 ? (
+              {currentItems.length === 0 ? (
                 <tr>
-                  <td colSpan={visibleColumns.length + 1} className={styles.noData}>No jobs found matching criteria.</td>
+                  <td colSpan={visibleColumns.length + 1}>
+                    <div className="empty-state">
+                      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+                      <h3>No jobs found</h3>
+                      <p>No active jobs match your current filters. Try adjusting or clearing your filters.</p>
+                    </div>
+                  </td>
                 </tr>
               ) : (
-                sortedJobs.map((job) => (
+                currentItems.map((job) => (
                   <tr key={job.job_number}>
                     <td>
                       <button 
@@ -839,6 +1006,46 @@ function JobsTable() {
           </table>
         )}
       </div>
+
+      {/* Pagination controls */}
+      {!loading && totalPages > 1 && (
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginTop: '1rem', 
+          padding: '0.75rem 1.5rem', 
+          background: 'var(--surface-color)', 
+          borderRadius: '12px', 
+          border: '1px solid var(--border-color)',
+          backdropFilter: 'var(--glass-blur)'
+        }}>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            Showing {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, sortedJobs.length)} of {sortedJobs.length} jobs
+          </span>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <button 
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
+              disabled={currentPage === 1}
+              className="btn btn-secondary"
+              style={{ padding: '0.4rem 1rem', fontSize: '0.8rem', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1 }}
+            >
+              Previous
+            </button>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Page {currentPage} of {totalPages}
+            </span>
+            <button 
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
+              disabled={currentPage === totalPages}
+              className="btn"
+              style={{ padding: '0.4rem 1rem', fontSize: '0.8rem', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.5 : 1 }}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
