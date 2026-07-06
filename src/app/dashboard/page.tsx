@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import styles from './jobs.module.css';
 
 const ALL_COLUMNS = [
@@ -252,8 +252,6 @@ function JobsTable() {
   }, []);
 
   const router = useRouter();
-  const searchParams = useSearchParams();
-  // Search params hook could be removed if unused, but we'll leave useSearchParams if other things need it
 
   useEffect(() => {
     const saved = localStorage.getItem('csc_visible_columns');
