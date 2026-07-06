@@ -521,9 +521,9 @@ function JobsTable() {
       });
 
       const unattended = householdActiveJobs.filter(j => {
-        const status = (j.goods_track_status || '').trim().toLowerCase();
+        const status = (j.goods_track_status || '').trim();
         const coord = (j.csc_coordinator || '').trim();
-        return (status === '' || status === 'pending' || status.includes('pending')) && coord === '';
+        return status === '' && coord === '';
       }).length;
 
       // Follow-ups due today (from all job_communications)
