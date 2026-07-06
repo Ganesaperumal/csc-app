@@ -117,6 +117,59 @@ export async function POST(request: Request) {
       }
     }
 
+    // 5.5. Sync to Google Sheets if configured
+    if (process.env.GOOGLE_SHEETS_WEBHOOK_URL) {
+      try {
+        console.log('Fetching all jobs for Google Sheets sync...');
+        const { data: allJobs, error: fetchErr } = await supabase
+          .from('jobs')
+          .select('*')
+          .order('erp_job_id', { ascending: false, nullsFirst: false });
+
+        if (fetchErr) throw fetchErr;
+
+        if (allJobs && allJobs.length > 0) {
+          const cleanedJobs = allJobs.map(job => ({
+            'Job ID': job.erp_job_id || '',
+            'Job Number': job.job_number || '',
+            'Date': job.job_date || '',
+            'Branch': job.branch || '',
+            'Customer Name': job.customer_name || '',
+            'Company': job.company || '',
+            'Type of Goods': job.goods_type || '',
+            'Origin': job.origin || '',
+            'Destination': job.destination || '',
+            'Phone': job.customer_phone || '',
+            'ERP Status': job.erp_status || '',
+            'Invoice Number': job.invoice_number || '',
+            'Invoice Date': job.invoice_date || '',
+            'Goods Track Status': job.goods_track_status || 'Pending',
+            'Car Track Status': job.car_track_status || '',
+            'CSC Coordinator': job.csc_coordinator || '',
+            'SPOC Name': job.spoc_name || '',
+            'Deviation': job.deviation ? 'Yes' : 'No',
+            'Incidents': job.incidents || '',
+            'Last Updated': job.updated_at || ''
+          }));
+
+          console.log(`Sending ${cleanedJobs.length} jobs to Google Sheets webhook...`);
+          const sheetResponse = await fetch(process.env.GOOGLE_SHEETS_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(cleanedJobs)
+          });
+
+          if (!sheetResponse.ok) {
+            console.error('Google Sheets webhook returned error:', await sheetResponse.text());
+          } else {
+            console.log('✅ Google Sheets sync complete!');
+          }
+        }
+      } catch (sheetsErr: any) {
+        console.error('❌ Failed to sync to Google Sheets:', sheetsErr.message);
+      }
+    }
+
     // 6. Unlock the sync button!
     await supabase.from('sync_lock').update({ is_syncing: false }).eq('id', 1);
 
