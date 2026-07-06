@@ -1213,7 +1213,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', width: '100%' }}>
                     <input type="date" id="new_track_date" style={{ padding: '0.6rem', fontSize: '0.85rem', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.3)' }} />
                     <input type="text" id="new_track_location" placeholder="Current Location" style={{ padding: '0.6rem', fontSize: '0.85rem', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.3)' }} />
-                    <input type="text" id="new_track_remarks" placeholder="Status / Remarks (optional)" style={{ padding: '0.6rem', fontSize: '0.85rem', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.3)' }} />
+                    <input type="text" id="new_track_remarks" placeholder="Remarks (Optional)" style={{ padding: '0.6rem', fontSize: '0.85rem', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.3)' }} />
                     <button type="button" onClick={async () => {
                       const d = (document.getElementById('new_track_date') as HTMLInputElement).value;
                       const l = (document.getElementById('new_track_location') as HTMLInputElement).value;
