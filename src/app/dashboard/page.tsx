@@ -209,9 +209,8 @@ function JobsTable() {
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 50;
+  // Infinite scroll state
+  const [visibleCount, setVisibleCount] = useState(50);
 
   const handleMouseEnterNotification = () => {
     if (notificationTimeout.current) clearTimeout(notificationTimeout.current);
@@ -366,10 +365,24 @@ function JobsTable() {
     fetchJobs();
   }, [typeFilter]);
 
-  // Reset pagination to first page when any filters change
+  // Reset infinite scroll count when filters or tab changes
   useEffect(() => {
-    setCurrentPage(1);
+    setVisibleCount(50);
   }, [filters, typeFilter]);
+
+  // Infinite Scroll Listener
+  useEffect(() => {
+    const handleScroll = () => {
+      if (
+        window.innerHeight + window.scrollY >=
+        document.documentElement.scrollHeight - 200
+      ) {
+        setVisibleCount(prev => prev + 50);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // ── Supabase Realtime subscription ──────────────────────────────
   useEffect(() => {
@@ -573,11 +586,8 @@ function JobsTable() {
     return 'Active Jobs Dashboard';
   };
 
-  // Pagination calculations
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = sortedJobs.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(sortedJobs.length / itemsPerPage);
+  // Infinite scroll items
+  const currentItems = sortedJobs.slice(0, visibleCount);
 
   return (
     <div className="page-enter">
@@ -1007,82 +1017,28 @@ function JobsTable() {
         )}
       </div>
 
-      {/* Pagination controls */}
-      {!loading && totalPages > 1 && (
+      {/* Infinite scroll indicator */}
+      {!loading && sortedJobs.length > 0 && (
         <div style={{ 
           display: 'flex', 
+          justifyContent: 'center',
           alignItems: 'center', 
-          marginTop: '1rem', 
+          marginTop: '1.5rem', 
           padding: '0.75rem 1.5rem', 
           background: 'var(--surface-color)', 
           borderRadius: '12px', 
           border: '1px solid var(--border-color)',
-          backdropFilter: 'var(--glass-blur)'
+          backdropFilter: 'var(--glass-blur)',
+          boxShadow: 'var(--glass-shadow)',
+          fontSize: '0.85rem',
+          fontWeight: 600,
+          color: 'var(--text-secondary)'
         }}>
-          {/* Left section: Info text */}
-          <div style={{ flex: 1 }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              Showing {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, sortedJobs.length)} of {sortedJobs.length} jobs
-            </span>
-          </div>
-
-          {/* Middle section: Navigation buttons centered */}
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', justifyContent: 'center' }}>
-            <button 
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
-              disabled={currentPage === 1}
-              className="btn btn-secondary"
-              style={{ padding: '0.4rem 1rem', fontSize: '0.8rem', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1 }}
-            >
-              Previous
-            </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Page</span>
-              <input 
-                type="number" 
-                min={1} 
-                max={totalPages}
-                value={currentPage || ''}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  if (!isNaN(val) && val >= 1 && val <= totalPages) {
-                    setCurrentPage(val);
-                  } else if (e.target.value === '') {
-                    setCurrentPage('' as any);
-                  }
-                }}
-                onBlur={(e) => {
-                  if (e.target.value === '' || isNaN(parseInt(e.target.value, 10))) {
-                    setCurrentPage(1);
-                  }
-                }}
-                style={{
-                  width: '48px',
-                  padding: '0.25rem 0.35rem',
-                  borderRadius: '6px',
-                  border: '1px solid var(--border-color)',
-                  background: 'rgba(255,255,255,0.8)',
-                  color: 'var(--text-primary)',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  textAlign: 'center',
-                  outline: 'none',
-                }}
-              />
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>of {totalPages}</span>
-            </div>
-            <button 
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
-              disabled={currentPage === totalPages}
-              className="btn"
-              style={{ padding: '0.4rem 1rem', fontSize: '0.8rem', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.5 : 1 }}
-            >
-              Next
-            </button>
-          </div>
-
-          {/* Right section: Spacer to balance layout and keep buttons in the exact middle */}
-          <div style={{ flex: 1 }} />
+          {visibleCount >= sortedJobs.length ? (
+            <span>✨ All {sortedJobs.length} jobs loaded</span>
+          ) : (
+            <span>Showing {Math.min(visibleCount, sortedJobs.length)} of {sortedJobs.length} jobs (Scroll down to load more)</span>
+          )}
         </div>
       )}
     </div>
