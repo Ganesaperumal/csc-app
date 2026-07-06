@@ -1,12 +1,23 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
+import { createClient } from '@supabase/supabase-js';
+
+const getSupabaseAdmin = () => {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
+};
 
 export async function POST(request: Request) {
   try {
     const { prompt, context, systemInstruction, provider } = await request.json();
 
-    // Default context for the CSC Assistant
-    const defaultSysPrompt = `You are a highly professional Customer Service Assistant for Transworld International (Ti) Packing and Moving Company. 
+    // Fetch dynamic system prompt from Supabase
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: aiSettings } = await supabaseAdmin.from('ai_settings').select('system_prompt').eq('id', 1).single();
+
+    // Fallback default context if DB fetch fails
+    const fallbackSysPrompt = `You are a highly professional Customer Service Assistant for Transworld International (Ti) Packing and Moving Company. 
 
 Guidelines:
 1. Tone: Always remain polite, empathetic, and highly professional. Never argue with a customer or agent.
@@ -14,7 +25,8 @@ Guidelines:
 3. Branding: Always refer to the company as "Transworld Intl" or "Ti".
 4. Conciseness: Keep your answers concise, actionable, and straight to the point. Use bullet points for readability when explaining processes.
 5. Limitations: If you do not have enough tracking data or job history to answer a question, state clearly that you need more information rather than making up (hallucinating) dates or locations.`;
-    const sysPrompt = systemInstruction || defaultSysPrompt;
+    
+    const sysPrompt = systemInstruction || aiSettings?.system_prompt || fallbackSysPrompt;
     const fullPrompt = context ? `${context}\n\nTask: ${prompt}` : prompt;
 
     // 1. Handle Groq Provider

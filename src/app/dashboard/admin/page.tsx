@@ -61,6 +61,8 @@ export default function AdminPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [loadingLogs, setLoadingLogs] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [savingAi, setSavingAi] = useState(false);
 
   const downloadCSV = async (table: 'jobs' | 'job_logs') => {
     try {
@@ -139,10 +141,42 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetchUsers();
+    fetchAiSettings();
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) setCurrentUser(data.user);
     });
   }, []);
+
+  const fetchAiSettings = async () => {
+    try {
+      const res = await fetch('/api/admin/ai-settings');
+      const data = await res.json();
+      if (data.system_prompt) setAiPrompt(data.system_prompt);
+    } catch (err) {
+      console.error('Failed to fetch AI settings', err);
+    }
+  };
+
+  const handleSaveAiSettings = async () => {
+    setSavingAi(true);
+    try {
+      const res = await fetch('/api/admin/ai-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ system_prompt: aiPrompt })
+      });
+      if (res.ok) {
+        alert('✅ AI System Instructions updated successfully!');
+      } else {
+        const data = await res.json();
+        alert(`❌ Failed: ${data.error}`);
+      }
+    } catch (err: any) {
+      alert(`❌ Error: ${err.message}`);
+    } finally {
+      setSavingAi(false);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -420,7 +454,41 @@ export default function AdminPage() {
         </table>
       </div>
 
-      {/* Bulk Data Management Cards */}
+      {/* AI Settings Card */}
+      <div style={cardStyle}>
+        <h2 style={{ margin: '0 0 1rem', fontSize: '1.25rem', fontWeight: 800, color: '#8b5cf6', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ background: 'rgba(139,92,246,0.1)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>🤖</span>
+          AI System Instructions
+        </h2>
+        <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+          Edit the core behavioral guidelines, rules, and logic for the Transworld Intl AI Assistant. These rules apply globally to all AI features.
+        </p>
+        
+        <textarea
+          value={aiPrompt}
+          onChange={(e) => setAiPrompt(e.target.value)}
+          rows={12}
+          style={{ ...inputStyle, fontFamily: 'monospace', fontSize: '0.85rem', lineHeight: '1.5', resize: 'vertical', marginBottom: '1rem' }}
+          placeholder="Loading AI instructions..."
+        />
+        
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <button 
+            onClick={handleSaveAiSettings}
+            disabled={savingAi}
+            style={{ 
+              padding: '0.6rem 1.5rem', borderRadius: '8px', 
+              background: savingAi ? '#cbd5e1' : 'linear-gradient(135deg, #8b5cf6, #6d28d9)', 
+              color: 'white', border: 'none', cursor: savingAi ? 'not-allowed' : 'pointer', 
+              fontWeight: 700, boxShadow: '0 4px 12px rgba(139,92,246,0.3)',
+              transition: 'all 0.2s'
+            }}
+          >
+            {savingAi ? 'Saving...' : '💾 Save AI Instructions'}
+          </button>
+        </div>
+      </div>
+
       {/* Bulk Data Management Card */}
       <div style={cardStyle}>
         <h2 style={{ margin: '0 0 1.5rem', fontSize: '1.25rem', fontWeight: 800, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
