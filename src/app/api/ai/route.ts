@@ -61,7 +61,10 @@ Guidelines:
                 parameters: {
                   type: "object",
                   properties: {
-                    query: { type: "string", description: "The search term (e.g. 'Nilanjan', 'JB/123')." }
+                    query: { 
+                      type: "string", 
+                      description: "The core search term. Extract ONLY the name of the person/company (e.g. 'Samir Verma') or the job number (e.g. 'JB/123'). Do NOT include descriptive words like 'shipment', 'job', 'details', 'status'." 
+                    }
                   },
                   required: ["query"]
                 }
@@ -91,11 +94,17 @@ Guidelines:
             const args = JSON.parse(toolCall.function.arguments);
             const searchQuery = args.query;
 
-            // Perform Supabase text search on jobs table
+            // Clean common prefixes, suffixes, and noise words (e.g. "Brig.", "shipment")
+            let cleanQuery = searchQuery
+              .replace(/(brig|col|gen|maj|capt|mr|mrs|ms|shipment|details|job|status|info)\.?/gi, '')
+              .replace(/\s+/g, ' ')
+              .trim();
+
+            // Perform Supabase text search on jobs table using the cleaned query
             const { data: jobs, error } = await supabaseAdmin
               .from('jobs')
               .select('*')
-              .or(`customer_name.ilike.%${searchQuery}%,job_number.ilike.%${searchQuery}%,shipper_name.ilike.%${searchQuery}%`)
+              .or(`customer_name.ilike.%${cleanQuery}%,job_number.ilike.%${cleanQuery}%,shipper_name.ilike.%${cleanQuery}%`)
               .limit(5);
 
             const searchResult = jobs && jobs.length > 0 

@@ -209,8 +209,9 @@ function JobsTable() {
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // Infinite scroll state
+  // Infinite Scroll states
   const [visibleCount, setVisibleCount] = useState(50);
+  const loaderRef = useRef<HTMLDivElement>(null);
 
   const handleMouseEnterNotification = () => {
     if (notificationTimeout.current) clearTimeout(notificationTimeout.current);
@@ -365,24 +366,36 @@ function JobsTable() {
     fetchJobs();
   }, [typeFilter]);
 
-  // Reset infinite scroll count when filters or tab changes
+  // Reset infinite scroll count when any filters or sorting changes
   useEffect(() => {
     setVisibleCount(50);
-  }, [filters, typeFilter]);
+  }, [filters, typeFilter, sortConfig]);
 
-  // Infinite Scroll Listener
+  // Infinite scroll IntersectionObserver setup
   useEffect(() => {
-    const handleScroll = () => {
-      if (
-        window.innerHeight + window.scrollY >=
-        document.documentElement.scrollHeight - 200
-      ) {
+    if (loading) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      const target = entries[0];
+      if (target.isIntersecting) {
         setVisibleCount(prev => prev + 50);
       }
+    }, {
+      root: document.querySelector('.main-content'),
+      rootMargin: '200px', // start loading when the user is 200px from the bottom
+      threshold: 0.1
+    });
+
+    if (loaderRef.current) {
+      observer.observe(loaderRef.current);
+    }
+
+    return () => {
+      if (loaderRef.current) {
+        observer.unobserve(loaderRef.current);
+      }
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [loading, visibleCount]);
 
   // ── Supabase Realtime subscription ──────────────────────────────
   useEffect(() => {
@@ -586,7 +599,7 @@ function JobsTable() {
     return 'Active Jobs Dashboard';
   };
 
-  // Infinite scroll items
+  // Infinite scroll calculations
   const currentItems = sortedJobs.slice(0, visibleCount);
 
   return (
@@ -1017,28 +1030,34 @@ function JobsTable() {
         )}
       </div>
 
-      {/* Infinite scroll indicator */}
-      {!loading && sortedJobs.length > 0 && (
+      {/* Infinite Scroll Trigger */}
+      {!loading && visibleCount < sortedJobs.length && (
+        <div ref={loaderRef} style={{ padding: '2rem', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+            ⏳ Loading more jobs...
+          </span>
+        </div>
+      )}
+
+      {/* Footer Info bar */}
+      {!loading && (
         <div style={{ 
           display: 'flex', 
-          justifyContent: 'center',
+          justifyContent: 'space-between', 
           alignItems: 'center', 
-          marginTop: '1.5rem', 
+          marginTop: '1rem', 
           padding: '0.75rem 1.5rem', 
           background: 'var(--surface-color)', 
           borderRadius: '12px', 
           border: '1px solid var(--border-color)',
-          backdropFilter: 'var(--glass-blur)',
-          boxShadow: 'var(--glass-shadow)',
-          fontSize: '0.85rem',
-          fontWeight: 600,
-          color: 'var(--text-secondary)'
+          backdropFilter: 'var(--glass-blur)'
         }}>
-          {visibleCount >= sortedJobs.length ? (
-            <span>✨ All {sortedJobs.length} jobs loaded</span>
-          ) : (
-            <span>Showing {Math.min(visibleCount, sortedJobs.length)} of {sortedJobs.length} jobs (Scroll down to load more)</span>
-          )}
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            Showing {Math.min(visibleCount, sortedJobs.length)} of {sortedJobs.length} jobs
+          </span>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+            Scroll down to load more
+          </span>
         </div>
       )}
     </div>
