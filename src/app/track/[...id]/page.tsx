@@ -58,7 +58,7 @@ export default function PublicTrackingPage({ params }: { params: Promise<{ id: s
         setJob(jobData);
 
         // Fetch Coordinator Phone
-        const coordName = jobData.csc_coordinator || jobData.spoc_name;
+        const coordName = jobData.csc_coordinator;
         if (coordName) {
           const { data: profileData } = await supabase
             .from('profiles')
@@ -346,7 +346,7 @@ export default function PublicTrackingPage({ params }: { params: Promise<{ id: s
                 </div>
                 <div>
                   <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block' }}>Your Assigned CSC Coordinator:</span>
-                  <strong style={{ fontSize: '1.05rem', color: 'var(--text-primary)', display: 'block' }}>{job.csc_coordinator || job.spoc_name || 'Transworld CSC SPOC'}</strong>
+                  <strong style={{ fontSize: '1.05rem', color: 'var(--text-primary)', display: 'block' }}>{job.csc_coordinator || 'Transworld CSC Coordinator'}</strong>
                   {coordinatorPhone && (
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'block', marginTop: '2px' }}>
                       Phone: {coordinatorPhone}
