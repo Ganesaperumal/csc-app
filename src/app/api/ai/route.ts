@@ -38,6 +38,11 @@ Guidelines:
         );
       }
 
+      let messagesArray: any[] = [
+        { role: 'system', content: sysPrompt },
+        { role: 'user', content: fullPrompt }
+      ];
+
       const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -46,10 +51,24 @@ Guidelines:
         },
         body: JSON.stringify({
           model: 'llama-3.3-70b-versatile',
-          messages: [
-            { role: 'system', content: sysPrompt },
-            { role: 'user', content: fullPrompt }
+          messages: messagesArray,
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "search_database",
+                description: "Search the database for a customer's shipment or job details using a search query (name, job number, etc.). Use this when the user asks about a specific person or shipment.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    query: { type: "string", description: "The search term (e.g. 'Nilanjan', 'JB/123')." }
+                  },
+                  required: ["query"]
+                }
+              }
+            }
           ],
+          tool_choice: "auto",
           temperature: 0.6,
           max_tokens: 1024
         })
@@ -61,7 +80,59 @@ Guidelines:
       }
 
       const groqData = await groqResponse.json();
-      return NextResponse.json({ result: groqData.choices[0].message.content });
+      const responseMessage = groqData.choices[0].message;
+
+      // Handle Tool Calls (RAG Interception)
+      if (responseMessage.tool_calls) {
+        messagesArray.push(responseMessage); // Append the assistant's tool call request
+
+        for (const toolCall of responseMessage.tool_calls) {
+          if (toolCall.function.name === 'search_database') {
+            const args = JSON.parse(toolCall.function.arguments);
+            const searchQuery = args.query;
+
+            // Perform Supabase text search on jobs table
+            const { data: jobs, error } = await supabaseAdmin
+              .from('jobs')
+              .select('*')
+              .or(`customer_name.ilike.%${searchQuery}%,job_number.ilike.%${searchQuery}%,shipper_name.ilike.%${searchQuery}%`)
+              .limit(5);
+
+            const searchResult = jobs && jobs.length > 0 
+              ? JSON.stringify(jobs) 
+              : "No jobs found for this query.";
+
+            // Append the tool response
+            messagesArray.push({
+              tool_call_id: toolCall.id,
+              role: 'tool',
+              name: 'search_database',
+              content: searchResult
+            });
+          }
+        }
+
+        // Second API call with the injected data
+        const secondResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: messagesArray,
+            temperature: 0.6,
+            max_tokens: 1024
+          })
+        });
+
+        const secondData = await secondResponse.json();
+        return NextResponse.json({ result: secondData.choices[0].message.content });
+      }
+
+      // No tool called, return normal response
+      return NextResponse.json({ result: responseMessage.content });
     }
 
     // 2. Default to Gemini
