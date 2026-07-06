@@ -24,13 +24,17 @@ export default function AIChatbot() {
     setLoading(true);
 
     try {
+      const isTrackPage = window.location.pathname.startsWith('/track/');
+      const jobNumber = isTrackPage ? decodeURIComponent(window.location.pathname.replace('/track/', '')) : null;
+
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           prompt: userMsg,
           context: `Conversation History:\n${messages.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n')}`,
-          provider: window.location.pathname.startsWith('/dashboard') ? 'groq' : 'gemini'
+          provider: window.location.pathname.startsWith('/dashboard') ? 'groq' : 'gemini',
+          trackingJobNumber: jobNumber
         })
       });
 

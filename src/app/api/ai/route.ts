@@ -10,7 +10,7 @@ const getSupabaseAdmin = () => {
 
 export async function POST(request: Request) {
   try {
-    const { prompt, context, systemInstruction, provider } = await request.json();
+    const { prompt, context, systemInstruction, provider, trackingJobNumber } = await request.json();
 
     // Fetch dynamic system prompt from Supabase
     const supabaseAdmin = getSupabaseAdmin();
@@ -27,7 +27,46 @@ Guidelines:
 5. Limitations: If you do not have enough tracking data or job history to answer a question, state clearly that you need more information rather than making up (hallucinating) dates or locations.`;
     
     const sysPrompt = systemInstruction || aiSettings?.system_prompt || fallbackSysPrompt;
-    const fullPrompt = context ? `${context}\n\nTask: ${prompt}` : prompt;
+
+    let augmentedContext = context || '';
+
+    // If on a public tracking page, fetch the specific job context and timelines
+    if (trackingJobNumber) {
+      const { data: job } = await supabaseAdmin
+        .from('jobs')
+        .select('*')
+        .eq('job_number', trackingJobNumber)
+        .single();
+
+      if (job) {
+        const { data: trackData } = await supabaseAdmin
+          .from('job_shipment_track')
+          .select('*')
+          .eq('job_number', trackingJobNumber)
+          .order('date', { ascending: true });
+
+        const trackHistory = trackData && trackData.length > 0
+          ? trackData.map((t: any) => `[${t.date}] ${t.location}: ${t.remark}`).join('\n')
+          : "No transit checkpoints registered yet.";
+
+        const jobInfoContext = `
+[CURRENT SHIPMENT DETAILS (DO NOT ASK USER FOR THESE - THEY ARE ALREADY LOADED)]
+Job Number: ${job.job_number}
+Customer Name: ${job.customer_name}
+Company: ${job.company || 'Private'}
+Origin: ${job.origin}
+Destination: ${job.destination}
+Goods Type: ${job.goods_type}
+Shipment Status: ${job.goods_track_status}
+Actual Delivery Date: ${job.actual_delivery || 'Not delivered yet'}
+Transit Checkpoints Logged:
+${trackHistory}
+`;
+        augmentedContext = augmentedContext ? `${augmentedContext}\n\n${jobInfoContext}` : jobInfoContext;
+      }
+    }
+
+    const fullPrompt = augmentedContext ? `${augmentedContext}\n\nTask: ${prompt}` : prompt;
 
     // 1. Handle Groq Provider
     if (provider === 'groq') {
