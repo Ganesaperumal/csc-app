@@ -1011,7 +1011,6 @@ function JobsTable() {
       {!loading && totalPages > 1 && (
         <div style={{ 
           display: 'flex', 
-          justifyContent: 'space-between', 
           alignItems: 'center', 
           marginTop: '1rem', 
           padding: '0.75rem 1.5rem', 
@@ -1020,10 +1019,15 @@ function JobsTable() {
           border: '1px solid var(--border-color)',
           backdropFilter: 'var(--glass-blur)'
         }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Showing {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, sortedJobs.length)} of {sortedJobs.length} jobs
-          </span>
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          {/* Left section: Info text */}
+          <div style={{ flex: 1 }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              Showing {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, sortedJobs.length)} of {sortedJobs.length} jobs
+            </span>
+          </div>
+
+          {/* Middle section: Navigation buttons centered */}
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', justifyContent: 'center' }}>
             <button 
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
               disabled={currentPage === 1}
@@ -1044,6 +1048,9 @@ function JobsTable() {
               Next
             </button>
           </div>
+
+          {/* Right section: Spacer to balance layout and keep buttons in the exact middle */}
+          <div style={{ flex: 1 }} />
         </div>
       )}
     </div>
