@@ -29,7 +29,8 @@ export default function AIChatbot() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           prompt: userMsg,
-          context: `Conversation History:\n${messages.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n')}`
+          context: `Conversation History:\n${messages.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n')}`,
+          provider: 'groq'
         })
       });
 
