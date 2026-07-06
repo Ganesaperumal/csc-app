@@ -401,35 +401,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
     }
   };
 
-  const handleDraftAIReply = async () => {
-    if (comms.length === 0) return;
-    setAiLoading(true);
-    try {
-      const lastComm = comms[0];
-      const context = `Last communication:\nType: ${lastComm.call_type}\nRegarding: ${lastComm.regarding}\nSummary: ${lastComm.summary}`;
-      
-      const res = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          prompt: "Draft a polite, professional reply or follow-up to this communication. Return ONLY the drafted message.",
-          context
-        })
-      });
-      const data = await res.json();
-      if (res.ok && data.result) {
-        setCommForm(f => ({ ...f, summary: data.result }));
-      } else if (res.status === 429) {
-        alert(data.message || 'Rate limit hit. Wait a minute.');
-      } else {
-        alert('Failed to draft reply.');
-      }
-    } catch (err) {
-      alert('Network error.');
-    } finally {
-      setAiLoading(false);
-    }
-  };
+
 
   const [copied, setCopied] = useState(false);
   const handleCopyLink = () => {
@@ -889,19 +861,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           </div>
         </div>
         
-        {aiSummary && (
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(5,150,105,0.15))',
-            borderLeft: '4px solid #10b981',
-            borderRadius: '0 8px 8px 0', padding: '1rem', marginTop: '0.5rem', marginBottom: '1rem',
-            color: '#1e293b', fontSize: '0.9rem', lineHeight: '1.5'
-          }}>
-            <div style={{ fontWeight: 700, color: '#059669', marginBottom: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <span>✨</span> Ti AI Summary
-            </div>
-            {aiSummary}
-          </div>
-        )}
+
         <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           {/* Live Viewing Agents */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginRight: '0.5rem' }}>
@@ -931,6 +891,33 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
       </div>
 
 
+
+      {aiSummary && (
+        <div style={{
+          background: 'linear-gradient(135deg, #ffffff 0%, rgba(243, 232, 255, 0.4) 100%)',
+          border: '1px solid rgba(139, 92, 246, 0.2)',
+          borderRadius: '12px',
+          padding: '1.25rem',
+          marginBottom: '1.5rem',
+          boxShadow: '0 4px 20px rgba(139, 92, 246, 0.05)',
+          color: '#1e293b',
+          fontSize: '0.95rem',
+          lineHeight: '1.6'
+        }}>
+          <div style={{ 
+            fontWeight: 700, 
+            color: '#4f46e5', 
+            marginBottom: '0.5rem', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.5rem',
+            fontSize: '1.05rem'
+          }}>
+            <span>✨</span> Transworld Intl - AI Summary
+          </div>
+          {aiSummary}
+        </div>
+      )}
 
       <div className={styles.layout}>
         <div className={styles.mainForm}>
@@ -1412,19 +1399,6 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
                     <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Call Summary *</label>
-                    <button 
-                      type="button" 
-                      onClick={handleDraftAIReply}
-                      disabled={aiLoading || comms.length === 0}
-                      style={{
-                        background: 'none', border: '1px solid #10b981', color: '#10b981',
-                        borderRadius: '12px', padding: '0.2rem 0.6rem', fontSize: '0.7rem', fontWeight: 600,
-                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem',
-                        opacity: (aiLoading || comms.length === 0) ? 0.5 : 1
-                      }}
-                    >
-                      ✨ Draft AI Reply
-                    </button>
                   </div>
                   <textarea required value={commForm.summary} onChange={e => setCommForm(f => ({ ...f, summary: e.target.value }))} rows={3}
                     placeholder="Describe what was discussed..."
