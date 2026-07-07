@@ -31,7 +31,7 @@
 
 .table th {
   position: sticky;
-  top: -2rem;
+  top: var(--header-top, 0);
   z-index: 20;
   background: linear-gradient(135deg, rgba(248, 250, 252, 0.98), rgba(241, 245, 249, 0.98));
   color: var(--text-secondary);
