@@ -199,6 +199,22 @@ function AllJobsContent() {
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
+
+  const [isExportingSheets, setIsExportingSheets] = useState(false);
+
+  const exportToSheets = async () => {
+    setIsExportingSheets(true);
+    try {
+      const res = await fetch('/api/export-sheets', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to export');
+      alert(`Successfully exported ${data.count} jobs to Google Sheets!`);
+    } catch (err: any) {
+      alert('Error exporting to Google Sheets: ' + err.message);
+    } finally {
+      setIsExportingSheets(false);
+    }
+  };
   
   const filterRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -506,6 +522,32 @@ function AllJobsContent() {
               <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
             </svg>
           </button>
+          <button
+            onClick={exportToSheets}
+            disabled={isExportingSheets}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.6rem 1.2rem',
+              borderRadius: '99px',
+              border: '1px solid #10b981',
+              background: isExportingSheets ? '#d1fae5' : '#10b981',
+              color: isExportingSheets ? '#047857' : 'white',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              cursor: isExportingSheets ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)',
+            }}
+          >
+            {isExportingSheets ? (
+               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 2s linear infinite' }}><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
+            ) : (
+               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            )}
+            {isExportingSheets ? 'Exporting...' : 'Export to Sheets'}
+          </button>
 
           <div className={styles.columnSelectorContainer}>
             <button className={styles.columnsBtn} onClick={() => setShowColumnSelector(!showColumnSelector)} style={{ padding: '0.6rem 1.2rem', borderRadius: '99px' }}>
@@ -551,7 +593,7 @@ function AllJobsContent() {
             ))}
           </div>
         ) : (
-          <table className={styles.table} style={{ '--header-top': '-2rem' } as React.CSSProperties}>
+          <table className={styles.table}>
             <thead>
               <tr>
                 <th style={{ position: 'sticky', left: 0, zIndex: 30 }}>Action</th>
