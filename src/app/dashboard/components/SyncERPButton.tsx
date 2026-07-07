@@ -92,6 +92,10 @@ export default function SyncERPButton({ user: initialUser }: { user?: any }) {
     // Lock is now handled by the backend API
 
     try {
+      // 1. Trigger Export to Google Sheets FIRST
+      await fetch('/api/export-sheets', { method: 'POST' });
+
+      // 2. Trigger the actual ERP Sync
       const username = user?.email?.split('@')[0] || 'User';
       const res = await fetch('/api/ingest-erp/manual-trigger', {
         method: 'POST',
