@@ -593,7 +593,7 @@ function AllJobsContent() {
             ))}
           </div>
         ) : (
-          <table className={styles.table}>
+          <table className={styles.table} style={{ '--header-top': '-2rem' } as React.CSSProperties}>
             <thead>
               <tr>
                 <th style={{ position: 'sticky', left: 0, zIndex: 30 }}>Action</th>

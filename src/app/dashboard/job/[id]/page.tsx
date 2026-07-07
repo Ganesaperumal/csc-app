@@ -416,24 +416,24 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
     const custName = job.customer_name || 'Customer';
     const originCity = job.origin || '';
     const destCity = job.destination || '';
-    const coordinator = currentCoordinator || agentName;
-    const trackingLink = `${window.location.origin}/track/${job.job_number}`;
+    const coordinator = job.csc_coordinator || currentCoordinator || agentName;
+    const trackingLink = `https://csc-ti.vercel.app/track/${job.job_number}`;
     
     switch (stage) {
       case 'Pre-Packing':
-        return `Hi ${custName}, thank you for choosing Transworld International for your relocation from ${originCity} to ${destCity}. Our assigned CSC coordinator is ${coordinator}. We are preparing your relocation schedule and will keep you updated every step of the way!`;
+        return `Hi ${custName},\nThank you for choosing Transworld International for your relocation from ${originCity} to ${destCity}.\nYour assigned CSC Coordinator is ${coordinator}, who will assist you throughout your relocation.\nYour packing is scheduled for ${job.packing_date || 'TBD'}. If there are any changes to your packing date or moving plan, please inform Transworld International at the earliest so that the necessary arrangements can be made.\nAt Transworld International, we are committed to keeping you informed at every stage of your relocation and ensuring a smooth moving experience. We look forward to serving you.`;
       case 'Packing Day':
-        return `Hi ${custName}, this is a reminder that your packing is scheduled for today. The Transworld packing team must report by 9:00 a.m. sharp in complete uniform. Please contact your coordinator ${coordinator} for any immediate assistance.`;
+        return `Hi ${custName},\nGreetings from Transworld International.\nThis is a reminder that your packing is scheduled for today. Our packing team will arrive as planned to carry out the packing process.\nIf you have any questions or require any assistance, please feel free to call or reply to this message.\nThank you for choosing Transworld International.`;
       case 'Post-Packing':
-        return `Hi ${custName}, we are pleased to inform you that the packing for your shipment to ${destCity} has been successfully completed today. Your goods are secure and prepared for dispatch.`;
+        return `Hi ${custName},\nTransworld International is pleased to inform you that your household goods have been successfully packed. Your shipment is now being prepared for dispatch, and we will continue to keep you updated on the next stages of your relocation.\nThank you for choosing Transworld International.\nYour feedback is valuable to Transworld International. If you would like to share your experience with our packing service, we would greatly appreciate it if you could leave us a review.`;
       case 'Despatch / In Transit':
-        return `Hi ${custName}, your shipment from ${originCity} to ${destCity} has been successfully dispatched and is now in transit. You can track your shipment status, vehicle checkpoints, and timeline in real-time here: ${trackingLink} - Transworld International.`;
+        return `Hi ${custName},\nTransworld International is pleased to inform you that your shipment has been dispatched and is currently in transit to ${destCity}.\nWe are closely monitoring your shipment and will continue to keep you updated until it reaches its destination.\nYou can track your shipment status, vehicle checkpoints, and timeline in real-time here: ${trackingLink}\nThank you for choosing Transworld International.`;
       case 'Delivery Scheduled':
-        return `Hi ${custName}, your delivery schedule to ${destCity} is confirmed. Our delivery team will contact you shortly.`;
+        return `Hi ${custName},\nTransworld International has scheduled the delivery of your shipment for ${job.planned_delivery || 'TBD'}.\nKindly confirm your availability to receive the shipment. If there are any changes to your availability or delivery schedule, please inform Transworld International at the earliest.\nThank you for choosing Transworld International.`;
       case 'Delivery Day':
-        return `Hi ${custName}, your delivery is scheduled for today. The reporting team is on their way. Please contact your coordinator ${coordinator} if you need any support.`;
+        return `Hi ${custName},\nGreetings from Transworld International.\nYour shipment is out for delivery today. Our delivery team will contact you before arriving.\nKindly ensure that someone is available at the delivery location to receive the shipment.\nThank you for choosing Transworld International.`;
       case 'Delivered & Feedback':
-        return `Hi ${custName}, your relocation has been successfully completed and delivered! We hope you had a smooth experience. Please take a moment to leave a review here: https://g.page/r/transworld-review/review. Thank you for choosing Transworld!`;
+        return `Hi ${custName},\nTransworld International is delighted to inform you that your relocation has been successfully completed. We hope you had a smooth and hassle-free moving experience with us.\nThank you for choosing Transworld International. We truly appreciate your trust and look forward to serving you again in the future.\nYour feedback is valuable to Transworld International. We would appreciate it if you could take a moment to leave us a review.`;
       default:
         return '';
     }

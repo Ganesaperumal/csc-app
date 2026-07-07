@@ -31,7 +31,7 @@
 
 .table th {
   position: sticky;
-  top: -2rem;
+  top: var(--header-top, 0);
   z-index: 20;
   background: linear-gradient(135deg, rgba(248, 250, 252, 0.98), rgba(241, 245, 249, 0.98));
   color: var(--text-secondary);
@@ -389,4 +389,19 @@
 .gsBtnOk:hover {
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
   transform: translateY(-1px);
+}
+
+/* Fix for Search Box Focus Ring */
+.gsSearchBox {
+  transition: all 0.2s ease;
+}
+
+.gsSearchBox:focus-within {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px var(--primary-glow), 0 4px 12px var(--border-glow) !important;
+}
+
+.gsSearchBox input:focus {
+  box-shadow: none !important;
+  background: transparent !important;
 }
