@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import styles from './jobs.module.css';
+import styles from '../jobs.module.css';
 
 const ALL_COLUMNS = [
   { id: 'erp_job_id', label: 'Job ID' },
@@ -13,6 +13,7 @@ const ALL_COLUMNS = [
   { id: 'customer_name', label: 'Customer Name' },
   { id: 'company', label: 'Company' },
   { id: 'goods_type', label: 'Type' },
+  { id: 'erp_status', label: 'ERP Status' },
   { id: 'origin', label: 'Origin' },
   { id: 'destination', label: 'Destination' },
   { id: 'customer_phone', label: 'Customer Phone' },
@@ -61,6 +62,8 @@ const ALL_COLUMNS = [
   { id: 'invoice_date', label: 'Invoice Date' },
   { id: 'csc_coordinator', label: 'CSC Coordinator' }
 ];
+
+const DEFAULT_VISIBLE_COLUMNS = ['erp_job_id', 'job_number', 'job_date', 'customer_name', 'company', 'goods_type', 'erp_status', 'goods_track_status', 'spoc_name'];
 
 function ColumnFilterDropdown({ 
   colId, 
@@ -163,73 +166,58 @@ function ColumnFilterDropdown({
   );
 }
 
-// ── Status badge helper ──────────────────────────────────────────
-function getStatusBadge(status: string) {
-  if (!status) return <span className="status-badge default">—</span>;
-  const s = status.toLowerCase();
-  if (s.includes('delivered') || s.includes('job completed')) return <span className="status-badge delivered" title={status}>✓ Delivered</span>;
-  if (s.includes('in transit')) return <span className="status-badge in-transit" title={status}>🔵 In Transit</span>;
-  if (s.includes('despatch') || s.includes('dispatch')) return <span className="status-badge dispatched" title={status}>📦 Dispatched</span>;
-  if (s.includes('out for delivery')) return <span className="status-badge out-delivery" title={status}>🚀 Out for Delivery</span>;
-  if (s.includes('packing')) return <span className="status-badge packing" title={status}>📦 Packing</span>;
-  if (s.includes('deviation')) return <span className="status-badge deviation" title={status}>⚠ Deviation</span>;
-  return <span className="status-badge default" title={status}>{status.replace(/^\d+\.\s*/, '')}</span>;
-}
-
-function JobsTable() {
+function AllJobsContent() {
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [typeFilter, setTypeFilter] = useState<string>(() => {
-    try { return localStorage.getItem('csc_type_filter') || 'HHG'; } catch { return 'HHG'; }
-  });
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(['erp_job_id', 'job_number', 'job_date', 'customer_name', 'company', 'goods_type', 'goods_track_status', 'spoc_name']);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(DEFAULT_VISIBLE_COLUMNS);
   const [orderedColumns, setOrderedColumns] = useState<string[]>(ALL_COLUMNS.map(c => c.id));
   const [showColumnSelector, setShowColumnSelector] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [agentName, setAgentName] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
+  
   const [filters, setFilters] = useState<Record<string, string[]>>(() => {
     try {
-      const saved = localStorage.getItem('csc_column_filters');
+      const saved = localStorage.getItem('csc_all_column_filters');
       return saved ? JSON.parse(saved) : {};
     } catch { return {}; }
   });
+  
   const [activeFilterColumn, setActiveFilterColumn] = useState<string | null>(null);
-
-  const [kpi, setKpi] = useState({ 
-    total: 0, 
-    inTransit: 0, 
-    deliveredToday: 0, 
-    followUpsToday: 0,
-    packingToday: 0,
-    dispatchToday: 0,
-    damagesComplaints: 0,
-    unattended: 0
+  const [sortConfig, setSortConfig] = useState<{ colId: string, direction: 'asc' | 'desc' } | null>(() => {
+    try {
+      const saved = localStorage.getItem('csc_all_sort_config');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
   });
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const notificationTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // Infinite Scroll & viewMode states
   const [visibleCount, setVisibleCount] = useState(50);
-  const loaderRef = useRef<HTMLDivElement>(null);
-  const [viewMode, setViewMode] = useState<'active' | 'completed'>('active');
-
-  const handleMouseEnterNotification = () => {
-    if (notificationTimeout.current) clearTimeout(notificationTimeout.current);
-  };
-
-  const handleMouseLeaveNotification = () => {
-    if (showNotifications) {
-      notificationTimeout.current = setTimeout(() => {
-        setShowNotifications(false);
-      }, 2000);
-    }
-  };
-
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  
   const resizingCol = useRef<string | null>(null);
   const startX = useRef<number>(0);
   const startWidth = useRef<number>(0);
+  const loaderRef = useRef<HTMLDivElement>(null);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+
+  const [isExportingSheets, setIsExportingSheets] = useState(false);
+
+  const exportToSheets = async () => {
+    setIsExportingSheets(true);
+    try {
+      const res = await fetch('/api/export-sheets', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to export');
+      alert(`Successfully exported ${data.count} jobs to Google Sheets!`);
+    } catch (err: any) {
+      alert('Error exporting to Google Sheets: ' + err.message);
+    } finally {
+      setIsExportingSheets(false);
+    }
+  };
+  
+  const filterRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   const onMouseDown = (e: React.MouseEvent, colId: string) => {
     e.preventDefault();
@@ -259,16 +247,6 @@ function JobsTable() {
       document.removeEventListener('mouseup', onMouseUp);
     };
   }, []);
-  const [sortConfig, setSortConfig] = useState<{ colId: string, direction: 'asc' | 'desc' } | null>(() => {
-    try {
-      const saved = localStorage.getItem('csc_sort_config');
-      return saved ? JSON.parse(saved) : null;
-    } catch { return null; }
-  });
-  
-  const dragItem = useRef<number | null>(null);
-  const dragOverItem = useRef<number | null>(null);
-  const filterRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -280,14 +258,12 @@ function JobsTable() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const router = useRouter();
-
   useEffect(() => {
-    const saved = localStorage.getItem('csc_visible_columns');
+    const saved = localStorage.getItem('csc_all_visible_cols');
     if (saved) {
       try { setVisibleColumns(JSON.parse(saved)); } catch (e) {}
     }
-    const savedOrder = localStorage.getItem('csc_ordered_columns');
+    const savedOrder = localStorage.getItem('csc_all_ordered_cols');
     if (savedOrder) {
       try { 
         const parsed = JSON.parse(savedOrder);
@@ -295,41 +271,42 @@ function JobsTable() {
         setOrderedColumns(finalOrder as string[]); 
       } catch (e) {}
     }
-    
-    // Check if user is admin and get their name
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        supabase.from('profiles').select('role, name, username').eq('id', data.user.id).single().then(({ data: profileData }) => {
-          if (profileData) {
-            if (profileData.role === 'Admin') {
-              setIsAdmin(true);
-            }
-            const name = profileData.name || profileData.username || data.user.email?.split('@')[0] || 'Agent';
-            setAgentName(name);
-          } else {
-            const name = data.user.email?.split('@')[0] || 'Agent';
-            setAgentName(name);
-          }
-        });
-      }
-    });
-
-    // Save current path to sessionStorage
-    try {
-      sessionStorage.setItem('csc_last_jobs_page', '/dashboard');
-    } catch {}
+    fetchJobs();
   }, []);
 
-  const handleSort = () => {
+  useEffect(() => {
+    const channel = supabase
+      .channel('all-jobs-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => {
+        fetchJobs();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  const fetchJobs = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('*')
+        .order('erp_job_id', { ascending: false, nullsFirst: false });
+      if (error) throw error;
+      setJobs(data || []);
+    } catch (err: any) {
+      console.error('Error fetching jobs:', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDragEnd = () => {
     if (dragItem.current === null || dragOverItem.current === null) return;
-    
     let _orderedColumns = [...orderedColumns];
     const draggedItemContent = _orderedColumns.splice(dragItem.current, 1)[0];
     _orderedColumns.splice(dragOverItem.current, 0, draggedItemContent);
-    
     setOrderedColumns(_orderedColumns);
-    localStorage.setItem('csc_ordered_columns', JSON.stringify(_orderedColumns));
-    
+    localStorage.setItem('csc_all_ordered_cols', JSON.stringify(_orderedColumns));
     dragItem.current = null;
     dragOverItem.current = null;
   };
@@ -342,37 +319,24 @@ function JobsTable() {
       newCols = ALL_COLUMNS.map(c => c.id).filter(id => visibleColumns.includes(id) || id === colId);
     }
     setVisibleColumns(newCols);
-    localStorage.setItem('csc_visible_columns', JSON.stringify(newCols));
+    localStorage.setItem('csc_all_visible_cols', JSON.stringify(newCols));
   };
 
-  // Persist filters whenever they change
   useEffect(() => {
-    try { localStorage.setItem('csc_column_filters', JSON.stringify(filters)); } catch {}
+    try { localStorage.setItem('csc_all_column_filters', JSON.stringify(filters)); } catch {}
   }, [filters]);
 
-  // Persist sortConfig whenever it changes
   useEffect(() => {
     try {
-      if (sortConfig) localStorage.setItem('csc_sort_config', JSON.stringify(sortConfig));
-      else localStorage.removeItem('csc_sort_config');
+      if (sortConfig) localStorage.setItem('csc_all_sort_config', JSON.stringify(sortConfig));
+      else localStorage.removeItem('csc_all_sort_config');
     } catch {}
   }, [sortConfig]);
 
-  // Persist typeFilter whenever it changes
-  useEffect(() => {
-    try { localStorage.setItem('csc_type_filter', typeFilter); } catch {}
-  }, [typeFilter]);
-
-  useEffect(() => {
-    fetchJobs();
-  }, [typeFilter, viewMode]);
-
-  // Reset infinite scroll count when any filters, sorting, or viewMode changes
   useEffect(() => {
     setVisibleCount(50);
-  }, [filters, typeFilter, sortConfig, viewMode]);
+  }, [filters, searchQuery, sortConfig]);
 
-  // Infinite scroll IntersectionObserver setup
   useEffect(() => {
     if (loading) return;
 
@@ -383,7 +347,7 @@ function JobsTable() {
       }
     }, {
       root: document.querySelector('.main-content'),
-      rootMargin: '200px', // start loading when the user is 200px from the bottom
+      rootMargin: '200px',
       threshold: 0.1
     });
 
@@ -398,178 +362,14 @@ function JobsTable() {
     };
   }, [loading, visibleCount]);
 
-  // ── Supabase Realtime subscription ──────────────────────────────
-  useEffect(() => {
-    const channel = supabase
-      .channel('jobs-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => {
-        fetchJobs();
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [typeFilter, viewMode]);
-
-  useEffect(() => {
-    if (agentName) {
-      fetchNotifications();
-    }
-  }, [agentName, isAdmin]);
-
-  const fetchNotifications = async () => {
-    if (!agentName) return;
-
-    let query = supabase
-      .from('job_communications')
-      .select('*')
-      .eq('follow_up_required', true)
-      .eq('follow_up_completed', false);
-
-    if (!isAdmin) {
-      query = query.eq('agent_name', agentName);
-    }
-
-    const { data, error } = await query.order('follow_up_date', { ascending: true });
-    
-    if (!error && data) {
-      const today = new Date();
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      
-      const filtered = data.filter(n => {
-        if (!n.follow_up_date) return true;
-        return n.follow_up_date <= todayStr;
-      });
-      
-      setNotifications(filtered);
-    }
-  };
-
-  const fetchJobs = async () => {
-    setLoading(true);
-    try {
-      let query = supabase
-        .from('jobs')
-        .select('*')
-        .not('erp_status', 'ilike', '%cancel%')
-        .order('erp_job_id', { ascending: false, nullsFirst: false });
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      const COMPLETED_STATUSES = [
-        '22. Job Completed', 
-        '23. Job # taken for Billing', 
-        '24. Customer Cancelled', 
-        '25. Job # to be Cancelled'
-      ];
-
-      const isClosedJob = (job: any) => {
-        const erpStatus = job.erp_status?.toLowerCase() || '';
-        if (erpStatus.includes('cancel') || erpStatus.includes('cancelled') || erpStatus.includes('canceled')) {
-          return true;
-        }
-        if (erpStatus === 'billed') {
-          const goodsCompleted = job.goods_track_status === '22. Job Completed';
-          const carIncluded = job.car_included === true || job.car_included === 'Yes' || job.car_included === 'yes';
-          if (!carIncluded) {
-            return goodsCompleted;
-          } else {
-            const carCompleted = job.car_track_status === '16. Job Completed';
-            return goodsCompleted && carCompleted;
-          }
-        }
-        return false;
-      };
-
-      const isHousehold = (goodsType: string) => {
-        const gt = (goodsType || '').trim().toLowerCase();
-        return gt === 'household' || gt === 'household with vehicle' || gt === 'vehicle';
-      };
-
-      const dashboardJobs = (data || []).filter(job => !isClosedJob(job));
-      const activeJobsList = dashboardJobs.filter(job => !COMPLETED_STATUSES.includes(job.goods_track_status));
-      const completedJobsList = dashboardJobs.filter(job => COMPLETED_STATUSES.includes(job.goods_track_status));
-
-      // Filter by type filter (HHG, COM, ALL) for the dashboard view
-      let filteredActiveJobsList = activeJobsList;
-      let filteredCompletedJobsList = completedJobsList;
-
-      if (typeFilter === 'HHG') {
-        filteredActiveJobsList = activeJobsList.filter(job => isHousehold(job.goods_type));
-        filteredCompletedJobsList = completedJobsList.filter(job => isHousehold(job.goods_type));
-      } else if (typeFilter === 'COM') {
-        filteredActiveJobsList = activeJobsList.filter(job => !isHousehold(job.goods_type));
-        filteredCompletedJobsList = completedJobsList.filter(job => !isHousehold(job.goods_type));
-      }
-
-      const activeJobs = viewMode === 'completed' ? filteredCompletedJobsList : filteredActiveJobsList;
-      setJobs(activeJobs);
-
-      // ── Compute KPIs (Based on the selected type filter) ───────────────────────
-      const targetActiveList = typeFilter === 'HHG' 
-        ? activeJobsList.filter(job => isHousehold(job.goods_type))
-        : typeFilter === 'COM'
-          ? activeJobsList.filter(job => !isHousehold(job.goods_type))
-          : activeJobsList;
-
-      const targetDataList = typeFilter === 'HHG'
-        ? (data || []).filter(job => isHousehold(job.goods_type))
-        : typeFilter === 'COM'
-          ? (data || []).filter(job => !isHousehold(job.goods_type))
-          : (data || []);
-
-      const todayStr = new Date().toISOString().slice(0, 10);
-      const inTransit = targetActiveList.filter(j => j.goods_track_status?.toLowerCase().includes('transit')).length;
-      const deliveredToday = targetDataList.filter(j => j.actual_delivery === todayStr).length;
-      const packingToday = targetDataList.filter(j => j.packing_date === todayStr).length;
-      const dispatchToday = targetDataList.filter(j => j.dispatch_date === todayStr).length;
-      const damagesComplaints = targetActiveList.filter(j => {
-        const goodsStatus = (j.goods_track_status || '').toLowerCase();
-        const carStatus = (j.car_track_status || '').toLowerCase();
-        return (
-          j.deviation === true || 
-          j.deviation === 'Yes' || 
-          j.deviation === 'yes' ||
-          (j.incidents && j.incidents.trim() !== '') ||
-          goodsStatus.includes('complaint') ||
-          goodsStatus.includes('damage') ||
-          carStatus.includes('complaint') ||
-          carStatus.includes('damage')
-        );
-      }).length;
-
-      const unattended = targetActiveList.filter(j => {
-        const status = (j.goods_track_status || '').trim();
-        const coord = (j.csc_coordinator || '').trim();
-        return status === '' && coord === '';
-      }).length;
-
-      // Follow-ups due today (from all job_communications)
-      const { data: fuData } = await supabase
-        .from('job_communications')
-        .select('follow_up_date')
-        .eq('follow_up_required', true)
-        .eq('follow_up_completed', false)
-        .lte('follow_up_date', todayStr);
-      
-      setKpi({ 
-        total: targetActiveList.length, 
-        inTransit, 
-        deliveredToday, 
-        followUpsToday: fuData?.length || 0,
-        packingToday,
-        dispatchToday,
-        damagesComplaints,
-        unattended
-      });
-    } catch (error: any) {
-      console.error('Error fetching jobs:', error.message);
-    } finally {
-      setLoading(false);
-    }
+  const clearAllFilters = () => {
+    setFilters({});
+    setSearchQuery('');
+    localStorage.removeItem('csc_all_column_filters');
   };
 
   const getFilteredJobsForColumn = (targetColId: string) => {
-    return jobs.filter(job => {
+    return filteredJobs.filter(job => {
       for (const colId of Object.keys(filters)) {
         if (colId === targetColId) continue;
         if (filters[colId].length > 0) {
@@ -584,6 +384,24 @@ function JobsTable() {
   };
 
   const filteredJobs = jobs.filter(job => {
+    // 1. Global Search Filter
+    if (searchQuery.trim() !== '') {
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = 
+        String(job.customer_name || '').toLowerCase().includes(q) ||
+        String(job.job_number || '').toLowerCase().includes(q) ||
+        String(job.erp_job_id || '').toLowerCase().includes(q) ||
+        String(job.company || '').toLowerCase().includes(q) ||
+        String(job.goods_type || '').toLowerCase().includes(q) ||
+        String(job.goods_track_status || '').toLowerCase().includes(q) ||
+        String(job.spoc_name || '').toLowerCase().includes(q) ||
+        String(job.branch || '').toLowerCase().includes(q) ||
+        String(job.erp_status || '').toLowerCase().includes(q);
+      
+      if (!matchesSearch) return false;
+    }
+
+    // 2. Column Filters
     for (const colId of Object.keys(filters)) {
       if (filters[colId].length > 0) {
         const val = job[colId] === null || job[colId] === undefined || job[colId] === '' ? '(Blank)' : job[colId];
@@ -602,7 +420,6 @@ function JobsTable() {
     if (aVal === null || aVal === undefined) aVal = '';
     if (bVal === null || bVal === undefined) bVal = '';
     
-    // Convert to numbers if possible for correct numeric sorting (like for ID)
     const numA = Number(aVal);
     const numB = Number(bVal);
     if (!isNaN(numA) && !isNaN(numB) && aVal !== '' && bVal !== '') {
@@ -611,7 +428,6 @@ function JobsTable() {
       return 0;
     }
     
-    // Otherwise fallback to string compare
     const strA = String(aVal).toLowerCase();
     const strB = String(bVal).toLowerCase();
     if (strA < strB) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -619,108 +435,71 @@ function JobsTable() {
     return 0;
   });
 
-  const getStatusBadgeClass = (status: string) => {
-    if (status?.toLowerCase() === 'billed') return 'badge billed';
-    if (status?.toLowerCase() === 'cancelled' || status?.toLowerCase() === 'canceled') return 'badge cancelled';
-    return 'badge active';
-  };
+  const hasAppliedFilters = Object.values(filters).some(arr => arr && arr.length > 0) || searchQuery.trim() !== '';
 
-  const hasAppliedFilters = Object.values(filters).some(arr => arr && arr.length > 0);
-
-  const clearAllFilters = () => {
-    setFilters({});
-    localStorage.removeItem('csc_column_filters');
-  };
-
-  const getTitle = () => {
-    return viewMode === 'completed' ? 'Completed Jobs Dashboard' : 'Active Jobs Dashboard';
-  };
-
-  // Infinite scroll calculations
   const currentItems = sortedJobs.slice(0, visibleCount);
 
   return (
-    <div className="page-enter">
-      <div className="kpi-grid">
-        {/* 1. Active Jobs */}
-        <div className="kpi-card" style={{ background: 'linear-gradient(135deg, #312e81, #4f46e5)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '1.2rem' }}>📋</span>
-            <span className="kpi-label">Active Jobs</span>
-          </div>
-          <span className="kpi-value" style={{ marginTop: '0.4rem' }}>{loading ? '—' : kpi.total}</span>
+    <div className="page-enter" style={{ width: '100%', padding: '1rem 0' }}>
+      <div style={{ position: 'sticky', left: 0, width: 'calc(100vw - 5.5rem)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem', zIndex: 50 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button 
+            onClick={() => router.push('/dashboard')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.6rem 1.2rem',
+              borderRadius: '99px',
+              border: '1px solid var(--border-color)',
+              background: 'var(--glass-bg)',
+              color: 'var(--text-primary)',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              boxShadow: 'var(--glass-shadow)',
+              transition: 'all 0.3s ease',
+              fontFamily: "'Outfit', sans-serif"
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.6)';
+              e.currentTarget.style.transform = 'translateX(-2px)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'var(--glass-bg)';
+              e.currentTarget.style.transform = 'none';
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            Back
+          </button>
+          <h1 style={{ 
+              margin: 0, 
+              fontSize: '2.4rem', 
+              fontWeight: 800, 
+              background: 'linear-gradient(135deg, #0ea5e9 0%, #3b82f6 50%, #6366f1 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              letterSpacing: '-0.02em',
+              filter: 'drop-shadow(0 2px 4px rgba(59, 130, 246, 0.1))'
+            }}>
+            All Jobs Portal
+          </h1>
         </div>
-        {/* 2. Unattended Jobs */}
-        <div className="kpi-card" style={{ background: 'linear-gradient(135deg, #1e293b, #475569)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '1.2rem' }}>⏳</span>
-            <span className="kpi-label">Unassigned</span>
-          </div>
-          <span className="kpi-value" style={{ marginTop: '0.4rem' }}>{loading ? '—' : kpi.unattended}</span>
-        </div>
-        {/* 3. Follow-Ups Due */}
-        <div className="kpi-card" style={{ background: 'linear-gradient(135deg, #ea580c, #f59e0b)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '1.2rem' }}>⏰</span>
-            <span className="kpi-label">Follow-Ups Due</span>
-          </div>
-          <span className="kpi-value" style={{ marginTop: '0.4rem' }}>{loading ? '—' : kpi.followUpsToday}</span>
-        </div>
-        {/* 3. Packing Today */}
-        <div className="kpi-card" style={{ background: 'linear-gradient(135deg, #701a75, #d946ef)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '1.2rem' }}>📦</span>
-            <span className="kpi-label">Packing Today</span>
-          </div>
-          <span className="kpi-value" style={{ marginTop: '0.4rem' }}>{loading ? '—' : kpi.packingToday}</span>
-        </div>
-        {/* 4. Dispatch Today */}
-        <div className="kpi-card" style={{ background: 'linear-gradient(135deg, #0e7490, #06b6d4)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '1.2rem' }}>📤</span>
-            <span className="kpi-label">Dispatch Today</span>
-          </div>
-          <span className="kpi-value" style={{ marginTop: '0.4rem' }}>{loading ? '—' : kpi.dispatchToday}</span>
-        </div>
-        {/* 5. In Transit */}
-        <div className="kpi-card" style={{ background: 'linear-gradient(135deg, #1d4ed8, #60a5fa)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '1.2rem' }}>🚛</span>
-            <span className="kpi-label">In Transit</span>
-          </div>
-          <span className="kpi-value" style={{ marginTop: '0.4rem' }}>{loading ? '—' : kpi.inTransit}</span>
-        </div>
-        {/* 6. Delivered Today */}
-        <div className="kpi-card" style={{ background: 'linear-gradient(135deg, #15803d, #22c55e)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '1.2rem' }}>✅</span>
-            <span className="kpi-label">Delivered Today</span>
-          </div>
-          <span className="kpi-value" style={{ marginTop: '0.4rem' }}>{loading ? '—' : kpi.deliveredToday}</span>
-        </div>
-        {/* 7. Damages & Complaints */}
-        <div className="kpi-card" style={{ background: 'linear-gradient(135deg, #be123c, #f43f5e)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '1.2rem' }}>🚨</span>
-            <span className="kpi-label">Damages &amp; Complaints</span>
-          </div>
-          <span className="kpi-value" style={{ marginTop: '0.4rem' }}>{loading ? '—' : kpi.damagesComplaints}</span>
-        </div>
-      </div>
-      <div className={styles.header}>
-        <h1 style={{ 
-            margin: 0, 
-            fontSize: '2.4rem', 
-            fontWeight: 800, 
-            background: 'linear-gradient(135deg, #4f46e5 0%, #d946ef 50%, #06b6d4 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            letterSpacing: '-0.02em',
-            filter: 'drop-shadow(0 2px 4px rgba(79, 70, 229, 0.1))'
-          }}>
-          {getTitle()}
-        </h1>
+
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          {/* Search Box */}
+          <div className={styles.gsSearchBox} style={{ width: '320px', margin: 0, height: '42px', display: 'flex', alignItems: 'center', background: 'var(--glass-bg)', borderRadius: '99px', border: '1px solid var(--border-color)', padding: '0 1.2rem' }}>
+            <input 
+              type="text" 
+              placeholder="Search customer, job#, branch, SPOC, status..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', width: '100%', fontSize: '0.85rem' }}
+            />
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-secondary)' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </div>
+
           <button 
             title="Clear all filters"
             onClick={clearAllFilters}
@@ -743,69 +522,40 @@ function JobsTable() {
               <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
             </svg>
           </button>
-          <div className={styles.toggleContainer}>
-            <button 
-              className={`${styles.toggleBtn} ${typeFilter === 'HHG' ? styles.activeHHG : ''}`}
-              onClick={() => setTypeFilter('HHG')}
-            >
-              Household
-            </button>
-            <button 
-              className={`${styles.toggleBtn} ${typeFilter === 'COM' ? styles.activeCOM : ''}`}
-              onClick={() => setTypeFilter('COM')}
-            >
-              Commercial
-            </button>
-            <button 
-              className={`${styles.toggleBtn} ${typeFilter === 'ALL' ? styles.activeALL : ''}`}
-              onClick={() => setTypeFilter('ALL')}
-            >
-              All
-            </button>
-          </div>
-
           <button
-            onClick={() => setViewMode(prev => prev === 'active' ? 'completed' : 'active')}
+            onClick={exportToSheets}
+            disabled={isExportingSheets}
             style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
               padding: '0.6rem 1.2rem',
               borderRadius: '99px',
-              border: '1px solid var(--border-color)',
-              background: viewMode === 'completed' 
-                ? 'linear-gradient(135deg, #a855f7, #7e22ce)' 
-                : 'var(--surface-color)',
-              color: viewMode === 'completed' ? 'white' : 'var(--text-secondary)',
+              border: '1px solid #10b981',
+              background: isExportingSheets ? '#d1fae5' : '#10b981',
+              color: isExportingSheets ? '#047857' : 'white',
               fontWeight: 700,
               fontSize: '0.85rem',
-              cursor: 'pointer',
-              boxShadow: viewMode === 'completed' 
-                ? '0 4px 12px rgba(168,85,247,0.35)' 
-                : 'none',
-              transition: 'all 0.3s ease',
-              fontFamily: "'Outfit', sans-serif",
-            }}
-            onMouseOver={(e) => {
-              if (viewMode !== 'completed') {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.6)';
-                e.currentTarget.style.color = 'var(--text-primary)';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (viewMode !== 'completed') {
-                e.currentTarget.style.background = 'var(--surface-color)';
-                e.currentTarget.style.color = 'var(--text-secondary)';
-              }
+              cursor: isExportingSheets ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)',
             }}
           >
-            {viewMode === 'completed' ? '✓ Completed' : 'Completed'}
+            {isExportingSheets ? (
+               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 2s linear infinite' }}><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
+            ) : (
+               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            )}
+            {isExportingSheets ? 'Exporting...' : 'Export to Sheets'}
           </button>
 
           <div className={styles.columnSelectorContainer}>
-            <button className={styles.columnsBtn} onClick={() => setShowColumnSelector(!showColumnSelector)} style={{ padding: '0.6rem 1rem' }}>
+            <button className={styles.columnsBtn} onClick={() => setShowColumnSelector(!showColumnSelector)} style={{ padding: '0.6rem 1.2rem', borderRadius: '99px' }}>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
               Columns
             </button>
             {showColumnSelector && (
-              <div className={styles.dropdownMenu}>
+              <div className={styles.dropdownMenu} style={{ top: '120%' }}>
                 {orderedColumns.map((colId, index) => {
                   const col = ALL_COLUMNS.find(c => c.id === colId);
                   if (!col) return null;
@@ -815,9 +565,9 @@ function JobsTable() {
                       draggable
                       onDragStart={() => (dragItem.current = index)}
                       onDragEnter={() => (dragOverItem.current = index)}
-                      onDragEnd={handleSort}
+                      onDragEnd={handleDragEnd}
                       onDragOver={(e) => e.preventDefault()}
-                      style={{ cursor: 'grab' }}
+                      style={{ cursor: 'grab', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
                       <input 
@@ -832,111 +582,10 @@ function JobsTable() {
               </div>
             )}
           </div>
-          <div 
-            style={{ position: 'relative' }}
-            onMouseEnter={handleMouseEnterNotification}
-            onMouseLeave={handleMouseLeaveNotification}
-          >
-            <button 
-              className={styles.refreshBtn} 
-              onClick={() => setShowNotifications(!showNotifications)}
-              style={{ padding: '0.5rem 0.8rem', background: notifications.length > 0 ? '#ef4444' : 'var(--glass-bg)', color: notifications.length > 0 ? '#fff' : 'var(--text-primary)' }}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-              {notifications.length > 0 && <span style={{ marginLeft: '4px', fontWeight: 'bold' }}>{notifications.length}</span>}
-            </button>
-
-            {showNotifications && (
-              <div className="glass" style={{ 
-                position: 'absolute', top: '100%', right: 0, marginTop: '0.5rem', width: '340px', 
-                zIndex: 100, overflow: 'hidden', display: 'flex', flexDirection: 'column',
-                backgroundColor: '#ffffff', backdropFilter: 'none', WebkitBackdropFilter: 'none'
-              }}>
-                <div style={{ padding: '1rem', background: 'transparent', borderBottom: '1px solid var(--border-color)', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Pending Follow-ups</span>
-                  <span style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: '#fff', padding: '0.1rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', boxShadow: '0 2px 8px rgba(239,68,68,0.3)' }}>{notifications.length}</span>
-                </div>
-                <div style={{ maxHeight: '420px', overflowY: 'auto', paddingBottom: '0.5rem' }}>
-                  {notifications.length === 0 ? (
-                    <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>You're all caught up! ✨</div>
-                  ) : (
-                    notifications.map(n => {
-                      let isUrgent = false;
-                      if (n.follow_up_date) {
-                        const today = new Date();
-                        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                        if (n.follow_up_date <= todayStr) isUrgent = true;
-                      } else {
-                        isUrgent = true;
-                      }
-
-                      const jobDetails = jobs.find(j => j.job_number === n.job_number) || {};
-                      
-                      return (
-                        <div key={n.id} style={{ 
-                          padding: '1rem', cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                          background: 'var(--surface-color)', margin: '0.6rem', borderRadius: '14px',
-                          boxShadow: isUrgent ? '0 4px 15px rgba(239,68,68,0.1)' : 'var(--glass-shadow)', 
-                          border: '1px solid var(--border-color)',
-                          display: 'flex', flexDirection: 'column', gap: '0.4rem'
-                        }} onClick={() => {
-                          setShowNotifications(false);
-                          router.push('/dashboard/job/' + encodeURIComponent(n.job_number));
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                          e.currentTarget.style.background = 'var(--surface-hover)';
-                          e.currentTarget.style.borderColor = 'var(--border-hover)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.background = 'var(--surface-color)';
-                          e.currentTarget.style.borderColor = 'var(--border-color)';
-                        }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', letterSpacing: '-0.02em', flex: 1, paddingRight: '0.5rem' }}>{jobDetails.customer_name || 'Unknown Customer'}</span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.1rem' }}>
-                              {jobDetails.erp_job_id && <span style={{ color: '#3b82f6', fontWeight: 700, fontSize: '0.75rem' }}>#{jobDetails.erp_job_id}</span>}
-                              <span style={{ fontSize: '0.75rem', color: isUrgent ? '#ef4444' : '#64748b', fontWeight: 800, whiteSpace: 'nowrap' }}>
-                                {n.follow_up_date ? new Date(n.follow_up_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).replace(' ', '-') : 'ASAP'}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <div style={{ fontSize: '0.75rem', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
-                            <div style={{ flex: 1, textAlign: 'left' }}>
-                              {jobDetails.branch && <span style={{ padding: '0.15rem 0.6rem', borderRadius: '12px', background: 'rgba(139, 92, 246, 0.08)', color: '#7c3aed', border: '1px solid rgba(139, 92, 246, 0.2)' }}>🏢 {jobDetails.branch}</span>}
-                            </div>
-                            <div style={{ flex: 1, textAlign: 'center' }}>
-                              <span style={{ color: n.call_type === 'Customer' ? '#d97706' : '#0284c7' }}>{n.call_type === 'Customer' ? '👤 Customer' : '🏢 Internal'}</span>
-                            </div>
-                            <div style={{ flex: 1, textAlign: 'right' }}>
-                              {n.regarding && <span style={{ padding: '0.15rem 0.6rem', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.08)', color: '#059669', border: '1px solid rgba(16, 185, 129, 0.2)' }}>{n.regarding}</span>}
-                            </div>
-                          </div>
-
-                          <div style={{ fontSize: '0.85rem', color: '#475569', display: '-webkit-box', WebkitLineClamp: isAdmin ? 2 : 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontStyle: 'italic', marginTop: '0.2rem' }}>
-                            {isAdmin ? (
-                              <>
-                                <strong style={{ fontStyle: 'normal', color: '#0f172a' }}>{n.agent_name || 'Agent'}:</strong> "{n.summary.split('\n')[0]}"
-                              </>
-                            ) : (
-                              `"${n.summary.split('\n')[0]}"`
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
-      <div className={`glass ${styles.tableContainer}`}>
+      <div ref={tableContainerRef} className={`glass ${styles.tableContainer}`} style={{ minWidth: '100%', width: 'max-content', overflowX: 'visible', overflowY: 'visible' }}>
         {loading ? (
           <div style={{ padding: '1rem' }}>
             {[...Array(8)].map((_, i) => (
@@ -947,15 +596,14 @@ function JobsTable() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Action</th>
+                <th style={{ position: 'sticky', left: 0, zIndex: 30 }}>Action</th>
                 {orderedColumns.filter(id => visibleColumns.includes(id) && ALL_COLUMNS.some(c => c.id === id)).map(colId => {
                   const col = ALL_COLUMNS.find(c => c.id === colId)!;
                   return (
                     <th key={col.id} style={{ 
                       width: columnWidths[col.id] ? `${columnWidths[col.id]}px` : 'auto', 
                       minWidth: columnWidths[col.id] ? `${columnWidths[col.id]}px` : '100px',
-                      maxWidth: columnWidths[col.id] ? `${columnWidths[col.id]}px` : 'none',
-                      position: 'relative' 
+                      maxWidth: columnWidths[col.id] ? `${columnWidths[col.id]}px` : 'none'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', paddingRight: '8px' }}>
                         {col.label}
@@ -1009,7 +657,7 @@ function JobsTable() {
                     <div className="empty-state">
                       <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
                       <h3>No jobs found</h3>
-                      <p>No active jobs match your current filters. Try adjusting or clearing your filters.</p>
+                      <p>No jobs match your current filters. Try adjusting or clearing your filters.</p>
                     </div>
                   </td>
                 </tr>
@@ -1088,7 +736,7 @@ function JobsTable() {
                           <span 
                             className={colId === 'job_number' ? styles.jobNum : undefined}
                             style={colId === 'customer_name' ? { fontWeight: 'bold' } : undefined}
-                            title={String(value)} // Show full value on hover
+                            title={String(value)}
                           >
                             {value}
                           </span>
@@ -1128,19 +776,16 @@ function JobsTable() {
           <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
             Showing {Math.min(visibleCount, sortedJobs.length)} of {sortedJobs.length} jobs
           </span>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-            Scroll down to load more
-          </span>
         </div>
       )}
     </div>
   );
 }
 
-export default function JobsPage() {
+export default function AllJobsPage() {
   return (
-    <Suspense fallback={<div>Loading dashboard...</div>}>
-      <JobsTable />
+    <Suspense fallback={<div>Loading All Jobs Portal...</div>}>
+      <AllJobsContent />
     </Suspense>
   );
 }

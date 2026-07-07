@@ -47,16 +47,30 @@ export default function CommandPalette() {
     const q = query;
     const timer = setTimeout(async () => {
       setSearching(true);
-      const orFilter = [
-        'job_number.ilike.%' + q + '%',
-        'customer_name.ilike.%' + q + '%',
-        'company.ilike.%' + q + '%',
-        'erp_job_id.ilike.%' + q + '%',
-      ].join(',');
+      const orParts = [
+        `job_number.ilike.%${q}%`,
+        `branch.ilike.%${q}%`,
+        `customer_name.ilike.%${q}%`,
+        `company.ilike.%${q}%`,
+        `goods_type.ilike.%${q}%`,
+        `erp_status.ilike.%${q}%`,
+        `origin.ilike.%${q}%`,
+        `destination.ilike.%${q}%`,
+        `customer_phone.ilike.%${q}%`,
+        `goods_track_status.ilike.%${q}%`,
+        `car_track_status.ilike.%${q}%`,
+        `packing_team_supervisor.ilike.%${q}%`,
+        `invoice_number.ilike.%${q}%`,
+        `enq_number.ilike.%${q}%`
+      ];
+      if (!isNaN(Number(q)) && q.trim() !== '') {
+        orParts.push(`erp_job_id.eq.${Number(q)}`);
+      }
+      
       const { data } = await supabase
         .from('jobs')
         .select('job_number, customer_name, company, goods_track_status, erp_job_id')
-        .or(orFilter)
+        .or(orParts.join(','))
         .limit(8);
       setResults(data || []);
       setSelectedIdx(0);

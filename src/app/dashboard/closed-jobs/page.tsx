@@ -180,11 +180,14 @@ export default function ClosedJobsPage() {
     setLoading(true);
     try {
       let query = supabase.from('jobs').select('*').in('erp_status', ['Billed', 'Canceled', 'Cancelled']).order('erp_job_id', { ascending: false, nullsFirst: false });
-      if (typeFilter === 'HHG') query = query.ilike('goods_type', '%Household%');
-      else if (typeFilter === 'COM') query = query.ilike('goods_type', '%Commercial%');
       const { data, error } = await query;
       if (error) throw error;
       
+      const isHousehold = (goodsType: string) => {
+        const gt = (goodsType || '').trim().toLowerCase();
+        return gt === 'household' || gt === 'household with vehicle' || gt === 'vehicle';
+      };
+
       const closedJobs = (data || []).filter(job => {
         // Canceled jobs are always closed
         if (job.erp_status?.toLowerCase().includes('cancel')) return true;
@@ -204,7 +207,15 @@ export default function ClosedJobsPage() {
         }
       });
       
-      setJobs(closedJobs);
+      // Filter by type filter
+      let filteredJobs = closedJobs;
+      if (typeFilter === 'HHG') {
+        filteredJobs = closedJobs.filter(job => isHousehold(job.goods_type));
+      } else if (typeFilter === 'COM') {
+        filteredJobs = closedJobs.filter(job => !isHousehold(job.goods_type));
+      }
+
+      setJobs(filteredJobs);
     } catch (err: any) {
       console.error('Error fetching closed jobs:', err.message);
     } finally {

@@ -23,6 +23,9 @@ function DashboardNav({ role }: { role: string | null }) {
       <Link href="/dashboard/closed-jobs" className={`${styles.navItem} ${pathname === '/dashboard/closed-jobs' ? styles.active : ''}`}>
         <span>🗃️</span> Closed Jobs
       </Link>
+      <Link href="/dashboard/all-jobs" className={`${styles.navItem} ${pathname === '/dashboard/all-jobs' ? styles.active : ''}`}>
+        <span>📁</span> All Jobs
+      </Link>
       <Link href="/dashboard/follow-ups" className={`${styles.navItem} ${pathname === '/dashboard/follow-ups' ? styles.active : ''}`}>
         <span>⏰</span> Follow-ups
       </Link>
@@ -52,6 +55,8 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const isJobPage = pathname.startsWith('/dashboard/job/');
+  const isAllJobsPage = pathname === '/dashboard/all-jobs';
+  const showSidebar = !isJobPage && !isAllJobsPage;
 
   useEffect(() => {
     const checkUser = async () => {
@@ -105,7 +110,7 @@ export default function DashboardLayout({
 
   return (
     <div className="app-container">
-      {!isJobPage && (
+      {showSidebar && (
         <aside className={`glass ${styles.sidebar}`} style={{ display: 'flex', flexDirection: 'column', padding: 0, zIndex: 50, height: '100vh', position: 'sticky', top: 0 }}>
           
           <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', flex: 1, overflow: 'visible', minHeight: 0 }}>
