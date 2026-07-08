@@ -63,6 +63,7 @@ export default function AdminPage() {
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [savingAi, setSavingAi] = useState(false);
+  const [loadingBulkUpdate, setLoadingBulkUpdate] = useState(false);
 
   const downloadCSV = async (table: 'jobs' | 'job_logs') => {
     try {
@@ -81,6 +82,78 @@ export default function AdminPage() {
     } catch (err: any) {
       setMessage({ type: 'error', text: `Failed to download ${table}: ${err.message}` });
     }
+  };
+
+  const uploadBulkUpdateCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setLoadingBulkUpdate(true);
+    setMessage(null);
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        try {
+          const data = results.data as any[];
+          
+          if (data.length === 0) throw new Error("CSV is empty");
+
+          const headers = Object.keys(data[0]);
+          if (headers.length < 2) {
+             throw new Error("CSV must have at least 2 columns: Job_number and the column to update.");
+          }
+
+          const jobNumberKey = headers.find(h => h.toLowerCase() === 'job_number' || h.toLowerCase() === 'job number' || h.toLowerCase() === 'jobnumber');
+          if (!jobNumberKey) {
+            throw new Error("Could not find a 'Job_number' column in the CSV.");
+          }
+
+          const updateColumnKey = headers.find(h => h !== jobNumberKey);
+          if (!updateColumnKey) {
+            throw new Error("Could not find a column to update in the CSV.");
+          }
+
+          let successCount = 0;
+          let failCount = 0;
+
+          // Process sequentially to avoid rate limits
+          for (const row of data) {
+            const jobNumber = row[jobNumberKey];
+            let updateValue = row[updateColumnKey];
+            
+            if (!jobNumber) continue;
+            if (updateValue === '') updateValue = null;
+
+            const { error } = await supabase
+              .from('jobs')
+              .update({ [updateColumnKey]: updateValue })
+              .eq('job_number', jobNumber);
+              
+            if (error) {
+              console.error(`Failed to update ${jobNumber}:`, error);
+              failCount++;
+            } else {
+              successCount++;
+            }
+          }
+          
+          setMessage({ type: 'success', text: `Successfully updated ${successCount} jobs! ${failCount > 0 ? `Failed to update ${failCount} jobs.` : ''}` });
+
+        } catch (err: any) {
+          setMessage({ type: 'error', text: `Failed to bulk update: ${err.message}` });
+        } finally {
+          setLoadingBulkUpdate(false);
+          e.target.value = '';
+        }
+      },
+      error: (error) => {
+        setMessage({ type: 'error', text: `CSV Parse Error: ${error.message}` });
+        setLoadingBulkUpdate(false);
+        e.target.value = '';
+      }
+    });
   };
 
   const uploadCSV = (e: React.ChangeEvent<HTMLInputElement>, table: 'jobs' | 'job_logs') => {
@@ -524,6 +597,32 @@ export default function AdminPage() {
                 style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: loadingJobs ? '#cbd5e1' : 'linear-gradient(135deg, #10b981, #059669)', color: 'white', border: 'none', pointerEvents: 'none', fontWeight: 600, boxShadow: '0 4px 12px rgba(16,185,129,0.3)' }}
               >
                 {loadingJobs ? 'Uploading...' : 'Upload Jobs CSV'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Bulk Update Section */}
+        <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem' }}>Bulk Update Jobs (Single Column)</h3>
+          <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1rem' }}>
+            Upload a CSV with exactly 2 columns: <strong>Job_number</strong> and the <strong>Exact Column Title</strong> to update. This will ONLY update existing jobs, it will NOT create new ones.
+          </p>
+          
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <div style={{ position: 'relative' }}>
+              <input 
+                type="file" 
+                accept=".csv"
+                onChange={uploadBulkUpdateCSV}
+                style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
+                disabled={loadingBulkUpdate}
+              />
+              <button 
+                disabled={loadingBulkUpdate}
+                style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: loadingBulkUpdate ? '#cbd5e1' : 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white', border: 'none', pointerEvents: 'none', fontWeight: 600, boxShadow: '0 4px 12px rgba(245,158,11,0.3)' }}
+              >
+                {loadingBulkUpdate ? 'Updating...' : 'Upload Bulk Update CSV'}
               </button>
             </div>
           </div>

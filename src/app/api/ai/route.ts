@@ -135,7 +135,7 @@ ${trackHistory}
 
             // Clean common prefixes, suffixes, and noise words (e.g. "Brig.", "shipment")
             let cleanQuery = searchQuery
-              .replace(/(brig|col|gen|maj|capt|mr|mrs|ms|shipment|details|job|status|info)\.?/gi, '')
+              .replace(/\b(brig|col|gen|maj|capt|mr|mrs|ms|shipment|details|job|status|info)\.?\b/gi, '')
               .replace(/\s+/g, ' ')
               .trim();
 
@@ -143,7 +143,7 @@ ${trackHistory}
             const { data: jobs, error } = await supabaseAdmin
               .from('jobs')
               .select('*')
-              .or(`customer_name.ilike.%${cleanQuery}%,job_number.ilike.%${cleanQuery}%,shipper_name.ilike.%${cleanQuery}%`)
+              .or(`customer_name.ilike.%${cleanQuery}%,job_number.ilike.%${cleanQuery}%,company.ilike.%${cleanQuery}%`)
               .limit(5);
 
             const searchResult = jobs && jobs.length > 0 

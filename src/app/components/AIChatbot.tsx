@@ -25,7 +25,14 @@ export default function AIChatbot() {
 
     try {
       const isTrackPage = window.location.pathname.startsWith('/track/');
-      const jobNumber = isTrackPage ? decodeURIComponent(window.location.pathname.replace('/track/', '')) : null;
+      const isDashboardJobPage = window.location.pathname.startsWith('/dashboard/job/');
+      
+      let jobNumber = null;
+      if (isTrackPage) {
+        jobNumber = decodeURIComponent(window.location.pathname.replace('/track/', ''));
+      } else if (isDashboardJobPage) {
+        jobNumber = decodeURIComponent(window.location.pathname.replace('/dashboard/job/', ''));
+      }
 
       const res = await fetch('/api/ai', {
         method: 'POST',
@@ -111,7 +118,8 @@ export default function AIChatbot() {
                 borderRadius: '12px',
                 maxWidth: '80%',
                 fontSize: '0.9rem',
-                lineHeight: '1.4'
+                lineHeight: '1.4',
+                whiteSpace: 'pre-wrap'
               }}>
                 {msg.text}
               </div>
