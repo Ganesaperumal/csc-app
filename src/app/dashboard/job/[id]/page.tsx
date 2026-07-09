@@ -937,20 +937,20 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <div className={styles.inputGroup}><label>📦 TYPE OF GOODS</label><input name="goods_type" value={job.goods_type || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>🛫 ORIGIN</label><input name="origin" value={job.origin || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}><label>🛬 DESTINATION</label><input name="destination" value={job.destination || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>🎯 SPOC</label><input name="spoc_name" value={job.spoc_name || ''} onChange={handleChange} /></div>
               {/* ERP-synced invoice fields — read-only, shown only when erp_status is Billed */}
               {job.erp_status?.toLowerCase() === 'billed' && (
                 <>
                   <div className={styles.inputGroup}>
-                    <label>📅 INVOICE DATE <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 400 }}>(ERP Synced)</span></label>
+                    <label>📅 INVOICE DATE</label>
                     <input value={job.invoice_date ? formatDate(job.invoice_date) : ''} disabled style={{ opacity: 0.7, cursor: 'not-allowed' }} />
                   </div>
                   <div className={styles.inputGroup}>
-                    <label>🧾 INVOICE NUMBER <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 400 }}>(ERP Synced)</span></label>
+                    <label>🧾 INVOICE NUMBER</label>
                     <input value={job.invoice_number || ''} disabled style={{ opacity: 0.7, cursor: 'not-allowed' }} />
                   </div>
                 </>
               )}
+              <div className={styles.inputGroup}><label>🎯 SPOC</label><input name="spoc_name" value={job.spoc_name || ''} onChange={handleChange} /></div>
             </div>
           </div>
 
