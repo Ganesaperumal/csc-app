@@ -1,0 +1,8 @@
+{
+  "name": "erp-sync",
+  "version": "1.0.0",
+  "dependencies": {
+    "playwright": "^1.49.0",
+    "xlsx": "^0.18.5"
+  }
+}

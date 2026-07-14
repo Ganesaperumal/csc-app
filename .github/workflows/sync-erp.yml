@@ -1,31 +1,44 @@
 name: Sync ERP Jobs to Supabase
 
 on:
-  workflow_dispatch: # Allows manual triggering via GitHub API (from our Next.js dashboard)
+  workflow_dispatch: # Allows manual triggering via GitHub API / Dashboard
   schedule:
-    - cron: '30 4,7,11,14 * * *' # Runs at 10 AM, 1 PM, 5 PM, and 8 PM IST
+    # Runs at 10:30 AM, 1:30 PM, 5:30 PM, and 8:30 PM IST (05:00, 08:00, 12:00, 15:00 UTC)
+    # Changed minute from :30 to :00 to match your comment's intent, shifted by 5.5 hours for IST.
+    - cron: '0 5,8,12,15 * * *' 
 
 jobs:
   sync:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm' # Automatically caches node_modules if package-lock.json exists
 
-      - name: Install Dependencies
-        run: |
-          npm init -y
-          npm install playwright xlsx
-          npx playwright install chromium
+      - name: Install Node Dependencies
+        run: npm ci # Faster, clean install designed specifically for automated environments
 
-      # We can run the original Python script here, or a modified version that POSTs to our API
-      # For now, this is a placeholder indicating where the script lives
+      - name: Cache Playwright Chromium Browser
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install Playwright Chromium (Only if cache misses)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium --with-deps
+
+      - name: Install Playwright System Dependencies (If cache hits)
+        if: steps.playwright-cache.outputs.cache-hit == 'main' || steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
       - name: Run Playwright Sync Script
         env:
           ERP_USERNAME: ${{ secrets.ERP_USERNAME }}
@@ -34,5 +47,5 @@ jobs:
           API_URL: ${{ secrets.API_URL }}
           CRON_SECRET_KEY: ${{ secrets.CRON_SECRET_KEY }}
         run: |
-          echo "GitHub Action successfully triggered by Vercel Dashboard!"
+          echo "GitHub Action successfully triggered!"
           node scripts/github_sync.js
