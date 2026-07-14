@@ -9,6 +9,8 @@ import GroupChat from './components/GroupChat';
 import ProfilePopup from './components/ProfilePopup';
 import SyncERPButton from './components/SyncERPButton';
 import CommandPalette from './components/CommandPalette';
+import AIChatbot from '../components/AIChatbot';
+import GlobalDialogs from '@/components/GlobalDialogs';
 
 function DashboardNav({ role }: { role: string | null }) {
   const pathname = usePathname();
@@ -26,9 +28,11 @@ function DashboardNav({ role }: { role: string | null }) {
       <Link href="/dashboard/all-jobs" className={`${styles.navItem} ${pathname === '/dashboard/all-jobs' ? styles.active : ''}`}>
         <span>📁</span> All Jobs
       </Link>
-      <Link href="/dashboard/follow-ups" className={`${styles.navItem} ${pathname === '/dashboard/follow-ups' ? styles.active : ''}`}>
-        <span>⏰</span> Follow-ups
-      </Link>
+      {role !== 'Viewer' && (
+        <Link href="/dashboard/follow-ups" className={`${styles.navItem} ${pathname === '/dashboard/follow-ups' ? styles.active : ''}`}>
+          <span>⏰</span> Follow-ups
+        </Link>
+      )}
       <Link href="/dashboard/spocs" className={`${styles.navItem} ${pathname === '/dashboard/spocs' ? styles.active : ''}`}>
         <span>👥</span> SPOC Management
       </Link>
@@ -139,6 +143,7 @@ export default function DashboardLayout({
         {children}
       </main>
       <CommandPalette />
+      <AIChatbot />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 'use client';
+import { showToast } from '@/components/GlobalDialogs';
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -38,6 +39,7 @@ export default function FollowUpsPage() {
   const [loading, setLoading] = useState(true);
   const [agentName, setAgentName] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isViewer, setIsViewer] = useState(false);
   const [selectedAgentFilter, setSelectedAgentFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [allAgents, setAllAgents] = useState<string[]>([]);
@@ -68,6 +70,7 @@ export default function FollowUpsPage() {
         activeName = profile.name || profile.username || user.email?.split('@')[0] || 'Agent';
         adminRole = profile.role === 'Admin';
         setIsAdmin(adminRole);
+        setIsViewer(profile.role === 'Viewer');
         setAgentName(activeName);
       } else {
         activeName = user.email?.split('@')[0] || 'Agent';
@@ -137,6 +140,7 @@ export default function FollowUpsPage() {
 
   // Handle task status update
   const toggleTaskCompletion = async (taskId: number, currentCompleted: boolean) => {
+    if (isViewer) return;
     const updatedStatus = !currentCompleted;
     
     // Update local state first (optimistic UI change)
@@ -153,7 +157,7 @@ export default function FollowUpsPage() {
       console.error('Error toggling follow-up:', err);
       // Revert state on error
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, follow_up_completed: currentCompleted } : t));
-      alert('Failed to update task status in database.');
+      showToast('Failed to update task status in database.', 'error');
     }
   };
 
@@ -252,7 +256,8 @@ export default function FollowUpsPage() {
                       type="checkbox" 
                       checked={task.follow_up_completed} 
                       onChange={() => toggleTaskCompletion(task.id, task.follow_up_completed)}
-                      style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#10b981' }} 
+                      disabled={isViewer}
+                      style={{ width: '16px', height: '16px', cursor: isViewer ? 'not-allowed' : 'pointer', accentColor: '#10b981', opacity: isViewer ? 0.5 : 1 }} 
                     />
                     <Link 
                       href={`/dashboard/job/${encodeURIComponent(task.job_number)}`}
@@ -279,7 +284,7 @@ export default function FollowUpsPage() {
                 </div>
 
                 {/* Call summary comment */}
-                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'var(--surface-color)', padding: '0.5rem', borderRadius: '6px', borderLeft: `3px solid ${badgeBg}`, lineClamp: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.4)', padding: '0.5rem', borderRadius: '6px', borderLeft: `3px solid ${badgeBg}`, lineClamp: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {task.summary}
                 </p>
 
@@ -333,7 +338,7 @@ export default function FollowUpsPage() {
               placeholder="Search tasks..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ padding: '0.5rem 2rem 0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', fontSize: '0.85rem', minWidth: '200px' }}
+              style={{ padding: '0.5rem 2rem 0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.4)', color: 'var(--text-primary)', fontSize: '0.85rem', minWidth: '200px' }}
             />
             <span style={{ position: 'absolute', right: '10px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>🔍</span>
           </div>

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { email, password, name } = await request.json();
+    const { email, password, name, role = 'Executive' } = await request.json();
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
@@ -41,8 +41,8 @@ export async function POST(request: Request) {
         id: data.user.id, 
         username: username, 
         name: name || username, 
-        role: 'Executive', 
-        chat_access: true 
+        role: role, 
+        chat_access: role !== 'Viewer' 
       }
     ]);
 

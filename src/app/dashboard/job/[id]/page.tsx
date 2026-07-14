@@ -1,4 +1,5 @@
 'use client';
+import { showToast } from '@/components/GlobalDialogs';
 
 import { useEffect, useState, use, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -22,12 +23,12 @@ const toProperCase = (str: string) => {
   return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 };
 
-const DateInput = ({ name, value, onChange }: { name: string, value: string, onChange: (e: any) => void }) => {
+const DateInput = ({ name, value, onChange, disabled }: { name: string, value: string, onChange: (e: any) => void, disabled?: boolean }) => {
   const [isFocused, setIsFocused] = useState(false);
   const displayValue = (!isFocused && value) ? formatDate(value) : value;
 
   return (
-    <input
+    <input disabled={disabled}
       type={isFocused || !value ? "date" : "text"}
       name={name}
       value={displayValue || ''}
@@ -39,10 +40,10 @@ const DateInput = ({ name, value, onChange }: { name: string, value: string, onC
   );
 };
 
-const ToggleSwitch = ({ name, value, onChange }: { name: string, value: any, onChange: (val: boolean) => void }) => {
+const ToggleSwitch = ({ name, value, onChange, disabled }: { name: string, value: any, onChange: (val: boolean) => void, disabled?: boolean }) => {
   const isOn = value === true || value === 'Yes' || value === 'yes';
   return (
-    <div className={styles.toggleContainer} onClick={() => onChange(!isOn)}>
+    <div className={styles.toggleContainer} onClick={() => { if (!disabled) onChange(!isOn); }} style={{ opacity: disabled ? 0.6 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}>
       <div className={`${styles.toggleTrack} ${isOn ? styles.toggleTrackActive : ''}`}>
         <div className={`${styles.toggleThumb} ${isOn ? styles.toggleThumbActive : ''}`} />
       </div>
@@ -99,7 +100,7 @@ const CAR_TRACK_OPTIONS = [
   "16. Job Completed"
 ];
 
-const StatusSlider = ({ name, options, value, onChange }: { name: string, options: string[], value: any, onChange: (e: any) => void }) => {
+const StatusSlider = ({ name, options, value, onChange, disabled }: { name: string, options: string[], value: any, onChange: (e: any) => void, disabled?: boolean }) => {
   const currentIndex = options.indexOf(value);
   const safeIndex = currentIndex === -1 ? 0 : currentIndex;
 
@@ -111,7 +112,7 @@ const StatusSlider = ({ name, options, value, onChange }: { name: string, option
   return (
     <div className={styles.sliderContainer}>
       <div className={styles.sliderValueDisplay}>{options[safeIndex]}</div>
-      <input 
+      <input disabled={disabled} 
         type="range" 
         min="0" 
         max={options.length - 1} 
@@ -177,7 +178,7 @@ const CarStatusSlider = ({ name, options, value, onChange }: { name: string, opt
         onPointerDown={handlePointerDown}
         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', padding: '0 10px', touchAction: 'none', cursor: 'pointer' }}
       >
-        <div style={{ position: 'absolute', top: '50%', left: '23px', right: '23px', height: '4px', background: '#e2e8f0', zIndex: 0, transform: 'translateY(-50%)' }}>
+        <div style={{ position: 'absolute', top: '50%', left: '23px', right: '23px', height: '4px', background: 'var(--border-color)', zIndex: 0, transform: 'translateY(-50%)' }}>
           <div style={{ width: `${(safeIndex / (options.length - 1)) * 100}%`, height: '100%', background: '#a78bfa', transition: 'width 0.1s ease' }}></div>
         </div>
         
@@ -190,9 +191,9 @@ const CarStatusSlider = ({ name, options, value, onChange }: { name: string, opt
               width: i === safeIndex ? '36px' : '26px', 
               height: i === safeIndex ? '36px' : '26px', 
               borderRadius: i === safeIndex ? '0' : '50%', 
-              background: i === safeIndex ? 'transparent' : (i < safeIndex ? '#a78bfa' : '#f8fafc'),
-              border: i === safeIndex ? 'none' : `2px solid ${i < safeIndex ? '#a78bfa' : '#cbd5e1'}`,
-              color: i < safeIndex ? '#fff' : '#64748b',
+              background: i === safeIndex ? 'transparent' : (i < safeIndex ? '#a78bfa' : 'var(--bg-color)'),
+              border: i === safeIndex ? 'none' : `2px solid ${i < safeIndex ? '#a78bfa' : 'var(--border-color)'}`,
+              color: i < safeIndex ? '#fff' : 'var(--text-secondary)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '0.75rem', 
               fontWeight: 'bold', zIndex: 2,
@@ -211,11 +212,11 @@ const CarStatusSlider = ({ name, options, value, onChange }: { name: string, opt
             {hoveredIndex === i && (
               <div className="car-tooltip" style={{
                 position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
-                marginBottom: '8px', padding: '4px 8px', background: '#1e293b', color: '#fff',
+                marginBottom: '8px', padding: '4px 8px', background: 'var(--text-primary)', color: '#fff',
                 fontSize: '0.75rem', borderRadius: '4px', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 10
               }}>
                 {opt}
-                <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', borderLeft: '4px solid transparent', borderRight: '4px solid transparent', borderTop: '4px solid #1e293b' }}></div>
+                <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', borderLeft: '4px solid transparent', borderRight: '4px solid transparent', borderTop: '4px solid var(--text-primary)' }}></div>
               </div>
             )}
           </div>
@@ -237,7 +238,8 @@ const WhatsAppStageRow = ({
   sentInfo,
   customerPhone,
   isLast,
-  onSend
+  onSend,
+  disabled
 }: {
   stageName: string;
   stageLabel: string;
@@ -246,6 +248,7 @@ const WhatsAppStageRow = ({
   customerPhone?: string;
   isLast?: boolean;
   onSend: () => void;
+  disabled?: boolean;
 }) => {
   const [showPreview, setShowPreview] = useState(false);
 
@@ -309,13 +312,15 @@ const WhatsAppStageRow = ({
 
         <button
           onClick={onSend}
+          disabled={disabled}
           style={{
             padding: '0.4rem 0.9rem', borderRadius: '8px', border: 'none',
             background: sentInfo ? '#3b82f6' : '#10b981', color: 'white',
-            fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
+            fontSize: '0.75rem', fontWeight: 700, cursor: disabled ? 'not-allowed' : 'pointer',
             boxShadow: sentInfo ? '0 2px 6px rgba(59,130,246,0.15)' : '0 2px 6px rgba(16,185,129,0.15)',
             whiteSpace: 'nowrap',
-            flexShrink: 0
+            flexShrink: 0,
+            opacity: disabled ? 0.6 : 1
           }}
         >
           {sentInfo ? 'Resend Update' : 'Send Update'}
@@ -360,6 +365,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const [newShipmentDate, setNewShipmentDate] = useState('');
   const [newShipmentLocation, setNewShipmentLocation] = useState('');
   const [agentName, setAgentName] = useState('Agent');
+  const [userRole, setUserRole] = useState<string>('');
+  const isViewer = userRole === 'Viewer';
   const [supervisors, setSupervisors] = useState<string[]>([]);
   const [viewingAgents, setViewingAgents] = useState<string[]>([]);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
@@ -455,6 +462,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   };
 
   const handleMarkWhatsAppStageSent = async (stageName: string, messageText: string) => {
+    if (isViewer) return;
     try {
       const cleanPhone = (job?.customer_phone || '').replace(/[^0-9]/g, '');
       const { error } = await supabase
@@ -472,7 +480,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
       await fetchWhatsAppLogs();
     } catch (err) {
       console.error('Error logging WhatsApp sent stage:', err);
-      alert('Error updating WhatsApp sent status: ' + (err as any).message);
+      showToast('Error updating WhatsApp sent status: ' + (err as any).message, 'error');
     }
   };
 
@@ -483,12 +491,13 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
         const fetchProfile = async () => {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('username, name')
+            .select('username, name, role')
             .eq('id', data.user.id)
             .single();
             
           if (profile) {
             setAgentName(profile.name || profile.username || data.user.email?.split('@')[0] || 'Agent');
+            setUserRole(profile.role || '');
           } else {
             setAgentName(data.user.email?.split('@')[0] || 'Agent');
           }
@@ -558,7 +567,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
       if (error) throw error;
       
       // Auto-toggle CAR (INCLUDED?) if goods_type contains "vehicle"
-      if (data?.goods_type?.toLowerCase().includes('vehicle') && data.car_included !== true) {
+      if (!isViewer && data?.goods_type?.toLowerCase().includes('vehicle') && data.car_included !== true) {
         data.car_included = true;
         supabase.from('jobs').update({ car_included: true }).eq('job_number', decodedId).then(() => {});
       }
@@ -596,6 +605,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const saveTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const handleFieldChange = (name: string, value: any) => {
+    if (isViewer) return;
     if (name === 'jtr_percentage' || name === 'transit_days' || name === 'due_days') {
       value = value === '' ? null : Number(value);
     }
@@ -653,6 +663,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
   const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isViewer) return;
     if (!newNote.trim()) return;
     
     try {
@@ -687,7 +698,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
   const handleAddComm = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commForm.call_type) return alert('Please select a Call Type (Customer or Internal)');
+    if (isViewer) return;
+    if (!commForm.call_type) return showToast('Please select a Call Type (Customer or Internal)', 'info');
     if (!commForm.summary.trim()) return;
     try {
       const now = new Date().toISOString();
@@ -730,6 +742,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   };
 
   const handleToggleFollowUp = async (id: number, currentStatus: boolean) => {
+    if (isViewer) return;
     try {
       setComms(prev => prev.map(c => c.id === id ? { ...c, follow_up_completed: !currentStatus } : c));
       
@@ -744,12 +757,13 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
       }
     } catch (err) {
       console.error('Error updating follow-up:', err);
-      alert('Failed to update follow-up status.');
+      showToast('Failed to update follow-up status.', 'error');
     }
   };
 
   const handleAddShipmentLog = async (e?: React.FormEvent, date?: string, location?: string, remark?: string) => {
     if (e) e.preventDefault();
+    if (isViewer) return;
     const d = date || newShipmentDate;
     const l = location || newShipmentLocation;
     if (!d || !l.trim()) return;
@@ -768,7 +782,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
       fetchTrackingLogs();
     } catch (err: any) {
       console.error(err);
-      alert(`Error saving shipment update: ${err.message || 'Check browser console'}`);
+      showToast(`Error saving shipment update: ${err.message || 'Check browser console'}`, 'error');
     }
   };
 
@@ -875,7 +889,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', borderLeft: '1px solid rgba(148, 163, 184, 0.3)', paddingLeft: '1rem' }}>
-            {saving ? (
+            {isViewer ? (
+              <span style={{ color: '#ef4444', fontWeight: 600, fontSize: '0.8rem' }}>🔒 View Only</span>
+            ) : saving ? (
               <>
                 <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
                 Saving...
@@ -894,13 +910,13 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
       {aiSummary && (
         <div style={{
-          background: 'linear-gradient(135deg, #ffffff 0%, rgba(243, 232, 255, 0.4) 100%)',
+          background: 'linear-gradient(135deg, var(--bg-color) 0%, rgba(243, 232, 255, 0.4) 100%)',
           border: '1px solid rgba(139, 92, 246, 0.2)',
           borderRadius: '12px',
           padding: '1.25rem',
           marginBottom: '1.5rem',
           boxShadow: '0 4px 20px rgba(139, 92, 246, 0.05)',
-          color: '#1e293b',
+          color: 'var(--text-primary)',
           fontSize: '0.95rem',
           lineHeight: '1.6'
         }}>
@@ -931,12 +947,12 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <span className={styles.textPrimary}>Customer Details</span>
             </h3>
             <div className={styles.grid}>
-              <div className={styles.inputGroup}><label>👤 NAME</label><input name="customer_name" value={job.customer_name || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>🏢 COMPANY</label><input name="company" value={job.company || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>📞 CONTACT</label><input name="customer_phone" value={job.customer_phone || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>📦 TYPE OF GOODS</label><input name="goods_type" value={job.goods_type || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>🛫 ORIGIN</label><input name="origin" value={job.origin || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>🛬 DESTINATION</label><input name="destination" value={job.destination || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>👤 NAME</label><input disabled={isViewer} name="customer_name" value={job.customer_name || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>🏢 COMPANY</label><input disabled={isViewer} name="company" value={job.company || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>📞 CONTACT</label><input disabled={isViewer} name="customer_phone" value={job.customer_phone || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>📦 TYPE OF GOODS</label><input disabled={isViewer} name="goods_type" value={job.goods_type || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>🛫 ORIGIN</label><input disabled={isViewer} name="origin" value={job.origin || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>🛬 DESTINATION</label><input disabled={isViewer} name="destination" value={job.destination || ''} onChange={handleChange} /></div>
               {/* ERP-synced invoice fields — read-only, shown only when erp_status is Billed */}
               {job.erp_status?.toLowerCase() === 'billed' && (
                 <>
@@ -950,7 +966,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   </div>
                 </>
               )}
-              <div className={styles.inputGroup}><label>🎯 SPOC</label><input name="spoc_name" value={job.spoc_name || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>🎯 SPOC</label><input disabled={isViewer} name="spoc_name" value={job.spoc_name || ''} onChange={handleChange} /></div>
             </div>
           </div>
 
@@ -967,11 +983,11 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                 <label>🤝 OPERATION BY</label>
                 <div style={{ display: 'flex', gap: '1.5rem', flexGrow: 1, alignItems: 'center' }}>
                   <label style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', textTransform: 'none', fontSize: '0.9rem', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 400 }}>
-                    <input type="radio" name="operation_by" value="TI" checked={job.operation_by === 'TI'} onChange={handleChange} style={{ width: '16px', height: '16px', margin: 0, cursor: 'pointer', accentColor: '#4f46e5' }} /> 
+                    <input disabled={isViewer} type="radio" name="operation_by" value="TI" checked={job.operation_by === 'TI'} onChange={handleChange} style={{ width: '16px', height: '16px', margin: 0, cursor: 'pointer', accentColor: '#4f46e5' }} /> 
                     TI
                   </label>
                   <label style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', textTransform: 'none', fontSize: '0.9rem', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 400 }}>
-                    <input type="radio" name="operation_by" value="Outsourced" checked={job.operation_by === 'Outsourced'} onChange={handleChange} style={{ width: '16px', height: '16px', margin: 0, cursor: 'pointer', accentColor: '#4f46e5' }} /> 
+                    <input disabled={isViewer} type="radio" name="operation_by" value="Outsourced" checked={job.operation_by === 'Outsourced'} onChange={handleChange} style={{ width: '16px', height: '16px', margin: 0, cursor: 'pointer', accentColor: '#4f46e5' }} /> 
                     Outsourced
                   </label>
                 </div>
@@ -984,16 +1000,16 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   onChange={handleChange} 
                   disabled={job.operation_by !== 'Outsourced'} 
                   placeholder={job.operation_by === 'Outsourced' ? "Partner name" : "N/A"} 
-                  style={job.operation_by !== 'Outsourced' ? { opacity: 0.6, cursor: 'not-allowed', background: 'rgba(255, 255, 255, 0.3)' } : undefined}
+                  style={job.operation_by !== 'Outsourced' ? { opacity: 0.6, cursor: 'not-allowed', background: 'var(--surface-color)' } : undefined}
                 />
               </div>
               <div className={styles.inputGroup}>
                 <label>🚗 CAR INCLUDED?</label>
-                <ToggleSwitch name="car_included" value={job.car_included === true} onChange={(val) => handleFieldChange('car_included', val)} />
+                <ToggleSwitch disabled={isViewer} name="car_included" value={job.car_included === true} onChange={(val) => handleFieldChange('car_included', val)} />
               </div>
               <div className={styles.inputGroup}>
                 <label>🏋️‍♂️ HEAVY ITEMS</label>
-                <ToggleSwitch name="heavy_items" value={job.heavy_items === true || job.heavy_items === 'Yes'} onChange={(val) => handleFieldChange('heavy_items', val)} />
+                <ToggleSwitch disabled={isViewer} name="heavy_items" value={job.heavy_items === true || job.heavy_items === 'Yes'} onChange={(val) => handleFieldChange('heavy_items', val)} />
               </div>
 
               {/* Subheadings for site details */}
@@ -1004,23 +1020,23 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                 🛬 DESTINATION SITE:
               </div>
 
-              <div className={styles.inputGroup}><label>🏢 FLOOR</label><input type="number" name="origin_floor" value={job.origin_floor || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>🏢 FLOOR</label><input type="number" name="dest_floor" value={job.dest_floor || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>🏢 FLOOR</label><input disabled={isViewer} type="number" name="origin_floor" value={job.origin_floor || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>🏢 FLOOR</label><input disabled={isViewer} type="number" name="dest_floor" value={job.dest_floor || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}>
                 <label>🛗 SERVICE LIFT</label>
-                <ToggleSwitch name="origin_service_lift" value={job.origin_service_lift === true || job.origin_service_lift === 'Yes'} onChange={(val) => handleFieldChange('origin_service_lift', val)} />
+                <ToggleSwitch disabled={isViewer} name="origin_service_lift" value={job.origin_service_lift === true || job.origin_service_lift === 'Yes'} onChange={(val) => handleFieldChange('origin_service_lift', val)} />
               </div>
               <div className={styles.inputGroup}>
                 <label>🛗 SERVICE LIFT</label>
-                <ToggleSwitch name="dest_service_lift" value={job.dest_service_lift === true || job.dest_service_lift === 'Yes'} onChange={(val) => handleFieldChange('dest_service_lift', val)} />
+                <ToggleSwitch disabled={isViewer} name="dest_service_lift" value={job.dest_service_lift === true || job.dest_service_lift === 'Yes'} onChange={(val) => handleFieldChange('dest_service_lift', val)} />
               </div>
               <div className={styles.inputGroup}>
                 <label>🅿️ PARKING</label>
-                <ToggleSwitch name="origin_parking" value={job.origin_parking === true || job.origin_parking === 'Yes'} onChange={(val) => handleFieldChange('origin_parking', val)} />
+                <ToggleSwitch disabled={isViewer} name="origin_parking" value={job.origin_parking === true || job.origin_parking === 'Yes'} onChange={(val) => handleFieldChange('origin_parking', val)} />
               </div>
               <div className={styles.inputGroup}>
                 <label>🅿️ PARKING</label>
-                <ToggleSwitch name="dest_parking" value={job.dest_parking === true || job.dest_parking === 'Yes'} onChange={(val) => handleFieldChange('dest_parking', val)} />
+                <ToggleSwitch disabled={isViewer} name="dest_parking" value={job.dest_parking === true || job.dest_parking === 'Yes'} onChange={(val) => handleFieldChange('dest_parking', val)} />
               </div>
             </div>
           </div>
@@ -1036,7 +1052,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
             <div className={styles.grid}>
               <div className={styles.inputGroup}>
                 <label>👤 CSC Coordinator</label>
-                <CustomSelect
+                <CustomSelect disabled={isViewer}
                   placeholder="- Select CSC Coordinator-"
                   value={currentCoordinator}
                   onChange={(val) => handleFieldChange('csc_coordinator', val)}
@@ -1050,7 +1066,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               </div>
               <div className={styles.inputGroup}>
                 <label>📅 FOLLOW-UP DATE</label>
-                <DateInput name="follow_up_date" value={job.follow_up_date || ''} onChange={handleChange} />
+                <DateInput disabled={isViewer} name="follow_up_date" value={job.follow_up_date || ''} onChange={handleChange} />
               </div>
 
               <div className={styles.inputGroup}>
@@ -1061,7 +1077,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   style={{
                     flexGrow: 1,
                     width: '62%',
-                    background: copied ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#ffffff',
+                    background: copied ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'var(--bg-color)',
                     border: copied ? 'none' : '1px solid rgba(148, 163, 184, 0.25)',
                     color: copied ? '#fff' : '#4f46e5',
                     borderRadius: '10px',
@@ -1075,13 +1091,13 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   }}
                   onMouseOver={(e) => {
                     if (!copied) {
-                      e.currentTarget.style.background = '#f8fafc';
+                      e.currentTarget.style.background = 'var(--bg-color)';
                       e.currentTarget.style.borderColor = 'rgba(79, 70, 229, 0.4)';
                     }
                   }}
                   onMouseOut={(e) => {
                     if (!copied) {
-                      e.currentTarget.style.background = '#ffffff';
+                      e.currentTarget.style.background = 'var(--bg-color)';
                       e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.25)';
                     }
                   }}
@@ -1112,13 +1128,13 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
                 <div style={{ width: '100%' }}>
-                  <label style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#475569', marginBottom: '0.5rem', display: 'block' }}>📍 CAR TRACK</label>
+                  <label style={{ fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', display: 'block' }}>📍 CAR TRACK</label>
                   <CarStatusSlider name="car_track_status" options={CAR_TRACK_OPTIONS} value={job.car_track_status} onChange={handleChange} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className={styles.inputGroup}><label>🏎️ CAR PICKUP DATE</label><DateInput name="car_pickup_date" value={job.car_pickup_date || ''} onChange={handleChange} /></div>
-                  <div className={styles.inputGroup}><label>🏁 CAR DELIVERY</label><DateInput name="car_delivery_date" value={job.car_delivery_date || ''} onChange={handleChange} /></div>
-                  <div className={styles.inputGroup}><label>🚛 CAR TRANSPORTER</label><input type="text" name="car_transporter" value={job.car_transporter || ''} onChange={handleChange} placeholder="Transporter name" /></div>
+                  <div className={styles.inputGroup}><label>🏎️ CAR PICKUP DATE</label><DateInput disabled={isViewer} name="car_pickup_date" value={job.car_pickup_date || ''} onChange={handleChange} /></div>
+                  <div className={styles.inputGroup}><label>🏁 CAR DELIVERY</label><DateInput disabled={isViewer} name="car_delivery_date" value={job.car_delivery_date || ''} onChange={handleChange} /></div>
+                  <div className={styles.inputGroup}><label>🚛 CAR TRANSPORTER</label><input disabled={isViewer} type="text" name="car_transporter" value={job.car_transporter || ''} onChange={handleChange} placeholder="Transporter name" /></div>
                 </div>
               </div>
             </div>
@@ -1133,13 +1149,13 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <span className={styles.textCOM}>Origin Service</span>
             </h3>
             <div className={styles.grid}>
-              <div className={styles.inputGroup}><label>📆 PACKING DATE</label><DateInput name="packing_date" value={job.packing_date || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>👔 SUPERVISOR</label><input name="packing_team_supervisor" value={job.packing_team_supervisor || ''} onChange={handleChange} list="supervisors-list" /></div>
-              <div className={styles.inputGroup}><label>👷‍♂️ HANDYMAN</label><input name="handyman_origin" value={job.handyman_origin || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>📝 REMARKS ON HANDYMAN</label><input name="handyman_origin_remarks" value={job.handyman_origin_remarks || ''} onChange={handleChange} placeholder="Remarks on handyman" /></div>
-              <div className={styles.inputGroup}><label>⌚ COMMITTED TIME</label><input type="time" name="committed_time" value={job.committed_time || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>⏱️ REPORTED TIME</label><input type="time" name="reported_time" value={job.reported_time || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>📝 INSTRUCTIONS</label><textarea name="origin_instructions" value={job.origin_instructions || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>📆 PACKING DATE</label><DateInput disabled={isViewer} name="packing_date" value={job.packing_date || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>👔 SUPERVISOR</label><input disabled={isViewer} name="packing_team_supervisor" value={job.packing_team_supervisor || ''} onChange={handleChange} list="supervisors-list" /></div>
+              <div className={styles.inputGroup}><label>👷‍♂️ HANDYMAN</label><input disabled={isViewer} name="handyman_origin" value={job.handyman_origin || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>📝 REMARKS ON HANDYMAN</label><input disabled={isViewer} name="handyman_origin_remarks" value={job.handyman_origin_remarks || ''} onChange={handleChange} placeholder="Remarks on handyman" /></div>
+              <div className={styles.inputGroup}><label>⌚ COMMITTED TIME</label><input disabled={isViewer} type="time" name="committed_time" value={job.committed_time || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>⏱️ REPORTED TIME</label><input disabled={isViewer} type="time" name="reported_time" value={job.reported_time || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>📝 INSTRUCTIONS</label><textarea disabled={isViewer} name="origin_instructions" value={job.origin_instructions || ''} onChange={handleChange} /></div>
             </div>
           </div>
 
@@ -1152,26 +1168,26 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <span className={styles.textLogistics}>Cargo Service</span>
             </h3>
             <div className={styles.grid}>
-              <div className={styles.inputGroup}><label>🚀 DISPATCH DATE</label><DateInput name="dispatch_date" value={job.dispatch_date || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>⏳ TRANSIT DAYS</label><input type="number" name="transit_days" value={job.transit_days || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>🚀 DISPATCH DATE</label><DateInput disabled={isViewer} name="dispatch_date" value={job.dispatch_date || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>⏳ TRANSIT DAYS</label><input disabled={isViewer} type="number" name="transit_days" value={job.transit_days || ''} onChange={handleChange} /></div>
 
-              <div className={styles.inputGroup}><label>🚗 VEHICLE TYPE</label><input type="text" name="vehicle_type" value={job.vehicle_type || ''} onChange={handleChange} placeholder="e.g. 20ft, 40ft, Trailer" /></div>
-              <div className={styles.inputGroup}><label>🚚 SHIPMENT TYPE</label><input type="text" name="shipment_type" value={job.shipment_type || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>🚗 VEHICLE TYPE</label><input disabled={isViewer} type="text" name="vehicle_type" value={job.vehicle_type || ''} onChange={handleChange} placeholder="e.g. 20ft, 40ft, Trailer" /></div>
+              <div className={styles.inputGroup}><label>🚚 SHIPMENT TYPE</label><input disabled={isViewer} type="text" name="shipment_type" value={job.shipment_type || ''} onChange={handleChange} /></div>
 
-              <div className={styles.inputGroup}><label>🚛 TRUCK NUMBER</label><input type="text" name="truck_number" value={job.truck_number || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>👨‍✈️ DRIVER DETAILS</label><input type="text" name="driver_details" value={job.driver_details || ''} onChange={handleChange} placeholder="e.g. Ram - 9876543210" /></div>
+              <div className={styles.inputGroup}><label>🚛 TRUCK NUMBER</label><input disabled={isViewer} type="text" name="truck_number" value={job.truck_number || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>👨‍✈️ DRIVER DETAILS</label><input disabled={isViewer} type="text" name="driver_details" value={job.driver_details || ''} onChange={handleChange} placeholder="e.g. Ram - 9876543210" /></div>
 
-              <div className={styles.inputGroup}><label>🎯 EXPECTED REACHING DATE</label><DateInput name="expected_to_reach_dest" value={job.expected_to_reach_dest || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>🏁 ACTUAL REACHED DATE</label><DateInput name="reached_destination" value={job.reached_destination || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>🎯 EXPECTED REACHING DATE</label><DateInput disabled={isViewer} name="expected_to_reach_dest" value={job.expected_to_reach_dest || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>🏁 ACTUAL REACHED DATE</label><DateInput disabled={isViewer} name="reached_destination" value={job.reached_destination || ''} onChange={handleChange} /></div>
 
               <div className={styles.inputGroup}>
                 <label>⚠️ DEVIATION</label>
-                <ToggleSwitch name="deviation" value={job.deviation === true} onChange={(val) => handleFieldChange('deviation', val)} />
+                <ToggleSwitch disabled={isViewer} name="deviation" value={job.deviation === true} onChange={(val) => handleFieldChange('deviation', val)} />
               </div>
-              <div className={styles.inputGroup}><label>✍️ REASON</label><input name="deviation_reason" value={job.deviation_reason || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>✍️ REASON</label><input disabled={isViewer} name="deviation_reason" value={job.deviation_reason || ''} onChange={handleChange} /></div>
 
-              <div className={styles.inputGroup}><label>🔔 PRE-ALERT</label><input type="text" name="pre_alert_status" value={job.pre_alert_status || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>💬 REMARKS</label><input type="text" name="remarks" value={job.remarks || ''} onChange={handleChange} placeholder="Remarks" /></div>
+              <div className={styles.inputGroup}><label>🔔 PRE-ALERT</label><input disabled={isViewer} type="text" name="pre_alert_status" value={job.pre_alert_status || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>💬 REMARKS</label><input disabled={isViewer} type="text" name="remarks" value={job.remarks || ''} onChange={handleChange} placeholder="Remarks" /></div>
             </div>
 
 
@@ -1186,16 +1202,16 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <span style={{ background: '-webkit-linear-gradient(45deg, #10b981, #0ea5e9)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 600 }}>Destination Service</span>
             </h3>
             <div className={styles.grid}>
-              <div className={styles.inputGroup}><label>📅 PLANNED DELIVERY DATE</label><DateInput name="planned_delivery" value={job.planned_delivery || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>✅ ACTUAL DELIVERY DATE</label><DateInput name="actual_delivery" value={job.actual_delivery || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>📅 PLANNED DELIVERY DATE</label><DateInput disabled={isViewer} name="planned_delivery" value={job.planned_delivery || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>✅ ACTUAL DELIVERY DATE</label><DateInput disabled={isViewer} name="actual_delivery" value={job.actual_delivery || ''} onChange={handleChange} /></div>
               
-              <div className={styles.inputGroup}><label>👔 SUPERVISOR</label><input name="dest_supervisor" value={job.dest_supervisor || ''} onChange={handleChange} list="supervisors-list" /></div>
-              <div className={styles.inputGroup}><label>👷‍♂️ HANDYMAN</label><input name="handyman_destination" value={job.handyman_destination || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>📝 REMARKS ON HANDYMAN</label><input name="handyman_dest_remarks" value={job.handyman_dest_remarks || ''} onChange={handleChange} placeholder="Remarks on handyman" /></div>
+              <div className={styles.inputGroup}><label>👔 SUPERVISOR</label><input disabled={isViewer} name="dest_supervisor" value={job.dest_supervisor || ''} onChange={handleChange} list="supervisors-list" /></div>
+              <div className={styles.inputGroup}><label>👷‍♂️ HANDYMAN</label><input disabled={isViewer} name="handyman_destination" value={job.handyman_destination || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>📝 REMARKS ON HANDYMAN</label><input disabled={isViewer} name="handyman_dest_remarks" value={job.handyman_dest_remarks || ''} onChange={handleChange} placeholder="Remarks on handyman" /></div>
               
               <div className={styles.inputGroup}>
                 <label>🚨 INCIDENTS</label>
-                <CustomSelect
+                <CustomSelect disabled={isViewer}
                   placeholder="None"
                   value={job.incidents || ''}
                   onChange={(val) => handleFieldChange('incidents', val)}
@@ -1206,7 +1222,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   ]}
                 />
               </div>
-              <div className={styles.inputGroup}><label>📝 INSTRUCTIONS</label><textarea name="dest_instructions" value={job.dest_instructions || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>📝 INSTRUCTIONS</label><textarea disabled={isViewer} name="dest_instructions" value={job.dest_instructions || ''} onChange={handleChange} /></div>
             </div>
           </div>
 
@@ -1219,14 +1235,14 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <span style={{ background: 'linear-gradient(90deg, #f43f5e, #eab308)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontWeight: 600 }}>Customer Service</span>
             </h3>
             <div className={styles.grid}>
-              <div className={styles.inputGroup}><label>💯 JTR %</label><input type="number" name="jtr_percentage" value={job.jtr_percentage || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>💯 JTR %</label><input disabled={isViewer} type="number" name="jtr_percentage" value={job.jtr_percentage || ''} onChange={handleChange} /></div>
               <div className={styles.inputGroup}>
                 <label>⭐ GOOGLE REVIEW</label>
-                <ToggleSwitch name="google_review_taken" value={job.google_review_taken === true || job.google_review_taken === 'Yes'} onChange={(val) => handleFieldChange('google_review_taken', val)} />
+                <ToggleSwitch disabled={isViewer} name="google_review_taken" value={job.google_review_taken === true || job.google_review_taken === 'Yes'} onChange={(val) => handleFieldChange('google_review_taken', val)} />
               </div>
               
-              <div className={styles.inputGroup}><label>📢 REFERRALS</label><textarea name="referrals" value={job.referrals || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}><label>💬 CUSTOMER FEEDBACK</label><textarea name="customer_feedback" value={job.customer_feedback || ''} onChange={handleChange} rows={4} style={{ resize: 'vertical', minHeight: '90px' }} placeholder="Customer feedback and comments..." /></div>
+              <div className={styles.inputGroup}><label>📢 REFERRALS</label><textarea disabled={isViewer} name="referrals" value={job.referrals || ''} onChange={handleChange} /></div>
+              <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}><label>💬 CUSTOMER FEEDBACK</label><textarea disabled={isViewer} name="customer_feedback" value={job.customer_feedback || ''} onChange={handleChange} rows={4} style={{ resize: 'vertical', minHeight: '90px' }} placeholder="Customer feedback and comments..." /></div>
             </div>
           </div>
 
@@ -1285,34 +1301,34 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                     <div style={{ position: 'absolute', left: '-2.5rem', top: '2px', width: '16px', height: '16px', borderRadius: '50%', background: '#3b82f6', border: '3px solid white', boxShadow: '0 0 0 1px #3b82f6', zIndex: 2 }}></div>
                     <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>{track.location ? toProperCase(track.location) : ''}</div>
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>{track.date ? formatDate(track.date) : ''}</div>
-                    {track.remark && <div style={{ fontSize: '0.85rem', color: '#64748b', fontStyle: 'italic', marginTop: '0.4rem', padding: '0.5rem 0.7rem', background: 'rgba(0,0,0,0.02)', borderRadius: '6px', borderLeft: '3px solid #3b82f6' }}>{track.remark}</div>}
+                    {track.remark && <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginTop: '0.4rem', padding: '0.5rem 0.7rem', background: 'rgba(0,0,0,0.02)', borderRadius: '6px', borderLeft: '3px solid #3b82f6' }}>{track.remark}</div>}
                   </div>
                 ))}
                 
-                <div style={{ position: 'relative', marginBottom: '2.5rem', background: 'rgba(255,255,255,0.6)', padding: '1.2rem', borderRadius: '12px', border: '1px dashed rgba(148, 163, 184, 0.5)', width: '100%', boxSizing: 'border-box' }}>
-                  <div style={{ position: 'absolute', left: '-3.7rem', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', borderRadius: '50%', background: 'transparent', border: '2px dashed #94a3b8', zIndex: 2 }}></div>
+                <div style={{ position: 'relative', marginBottom: '2.5rem', background: 'var(--surface-color)', padding: '1.2rem', borderRadius: '12px', border: '1px dashed var(--border-color)', width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ position: 'absolute', left: '-3.7rem', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', borderRadius: '50%', background: 'transparent', border: '2px dashed var(--text-secondary)', zIndex: 2 }}></div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', width: '100%' }}>
-                    <input type="date" id="new_track_date" style={{ padding: '0.6rem', fontSize: '0.85rem', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.3)' }} />
-                    <input type="text" id="new_track_location" placeholder="Current Location" style={{ padding: '0.6rem', fontSize: '0.85rem', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.3)' }} />
-                    <input type="text" id="new_track_remarks" placeholder="Remarks (Optional)" style={{ padding: '0.6rem', fontSize: '0.85rem', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.3)' }} />
+                    <input disabled={isViewer} type="date" id="new_track_date" style={{ padding: '0.6rem', fontSize: '0.85rem', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.3)' }} />
+                    <input disabled={isViewer} type="text" id="new_track_location" placeholder="Current Location" style={{ padding: '0.6rem', fontSize: '0.85rem', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.3)' }} />
+                    <input disabled={isViewer} type="text" id="new_track_remarks" placeholder="Remarks (Optional)" style={{ padding: '0.6rem', fontSize: '0.85rem', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.3)' }} />
                     <button type="button" onClick={async () => {
                       const d = (document.getElementById('new_track_date') as HTMLInputElement).value;
                       const l = (document.getElementById('new_track_location') as HTMLInputElement).value;
                       const r = (document.getElementById('new_track_remarks') as HTMLInputElement).value;
-                      if (!d || !l) return alert('Date and Location are required to add an update');
+                      if (!d || !l) return showToast('Date and Location are required to add an update', 'info');
                       
                       await handleAddShipmentLog(undefined, d, l, r);
                       
                       (document.getElementById('new_track_date') as HTMLInputElement).value = '';
                       (document.getElementById('new_track_location') as HTMLInputElement).value = '';
                       (document.getElementById('new_track_remarks') as HTMLInputElement).value = '';
-                    }} style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '0.7rem 1rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 2px 8px rgba(59,130,246,0.3)', marginTop: '0.5rem' }}>+ Add Update</button>
+                    }} style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '0.7rem 1rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 2px 8px rgba(59,130,246,0.3)', marginTop: '0.5rem' }} disabled={isViewer}>+ Add Update</button>
                   </div>
                 </div>
 
                 {/* Destination Point */}
                 <div style={{ position: 'relative' }}>
-                  <div style={{ position: 'absolute', left: '-2.5rem', top: '2px', width: '16px', height: '16px', borderRadius: '50%', background: job.reached_destination ? '#10b981' : '#cbd5e1', border: '3px solid white', boxShadow: `0 0 0 1px ${job.reached_destination ? '#10b981' : '#cbd5e1'}`, zIndex: 2 }}></div>
+                  <div style={{ position: 'absolute', left: '-2.5rem', top: '2px', width: '16px', height: '16px', borderRadius: '50%', background: job.reached_destination ? '#10b981' : 'var(--border-color)', border: '3px solid white', boxShadow: `0 0 0 1px ${job.reached_destination ? '#10b981' : 'var(--border-color)'}`, zIndex: 2 }}></div>
                   <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>Destination {job.reached_destination ? '(Reached)' : '(Expected)'}</div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
                     {job.reached_destination ? `Reached: ${formatDate(job.reached_destination)}` : (job.expected_to_reach_dest ? `Expected: ${formatDate(job.expected_to_reach_dest)}` : 'Pending Date')} • {job.destination ? toProperCase(job.destination) : 'Pending Destination'}
@@ -1363,9 +1379,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                             flex: 1, padding: '0.5rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s ease',
                             background: commForm.call_type === t
                               ? (t === 'Customer' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #3b82f6, #2563eb)')
-                              : 'rgba(255,255,255,0.7)',
+                              : 'var(--bg-color)',
                             color: commForm.call_type === t ? '#fff' : 'var(--text-secondary)',
-                            border: commForm.call_type === t ? 'none' : '1px solid rgba(148,163,184,0.3)',
+                            border: commForm.call_type === t ? 'none' : '1px solid var(--border-color)',
                             boxShadow: commForm.call_type === t ? '0 2px 8px rgba(0,0,0,0.15)' : 'none'
                           }}
                         >
@@ -1375,7 +1391,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                     </div>
                   </div>
                   <div style={{ flex: 1.5, minWidth: '180px', display: 'flex', alignItems: 'flex-end' }}>
-                    <CustomSelect
+                    <CustomSelect disabled={isViewer}
                       placeholder="- Regarding -"
                       value={commForm.regarding}
                       onChange={(val) => setCommForm(f => ({ ...f, regarding: val }))}
@@ -1400,9 +1416,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
                     <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Call Summary *</label>
                   </div>
-                  <textarea required value={commForm.summary} onChange={e => setCommForm(f => ({ ...f, summary: e.target.value }))} rows={3}
+                  <textarea disabled={isViewer} required value={commForm.summary} onChange={e => setCommForm(f => ({ ...f, summary: e.target.value }))} rows={3}
                     placeholder="Describe what was discussed..."
-                    style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', fontSize: '0.85rem', background: 'rgba(255,255,255,0.9)', resize: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem', background: 'var(--bg-color)', color: 'var(--text-primary)', resize: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
                 {/* Row 4: Follow-up */}
@@ -1413,9 +1429,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   }}>
                     🔔 REMINDER ON
                   </label>
-                  <input type="date" value={commForm.follow_up_date}
+                  <input disabled={isViewer} type="date" value={commForm.follow_up_date}
                     onChange={e => setCommForm(f => ({ ...f, follow_up_date: e.target.value, follow_up_required: !!e.target.value }))}
-                    style={{ flex: 1, padding: '0.4rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', fontSize: '0.85rem', background: 'rgba(255,255,255,0.9)', outline: 'none' }}
+                    style={{ flex: 1, padding: '0.4rem', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem', background: 'var(--bg-color)', color: 'var(--text-primary)', outline: 'none' }}
                   />
                   {commForm.follow_up_date && (
                     <button type="button" onClick={() => setCommForm(f => ({ ...f, follow_up_date: '', follow_up_required: false }))} 
@@ -1439,9 +1455,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                 <button key={f} type="button" onClick={() => setCommFilter(f)}
                   style={{
                     padding: '0.3rem 0.7rem', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s ease',
-                    background: commFilter === f ? '#4f46e5' : 'rgba(255,255,255,0.7)',
+                    background: commFilter === f ? '#4f46e5' : 'var(--bg-color)',
                     color: commFilter === f ? '#fff' : 'var(--text-secondary)',
-                    border: commFilter === f ? '1px solid #4f46e5' : '1px solid rgba(148,163,184,0.3)'
+                    border: commFilter === f ? '1px solid #4f46e5' : '1px solid var(--border-color)'
                   }}
                 >{f === 'All' ? `All (${comms.length})` : f === 'Customer' ? `👤 Customer (${comms.filter(c => c.call_type === 'Customer').length})` : `🏢 Internal (${comms.filter(c => c.call_type === 'Internal').length})`}</button>
               ))}
@@ -1455,7 +1471,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   const regardingColors: Record<string, string> = {
                     'Pre-Packing': '#8b5cf6', 'Packing': '#6366f1', 'In Transit': '#3b82f6',
                     'Delivery': '#10b981', 'Feedback': '#14b8a6', 'Damages': '#ef4444',
-                    'Complaints': '#f97316', 'Billing': '#eab308', 'Storage': '#64748b'
+                    'Complaints': '#f97316', 'Billing': '#eab308', 'Storage': 'var(--text-secondary)'
                   };
                   const tagColor = regardingColors[c.regarding] || '#6366f1';
                   return (
@@ -1570,10 +1586,11 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                     sentInfo={sentInfo}
                     customerPhone={job.customer_phone}
                     isLast={idx === arr.length - 1}
+                    disabled={isViewer}
                     onSend={async () => {
                       const cleanPhone = (job.customer_phone || '').replace(/[^0-9]/g, '');
                       if (!cleanPhone) {
-                        alert('Customer phone number is missing or invalid.');
+                        showToast('Customer phone number is missing or invalid.', 'error');
                         return;
                       }
                       const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}`;
@@ -1592,7 +1609,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
             
             <form onSubmit={handleAddNote} className={styles.addLogForm}>
               <div className={styles.inputWrapper}>
-                <textarea 
+                <textarea disabled={isViewer} 
                   value={newNote} 
                   onChange={(e) => setNewNote(e.target.value)} 
                   placeholder="Type an internal note..."

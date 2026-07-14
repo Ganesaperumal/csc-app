@@ -256,8 +256,8 @@ export default function JobMap({ origin, destination, checkpoints = [], title = 
             <strong style="color: ${color}; text-transform: uppercase; font-size: 0.75rem; display: block; margin-bottom: 2px;">
               ${stop.type}
             </strong>
-            <span style="font-weight: 600; color: #1e293b;">${stop.name}</span>
-            ${stop.desc ? `<p style="margin: 4px 0 0 0; font-size: 0.8rem; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 4px;">${stop.desc}</p>` : ''}
+            <span style="font-weight: 600; color: var(--text-primary);">${stop.name}</span>
+            ${stop.desc ? `<p style="margin: 4px 0 0 0; font-size: 0.8rem; color: var(--text-secondary); border-top: 1px solid var(--border-color); padding-top: 4px;">${stop.desc}</p>` : ''}
           </div>
         `;
 

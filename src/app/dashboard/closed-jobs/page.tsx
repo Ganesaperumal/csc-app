@@ -301,13 +301,13 @@ export default function ClosedJobsPage() {
 
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Status radio: All / Billed / Cancelled */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.45rem 1rem', backdropFilter: 'blur(10px)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', background: 'var(--surface-color)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.45rem 1rem', backdropFilter: 'blur(10px)' }}>
             {([
               { value: 'billed', label: `Billed (${billedCount})`, color: '#059669' },
               { value: 'cancelled', label: `Cancelled (${cancelledCount})`, color: '#dc2626' },
               { value: 'all', label: `All (${jobs.length})`, color: '#6366f1' },
             ] as const).map(opt => (
-              <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: statusFilter === opt.value ? opt.color : '#64748b', userSelect: 'none', transition: 'color 0.15s' }}>
+              <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: statusFilter === opt.value ? opt.color : 'var(--text-secondary)', userSelect: 'none', transition: 'color 0.15s' }}>
                 <input
                   type="radio"
                   name="statusFilter"
@@ -329,7 +329,7 @@ export default function ClosedJobsPage() {
               background: hasAppliedFilters ? '#ffe5e5' : 'none',
               border: 'none',
               cursor: 'pointer',
-              color: hasAppliedFilters ? '#ff3b30' : '#64748b',
+              color: hasAppliedFilters ? '#ff3b30' : 'var(--text-secondary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -338,7 +338,7 @@ export default function ClosedJobsPage() {
               transition: 'all 0.2s',
             }}
             onMouseOver={(e) => { e.currentTarget.style.color = '#ff3b30'; e.currentTarget.style.background = '#ffe5e5'; }}
-            onMouseOut={(e) => { e.currentTarget.style.color = hasAppliedFilters ? '#ff3b30' : '#64748b'; e.currentTarget.style.background = hasAppliedFilters ? '#ffe5e5' : 'none'; }}
+            onMouseOut={(e) => { e.currentTarget.style.color = hasAppliedFilters ? '#ff3b30' : 'var(--text-secondary)'; e.currentTarget.style.background = hasAppliedFilters ? '#ffe5e5' : 'none'; }}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24" fill={hasAppliedFilters ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
@@ -351,7 +351,7 @@ export default function ClosedJobsPage() {
             const labels = { HHG: 'Household', COM: 'Commercial', ALL: 'All' };
             const idx = opts.indexOf(typeFilter as any);
             return (
-              <div style={{ position: 'relative', display: 'flex', background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '4px', backdropFilter: 'blur(10px)', gap: 0 }}>
+              <div style={{ position: 'relative', display: 'flex', background: 'var(--surface-color)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '4px', backdropFilter: 'blur(10px)', gap: 0 }}>
                 {/* Sliding pill background */}
                 <div style={{
                   position: 'absolute',
@@ -375,7 +375,7 @@ export default function ClosedJobsPage() {
                     fontWeight: 700,
                     fontSize: '0.82rem',
                     cursor: 'pointer',
-                    color: typeFilter === opt ? 'white' : '#64748b',
+                    color: typeFilter === opt ? 'white' : 'var(--text-secondary)',
                     transition: 'color 0.2s ease',
                     whiteSpace: 'nowrap',
                     fontFamily: "'Outfit', sans-serif",
@@ -474,9 +474,9 @@ export default function ClosedJobsPage() {
                   <tr key={job.job_number} style={{ opacity: job.erp_status?.toLowerCase() === 'canceled' || job.erp_status?.toLowerCase() === 'cancelled' ? 0.75 : 1 }}>
                     <td>
                       <button 
-                        style={{ padding: '0.5rem 1.25rem', fontSize: '0.85rem', background: 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)', color: '#4f46e5', border: 'none', borderRadius: '99px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: '0 2px 8px rgba(79, 70, 229, 0.15)', whiteSpace: 'nowrap' }}
-                        onMouseOver={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #4f46e5 0%, #d946ef 100%)'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)'; }}
-                        onMouseOut={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)'; e.currentTarget.style.color = '#4f46e5'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.15)'; }}
+                        style={{ padding: '0.5rem 1.25rem', fontSize: '0.85rem', background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)', color: '#ffffff', border: 'none', borderRadius: '99px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: '0 2px 8px rgba(79, 70, 229, 0.15)', whiteSpace: 'nowrap' }}
+                        onMouseOver={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #a78bfa 0%, #e879f9 100%)'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.15)'; }}
                         onClick={() => router.push(`/dashboard/job/${encodeURIComponent(job.job_number)}`)}
                       >
                         View

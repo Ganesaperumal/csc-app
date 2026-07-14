@@ -1,4 +1,5 @@
 'use client';
+import { showToast } from '@/components/GlobalDialogs';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
@@ -6,13 +7,23 @@ export default function SyncERPButton({ user: initialUser }: { user?: any }) {
   const [user, setUser] = useState(initialUser);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncingBy, setSyncingBy] = useState('');
+  const [isViewer, setIsViewer] = useState(false);
   
   useEffect(() => {
-    // Fetch user if not passed
+    const fetchRole = async (userId: string) => {
+      const { data } = await supabase.from('profiles').select('role').eq('id', userId).single();
+      if (data && data.role === 'Viewer') setIsViewer(true);
+    };
+
     if (!user) {
       supabase.auth.getUser().then(({ data }) => {
-        if (data.user) setUser(data.user);
+        if (data.user) {
+          setUser(data.user);
+          fetchRole(data.user.id);
+        }
       });
+    } else {
+      fetchRole(user.id);
     }
   }, [user]);
 
@@ -106,7 +117,7 @@ export default function SyncERPButton({ user: initialUser }: { user?: any }) {
       }
     } catch (err: any) {
       console.error(err);
-      alert('Error triggering sync: ' + err.message);
+      showToast('Error triggering sync: ' + err.message, 'error');
       
       // Only unlock immediately if the initial trigger failed
       await supabase.from('sync_lock').update({
@@ -115,6 +126,8 @@ export default function SyncERPButton({ user: initialUser }: { user?: any }) {
       setIsSyncing(false);
     }
   };
+
+  if (isViewer) return null;
 
   return (
     <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
@@ -126,8 +139,8 @@ export default function SyncERPButton({ user: initialUser }: { user?: any }) {
           padding: '0.6rem 1rem',
           borderRadius: '8px',
           border: 'none',
-          background: isSyncing ? 'rgba(255,255,255,0.1)' : 'linear-gradient(45deg, #fde047, #fef08a)',
-          color: isSyncing ? 'var(--text-secondary)' : '#0f172a',
+          background: isSyncing ? 'var(--surface-color)' : 'linear-gradient(45deg, #fde047, #fef08a)',
+          color: isSyncing ? 'var(--text-secondary)' : '#1e293b',
           fontWeight: 'bold',
           cursor: isSyncing ? 'not-allowed' : 'pointer',
           display: 'flex',

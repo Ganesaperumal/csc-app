@@ -438,8 +438,28 @@ function JobsTable() {
         if (!n.follow_up_date) return true;
         return n.follow_up_date <= todayStr;
       });
-      
-      setNotifications(filtered);
+
+      if (filtered.length > 0) {
+        // Fetch corresponding job details to show customer name and other info
+        const jobNumbers = [...new Set(filtered.map(n => n.job_number))];
+        const { data: jobData } = await supabase
+          .from('jobs')
+          .select('job_number, customer_name, erp_job_id, branch')
+          .in('job_number', jobNumbers);
+
+        const enriched = filtered.map(n => {
+          const jInfo = ((jobData || []).find(j => j.job_number === n.job_number) || {}) as any;
+          return {
+            ...n,
+            customer_name: jInfo.customer_name,
+            erp_job_id: jInfo.erp_job_id,
+            branch: jInfo.branch
+          };
+        });
+        setNotifications(enriched);
+      } else {
+        setNotifications([]);
+      }
     }
   };
 
@@ -651,7 +671,7 @@ function JobsTable() {
           <span className="kpi-value" style={{ marginTop: '0.4rem' }}>{loading ? '—' : kpi.total}</span>
         </div>
         {/* 2. Unattended Jobs */}
-        <div className="kpi-card" style={{ background: 'linear-gradient(135deg, #1e293b, #475569)' }}>
+        <div className="kpi-card" style={{ background: 'linear-gradient(135deg, var(--text-primary), var(--text-secondary))' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '1.2rem' }}>⏳</span>
             <span className="kpi-label">Unassigned</span>
@@ -728,7 +748,7 @@ function JobsTable() {
               background: hasAppliedFilters ? '#ffe5e5' : 'none',
               border: 'none',
               cursor: 'pointer',
-              color: hasAppliedFilters ? '#ff3b30' : '#64748b',
+              color: hasAppliedFilters ? '#ff3b30' : 'var(--text-secondary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -737,7 +757,7 @@ function JobsTable() {
               transition: 'all 0.2s',
             }}
             onMouseOver={(e) => { e.currentTarget.style.color = '#ff3b30'; e.currentTarget.style.background = '#ffe5e5'; }}
-            onMouseOut={(e) => { e.currentTarget.style.color = hasAppliedFilters ? '#ff3b30' : '#64748b'; e.currentTarget.style.background = hasAppliedFilters ? '#ffe5e5' : 'none'; }}
+            onMouseOut={(e) => { e.currentTarget.style.color = hasAppliedFilters ? '#ff3b30' : 'var(--text-secondary)'; e.currentTarget.style.background = hasAppliedFilters ? '#ffe5e5' : 'none'; }}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24" fill={hasAppliedFilters ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
@@ -785,7 +805,7 @@ function JobsTable() {
             }}
             onMouseOver={(e) => {
               if (viewMode !== 'completed') {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.6)';
+                e.currentTarget.style.background = 'var(--surface-hover)';
                 e.currentTarget.style.color = 'var(--text-primary)';
               }
             }}
@@ -850,7 +870,7 @@ function JobsTable() {
               <div className="glass" style={{ 
                 position: 'absolute', top: '100%', right: 0, marginTop: '0.5rem', width: '340px', 
                 zIndex: 100, overflow: 'hidden', display: 'flex', flexDirection: 'column',
-                backgroundColor: '#ffffff', backdropFilter: 'none', WebkitBackdropFilter: 'none'
+                backgroundColor: 'var(--bg-color)', backdropFilter: 'none', WebkitBackdropFilter: 'none'
               }}>
                 <div style={{ padding: '1rem', background: 'transparent', borderBottom: '1px solid var(--border-color)', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between' }}>
                   <span>Pending Follow-ups</span>
@@ -870,8 +890,6 @@ function JobsTable() {
                         isUrgent = true;
                       }
 
-                      const jobDetails = jobs.find(j => j.job_number === n.job_number) || {};
-                      
                       return (
                         <div key={n.id} style={{ 
                           padding: '1rem', cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -895,10 +913,10 @@ function JobsTable() {
                         }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', letterSpacing: '-0.02em', flex: 1, paddingRight: '0.5rem' }}>{jobDetails.customer_name || 'Unknown Customer'}</span>
+                            <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem', letterSpacing: '-0.02em', flex: 1, paddingRight: '0.5rem' }}>{n.customer_name || 'Unknown Customer'}</span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.1rem' }}>
-                              {jobDetails.erp_job_id && <span style={{ color: '#3b82f6', fontWeight: 700, fontSize: '0.75rem' }}>#{jobDetails.erp_job_id}</span>}
-                              <span style={{ fontSize: '0.75rem', color: isUrgent ? '#ef4444' : '#64748b', fontWeight: 800, whiteSpace: 'nowrap' }}>
+                              {n.erp_job_id && <span style={{ color: '#3b82f6', fontWeight: 700, fontSize: '0.75rem' }}>#{n.erp_job_id}</span>}
+                              <span style={{ fontSize: '0.75rem', color: isUrgent ? '#ef4444' : 'var(--text-secondary)', fontWeight: 800, whiteSpace: 'nowrap' }}>
                                 {n.follow_up_date ? new Date(n.follow_up_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).replace(' ', '-') : 'ASAP'}
                               </span>
                             </div>
@@ -906,7 +924,7 @@ function JobsTable() {
                           
                           <div style={{ fontSize: '0.75rem', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
                             <div style={{ flex: 1, textAlign: 'left' }}>
-                              {jobDetails.branch && <span style={{ padding: '0.15rem 0.6rem', borderRadius: '12px', background: 'rgba(139, 92, 246, 0.08)', color: '#7c3aed', border: '1px solid rgba(139, 92, 246, 0.2)' }}>🏢 {jobDetails.branch}</span>}
+                              {n.branch && <span style={{ padding: '0.15rem 0.6rem', borderRadius: '12px', background: 'rgba(139, 92, 246, 0.08)', color: '#7c3aed', border: '1px solid rgba(139, 92, 246, 0.2)' }}>🏢 {n.branch}</span>}
                             </div>
                             <div style={{ flex: 1, textAlign: 'center' }}>
                               <span style={{ color: n.call_type === 'Customer' ? '#d97706' : '#0284c7' }}>{n.call_type === 'Customer' ? '👤 Customer' : '🏢 Internal'}</span>
@@ -916,10 +934,10 @@ function JobsTable() {
                             </div>
                           </div>
 
-                          <div style={{ fontSize: '0.85rem', color: '#475569', display: '-webkit-box', WebkitLineClamp: isAdmin ? 2 : 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontStyle: 'italic', marginTop: '0.2rem' }}>
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: isAdmin ? 2 : 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontStyle: 'italic', marginTop: '0.2rem' }}>
                             {isAdmin ? (
                               <>
-                                <strong style={{ fontStyle: 'normal', color: '#0f172a' }}>{n.agent_name || 'Agent'}:</strong> "{n.summary.split('\n')[0]}"
+                                <strong style={{ fontStyle: 'normal', color: 'var(--text-primary)' }}>{n.agent_name || 'Agent'}:</strong> "{n.summary.split('\n')[0]}"
                               </>
                             ) : (
                               `"${n.summary.split('\n')[0]}"`
@@ -1021,8 +1039,7 @@ function JobsTable() {
                         style={{ 
                           padding: '0.5rem 1.25rem', 
                           fontSize: '0.85rem',
-                          background: 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)',
-                          color: '#4f46e5',
+                          background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)', color: '#ffffff',
                           border: 'none',
                           borderRadius: '99px',
                           fontWeight: 700,
@@ -1031,8 +1048,8 @@ function JobsTable() {
                           boxShadow: '0 2px 8px rgba(79, 70, 229, 0.15)',
                           whiteSpace: 'nowrap'
                         }}
-                        onMouseOver={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #4f46e5 0%, #d946ef 100%)'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)'; }}
-                        onMouseOut={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)'; e.currentTarget.style.color = '#4f46e5'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.15)'; }}
+                        onMouseOver={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #a78bfa 0%, #e879f9 100%)'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.15)'; }}
                         onClick={() => router.push(`/dashboard/job/${encodeURIComponent(job.job_number)}`)}
                       >
                         View

@@ -35,7 +35,7 @@
 }
 
 /* Dark theme overrides */
-body.dark-theme {
+.dark-theme body {
   /* ═══ LIQUID GLASS DARK PALETTE ═══ */
   --bg-color: #030712;
   --surface-color: rgba(17, 24, 39, 0.45);
@@ -134,9 +134,9 @@ input, select, textarea {
   transition: all 0.25s ease;
 }
 
-body.dark-theme input, 
-body.dark-theme select, 
-body.dark-theme textarea {
+.dark-theme body input, 
+.dark-theme body select, 
+.dark-theme body textarea {
   background: rgba(17, 24, 39, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -148,12 +148,13 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 3px var(--primary-glow), 0 4px 12px var(--border-glow);
 }
 
-body.dark-theme input:focus, 
-body.dark-theme select:focus, 
-body.dark-theme textarea:focus {
-  background: rgba(17, 24, 39, 0.8);
-  box-shadow: 0 0 0 3px var(--primary-glow), 0 4px 12px var(--border-glow);
+.dark-theme body input:focus, 
+.dark-theme body select:focus, 
+.dark-theme body textarea:focus {
+  background: rgba(17, 24, 39, 0.95);
+  box-shadow: 0 0 0 3px var(--primary-glow), 0 4px 12px rgba(0,0,0,0.5);
 }
+
 
 select option {
   background: var(--bg-color);
@@ -197,7 +198,7 @@ select option {
   box-shadow: none;
 }
 
-body.dark-theme .btn-secondary {
+.dark-theme body .btn-secondary {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -404,7 +405,7 @@ body.dark-theme .btn-secondary {
   overflow: hidden;
   animation: slideDown 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
-body.dark-theme .cmd-box { background: rgba(15,23,42,0.96); border-color: rgba(255,255,255,0.08); }
+.dark-theme body .cmd-box { background: rgba(15,23,42,0.96); border-color: rgba(255,255,255,0.08); }
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-20px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0) scale(1); }

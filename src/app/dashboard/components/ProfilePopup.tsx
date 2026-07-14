@@ -1,6 +1,8 @@
 'use client';
+import { showToast } from '@/components/GlobalDialogs';
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -13,11 +15,43 @@ export default function ProfilePopup({ user }: { user: any }) {
   const [avatar, setAvatar] = useState(user?.user_metadata?.avatar_url || null);
   const [phone, setPhone] = useState(user?.user_metadata?.phone || '');
   const [loading, setLoading] = useState(false);
-  const [isLightMode, setIsLightMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const router = useRouter();
   const popupRef = useRef<HTMLDivElement>(null);
+  
+  const [popupStyle, setPopupStyle] = useState<React.CSSProperties>({});
 
   const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (isOpen && popupRef.current) {
+      const rect = popupRef.current.getBoundingClientRect();
+      let top = rect.bottom + window.scrollY + 8;
+      let left = rect.left + window.scrollX;
+      
+      if (top + 450 > window.innerHeight) {
+        top = rect.top + window.scrollY - 450 - 8;
+      }
+      
+      setPopupStyle({
+        position: 'absolute', 
+        top: `${top}px`, 
+        left: `${left}px`, 
+        width: '240px', 
+        zIndex: 99999,
+        borderRadius: '16px', 
+        padding: '1.5rem', 
+        boxShadow: 'var(--glass-shadow)',
+        backgroundColor: 'var(--surface-color)', 
+        backdropFilter: 'var(--glass-blur)', 
+        border: '1px solid var(--border-color)',
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center'
+      });
+    }
+  }, [isOpen]);
+
   const username = user?.email?.split('@')[0] || 'User';
   
   // Use profile data if available, fallback to user_metadata or defaults
@@ -40,11 +74,12 @@ export default function ProfilePopup({ user }: { user: any }) {
     }
 
     if (typeof window !== 'undefined') {
-      setIsLightMode(document.body.classList.contains('light-theme'));
+      setIsDarkMode(document.documentElement.classList.contains('dark-theme'));
     }
 
     function handleClickOutside(event: MouseEvent) {
-      if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
+      const target = event.target as HTMLElement;
+      if (popupRef.current && !popupRef.current.contains(target) && !target.closest('.profile-popup-portal')) {
         setIsOpen(false);
         setIsManageMode(false);
       }
@@ -52,6 +87,18 @@ export default function ProfilePopup({ user }: { user: any }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const toggleTheme = () => {
+    const newTheme = !isDarkMode;
+    setIsDarkMode(newTheme);
+    if (newTheme) {
+      document.documentElement.classList.add('dark-theme');
+      localStorage.setItem('csc_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark-theme');
+      localStorage.setItem('csc_theme', 'light');
+    }
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -126,15 +173,11 @@ export default function ProfilePopup({ user }: { user: any }) {
       setPhone(formattedPhone);
       setProfile((prev: any) => prev ? { ...prev, phone: formattedPhone } : { phone: formattedPhone });
     } else {
-      alert("Error saving profile: " + (error?.message || authError?.message));
+      showToast("Error saving profile: " + (error?.message || authError?.message, 'error'));
     }
   };
 
-  const toggleTheme = () => {
-    const isLight = document.body.classList.toggle('light-theme');
-    setIsLightMode(isLight);
-    localStorage.setItem('theme', isLight ? 'light' : 'dark');
-  };
+
 
   const AvatarComponent = ({ size = 40 }) => (
     <div style={{ position: 'relative', width: size, height: size, borderRadius: '50%', cursor: 'pointer', flexShrink: 0,
@@ -155,13 +198,8 @@ export default function ProfilePopup({ user }: { user: any }) {
       </div>
 
       {/* Popup Menu */}
-      {isOpen && (
-        <div style={{
-          position: 'fixed', top: '5rem', left: '1rem', width: '240px', zIndex: 9999,
-          borderRadius: '16px', padding: '1.5rem', boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-          backgroundColor: '#ffffff', backdropFilter: 'none', border: '1px solid rgba(148, 163, 184, 0.3)',
-          display: 'flex', flexDirection: 'column', alignItems: 'center'
-        }}>
+      {isOpen && typeof window !== 'undefined' && createPortal(
+        <div className="profile-popup-portal" style={popupStyle}>
           
           <button onClick={() => setIsOpen(false)} style={{ position: 'absolute', top: '10px', right: '15px', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '1.2rem' }}>✕</button>
 
@@ -188,10 +226,29 @@ export default function ProfilePopup({ user }: { user: any }) {
 
 
 
-              <div style={{ width: '100%', borderTop: '1px solid rgba(148, 163, 184, 0.2)', marginBottom: '1rem' }}></div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'rgba(148,163,184,0.1)', marginBottom: '1rem' }}>
+                <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                  {isDarkMode ? '🌙 Dark Mode' : '☀️ Light Mode'}
+                </span>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <div style={{ position: 'relative' }}>
+                    <input type="checkbox" style={{ display: 'none' }} checked={isDarkMode} onChange={toggleTheme} />
+                    <div style={{ width: '42px', height: '22px', backgroundColor: isDarkMode ? '#4f46e5' : 'var(--border-color)', borderRadius: '99px', transition: 'background-color 0.2s' }}></div>
+                    <div style={{ position: 'absolute', top: '3px', left: isDarkMode ? '23px' : '3px', width: '16px', height: '16px', backgroundColor: 'var(--bg-color)', borderRadius: '50%', transition: 'left 0.2s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}></div>
+                  </div>
+                </label>
+              </div>
+
+              <div style={{ width: '100%', borderTop: '1px solid var(--border-color)', marginBottom: '1rem' }}></div>
+
+              {(role === 'Admin' || role === 'Manager') && (
+                <Link href="/dashboard/users" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.75rem', borderRadius: '8px', color: 'white', textDecoration: 'none', background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', marginBottom: '0.5rem', boxShadow: '0 4px 12px rgba(14,165,233,0.2)', fontSize: '0.9rem' }}>
+                  👥 User Management
+                </Link>
+              )}
 
               {role === 'Admin' && (
-                <Link href="/dashboard/admin" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.75rem', borderRadius: '8px', color: 'white', textDecoration: 'none', background: 'linear-gradient(135deg, #334155, #0f172a)', marginBottom: '0.5rem', boxShadow: '0 4px 12px rgba(15,23,42,0.2)', fontSize: '0.9rem' }}>
+                <Link href="/dashboard/admin" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.75rem', borderRadius: '8px', color: 'white', textDecoration: 'none', background: 'linear-gradient(135deg, #475569, #334155)', marginBottom: '0.5rem', boxShadow: '0 4px 12px rgba(15,23,42,0.2)', fontSize: '0.9rem' }}>
                   ⚙️ Control Center
                 </Link>
               )}
@@ -256,14 +313,15 @@ export default function ProfilePopup({ user }: { user: any }) {
                 <button 
                   onClick={handleSaveProfile}
                   disabled={loading}
-                  style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: 'none', background: '#38bdf8', color: 'white', cursor: loading ? 'not-allowed' : 'pointer' }}
+                  style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: 'none', background: 'var(--primary-color)', color: 'white', cursor: loading ? 'not-allowed' : 'pointer' }}
                 >
                   {loading ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

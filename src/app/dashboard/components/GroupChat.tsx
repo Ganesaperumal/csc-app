@@ -23,12 +23,12 @@ export default function GroupChat({ user }: { user: any }) {
     // Fetch user profile for chat access
     const fetchProfile = async () => {
       if (!user?.id) return;
-      const { data } = await supabase.from('profiles').select('chat_access').eq('id', user.id).single();
+      const { data } = await supabase.from('profiles').select('chat_access, role').eq('id', user.id).single();
       if (data) {
-        setCanChat(data.chat_access);
+        setCanChat(data.role === 'Viewer' ? false : data.chat_access);
       } else {
         // Fallback for new users before profile is fetched
-        setCanChat(user?.user_metadata?.chat_enabled !== false);
+        setCanChat(user?.user_metadata?.chat_enabled !== false && user?.user_metadata?.role !== 'Viewer');
       }
     };
     fetchProfile();
@@ -79,8 +79,8 @@ export default function GroupChat({ user }: { user: any }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', borderRadius: '8px', overflow: 'hidden', background: 'rgba(255, 255, 255, 0.4)', border: '1px solid rgba(148, 163, 184, 0.2)' }}>
-      <div style={{ padding: '0.75rem', background: 'rgba(241, 245, 249, 0.8)', borderBottom: '1px solid rgba(148, 163, 184, 0.2)', fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', borderRadius: '8px', overflow: 'hidden', background: 'var(--surface-color)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--border-color)' }}>
+      <div style={{ padding: '0.75rem', background: 'var(--surface-color)', borderBottom: '1px solid var(--border-color)', fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
         🤝 CSC Team Colab
       </div>
       <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -113,14 +113,14 @@ export default function GroupChat({ user }: { user: any }) {
         })}
         <div ref={bottomRef} />
       </div>
-      <form onSubmit={sendMessage} style={{ display: 'flex', padding: '0.5rem', background: 'rgba(241, 245, 249, 0.8)', borderTop: '1px solid rgba(148, 163, 184, 0.2)' }}>
+      <form onSubmit={sendMessage} style={{ display: 'flex', padding: '0.5rem', background: 'var(--surface-color)', borderTop: '1px solid var(--border-color)' }}>
         <input
           type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder={canChat ? "Type a message..." : "Chat disabled"}
           disabled={!canChat}
-          style={{ flex: 1, padding: '0.5rem', borderRadius: '20px', border: '1px solid rgba(148, 163, 184, 0.3)', background: '#ffffff', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+          style={{ flex: 1, padding: '0.5rem', borderRadius: '20px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
         />
         <button type="submit" disabled={!canChat || !newMessage.trim()} style={{ background: 'none', border: 'none', color: '#4f46e5', marginLeft: '0.5rem', cursor: canChat ? 'pointer' : 'not-allowed' }}>
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>

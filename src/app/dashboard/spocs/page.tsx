@@ -1,4 +1,5 @@
 'use client';
+import { showToast, customConfirm } from '@/components/GlobalDialogs';
 
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -23,6 +24,7 @@ export default function SpocsPage() {
   const [search, setSearch] = useState('');
   const [assigning, setAssigning] = useState(false);
   const [showCompanySuggestions, setShowCompanySuggestions] = useState(false);
+  const [isViewer, setIsViewer] = useState(false);
 
   const filteredJobCompanies = useMemo(() => {
     const searchLower = companyName.toLowerCase().trim();
@@ -31,7 +33,7 @@ export default function SpocsPage() {
   }, [jobCompanies, companyName]);
 
   const handleAssignSpocs = async () => {
-    if (!window.confirm('Are you sure you want to assign SPOCs to all existing jobs based on the company mappings?')) return;
+    if (!await customConfirm('Are you sure you want to assign SPOCs to all existing jobs based on the company mappings?')) return;
     setAssigning(true);
     try {
       // Fetch all jobs using pagination to bypass the 1000 row API limit
@@ -81,7 +83,7 @@ export default function SpocsPage() {
       });
 
       if (jobsToUpsert.length === 0) {
-        alert('All jobs already have the correct SPOCs assigned. No updates needed!');
+        showToast('All jobs already have the correct SPOCs assigned. No updates needed!', 'info');
         setAssigning(false);
         return;
       }
@@ -96,9 +98,9 @@ export default function SpocsPage() {
         if (upsertError) throw upsertError;
       }
 
-      alert(`✅ Successfully assigned SPOCs to ${jobsToUpsert.length} jobs!`);
+      showToast(`✅ Successfully assigned SPOCs to ${jobsToUpsert.length} jobs!`, 'success');
     } catch (err: any) {
-      alert(`❌ Error assigning SPOCs: ${err.message}`);
+      showToast(`❌ Error assigning SPOCs: ${err.message}`, 'error');
     } finally {
       setAssigning(false);
     }
@@ -125,6 +127,14 @@ export default function SpocsPage() {
   };
 
   useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        supabase.from('profiles').select('role').eq('id', data.user.id).single()
+          .then(({ data: profile }) => {
+            if (profile) setIsViewer(profile.role === 'Viewer');
+          });
+      }
+    });
     fetchData();
   }, []);
 
@@ -181,13 +191,13 @@ export default function SpocsPage() {
             fontSize: '2.2rem', 
             fontWeight: 800, 
             margin: 0,
-            background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+            background: 'linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent'
           }}>
             SPOC Management
           </h1>
-          <p style={{ color: '#64748b', margin: '0.5rem 0 0 0', fontSize: '0.95rem' }}>
+          <p style={{ color: 'var(--text-secondary)', margin: '0.5rem 0 0 0', fontSize: '0.95rem' }}>
             Manage your single points of contact for corporate clients.
           </p>
         </div>
@@ -196,18 +206,19 @@ export default function SpocsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '3rem' }}>
         
         {/* Form Card */}
+        {!isViewer && (
         <div style={{ 
-          background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.8))',
+          background: 'var(--surface-color)',
           backdropFilter: 'blur(20px)',
           borderRadius: '16px', 
           padding: '2rem',
-          border: '1px solid rgba(255, 255, 255, 0.6)',
+          border: '1px solid var(--border-color)',
           boxShadow: '0 10px 40px -10px rgba(79, 70, 229, 0.1)'
         }}>
           <h2 style={{ 
             fontSize: '1.25rem', 
             marginBottom: '1.5rem', 
-            color: '#0f172a', 
+            color: 'var(--text-primary)', 
             fontWeight: 700,
             display: 'flex', alignItems: 'center', gap: '0.5rem'
           }}>
@@ -217,14 +228,14 @@ export default function SpocsPage() {
           
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-end' }}>
             <div style={{ flex: '1 1 300px' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem', letterSpacing: '0.02em', textTransform: 'uppercase' }}>Company Name <span style={{color: '#ef4444'}}>*</span></label>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem', letterSpacing: '0.02em', textTransform: 'uppercase' }}>Company Name <span style={{color: '#ef4444'}}>*</span></label>
               <div style={{ position: 'relative' }}>
                 <input 
                   style={{ 
                     width: '100%', padding: '0.85rem 1rem 0.85rem 2.8rem', 
-                    borderRadius: '10px', border: '1px solid #cbd5e1', 
-                    outline: 'none', background: '#f8fafc', fontSize: '0.95rem', 
-                    color: '#0f172a', transition: 'all 0.2s ease'
+                    borderRadius: '10px', border: '1px solid var(--border-color)', 
+                    outline: 'none', background: 'var(--bg-color)', fontSize: '0.95rem', 
+                    color: 'var(--text-primary)', transition: 'all 0.2s ease'
                   }}
                   value={companyName} 
                   onChange={(e) => setCompanyName(e.target.value)} 
@@ -236,9 +247,9 @@ export default function SpocsPage() {
                     setShowCompanySuggestions(true);
                   }}
                   onBlur={(e) => { 
-                    e.currentTarget.style.borderColor = '#cbd5e1'; 
+                    e.currentTarget.style.borderColor = 'var(--border-color)'; 
                     e.currentTarget.style.boxShadow = 'none'; 
-                    e.currentTarget.style.background = '#f8fafc'; 
+                    e.currentTarget.style.background = 'var(--bg-color)'; 
                     setShowCompanySuggestions(false);
                   }}
                 />
@@ -250,9 +261,9 @@ export default function SpocsPage() {
                     top: '100%',
                     left: 0,
                     right: 0,
-                    backgroundColor: '#ffffff',
+                    backgroundColor: 'var(--bg-color)',
                     backdropFilter: 'none',
-                    border: '1px solid rgba(148, 163, 184, 0.3)',
+                    border: '1px solid var(--border-color)',
                     borderRadius: '10px',
                     marginTop: '6px',
                     maxHeight: '220px',
@@ -274,19 +285,19 @@ export default function SpocsPage() {
                           padding: '0.75rem 1rem',
                           cursor: 'pointer',
                           fontSize: '0.9rem',
-                          color: '#1e293b',
+                          color: 'var(--text-primary)',
                           fontWeight: 500,
                           textAlign: 'left',
                           transition: 'all 0.15s ease',
-                          borderBottom: idx < filteredJobCompanies.length - 1 ? '1px solid rgba(241, 245, 249, 0.8)' : 'none'
+                          borderBottom: idx < filteredJobCompanies.length - 1 ? '1px solid var(--border-color)' : 'none'
                         }}
                         onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor = '#f1f5f9';
+                          e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
                           e.currentTarget.style.color = '#4f46e5';
                         }}
                         onMouseLeave={e => {
                           e.currentTarget.style.backgroundColor = 'transparent';
-                          e.currentTarget.style.color = '#1e293b';
+                          e.currentTarget.style.color = 'var(--text-primary)';
                         }}
                       >
                         🏢 {comp}
@@ -298,21 +309,21 @@ export default function SpocsPage() {
             </div>
 
             <div style={{ flex: '1 1 300px' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem', letterSpacing: '0.02em', textTransform: 'uppercase' }}>SPOC Name <span style={{color: '#ef4444'}}>*</span></label>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem', letterSpacing: '0.02em', textTransform: 'uppercase' }}>SPOC Name <span style={{color: '#ef4444'}}>*</span></label>
               <div style={{ position: 'relative' }}>
                 <input 
                   list="spoc-list"
                   style={{ 
                     width: '100%', padding: '0.85rem 1rem 0.85rem 2.8rem', 
-                    borderRadius: '10px', border: '1px solid #cbd5e1', 
-                    outline: 'none', background: '#f8fafc', fontSize: '0.95rem', 
-                    color: '#0f172a', transition: 'all 0.2s ease'
+                    borderRadius: '10px', border: '1px solid var(--border-color)', 
+                    outline: 'none', background: 'var(--bg-color)', fontSize: '0.95rem', 
+                    color: 'var(--text-primary)', transition: 'all 0.2s ease'
                   }}
                   value={spocName} 
                   onChange={(e) => setSpocName(e.target.value)} 
                   placeholder="Select or type SPOC name..."
                   onFocus={(e) => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)'; e.currentTarget.style.background = '#fff'; }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = '#f8fafc'; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'var(--bg-color)'; }}
                 />
                 <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.5, fontSize: '1.1rem' }}>👤</span>
                 <datalist id="spoc-list">
@@ -352,15 +363,15 @@ export default function SpocsPage() {
                   style={{ 
                     padding: '0.85rem 1.5rem', 
                     borderRadius: '10px', 
-                    border: '1px solid #cbd5e1', 
+                    border: '1px solid var(--border-color)', 
                     background: '#fff', 
-                    color: '#64748b', 
+                    color: 'var(--text-secondary)', 
                     fontWeight: 600, 
                     cursor: 'pointer',
                     transition: 'all 0.2s ease'
                   }}
-                  onMouseOver={(e) => { if(!saving) e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#0f172a'; }}
-                  onMouseOut={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#64748b'; }}
+                  onMouseOver={(e) => { if(!saving) e.currentTarget.style.background = 'var(--bg-color)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
                 >
                   Cancel
                 </button>
@@ -377,12 +388,14 @@ export default function SpocsPage() {
             </div>
           )}
         </div>
+        )}
         
         {/* Table Section */}
         <div>
           <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-            <h2 style={{ fontSize: '1.3rem', color: '#0f172a', fontWeight: 800, margin: 0 }}>Directory</h2>
+            <h2 style={{ fontSize: '1.3rem', color: 'var(--text-primary)', fontWeight: 800, margin: 0 }}>Directory</h2>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              {!isViewer && (
               <button 
                 onClick={handleAssignSpocs}
                 disabled={assigning}
@@ -403,6 +416,7 @@ export default function SpocsPage() {
               >
                 {assigning ? 'Assigning...' : '🔄 Assign SPOCs to Jobs'}
               </button>
+              )}
               <div style={{ position: 'relative' }}>
                 <span style={{ position: 'absolute', left: '0.8rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }}>🔍</span>
                 <input 
@@ -410,38 +424,38 @@ export default function SpocsPage() {
                   placeholder="Search..." 
                   style={{ 
                     width: '260px', padding: '0.65rem 1rem 0.65rem 2.2rem', 
-                    borderRadius: '99px', border: '1px solid #cbd5e1', 
-                    outline: 'none', background: 'rgba(255,255,255,0.8)', 
-                    fontSize: '0.9rem', color: '#1e293b', transition: 'all 0.2s ease'
+                    borderRadius: '99px', border: '1px solid var(--border-color)', 
+                    outline: 'none', background: 'var(--surface-color)', 
+                    fontSize: '0.9rem', color: 'var(--text-primary)', transition: 'all 0.2s ease'
                   }}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   onFocus={(e) => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)'; e.currentTarget.style.background = '#fff'; }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'rgba(255,255,255,0.8)'; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'var(--surface-color)'; }}
                 />
               </div>
             </div>
           </div>
 
-          <div className={styles.tableContainer} style={{ background: 'rgba(255,255,255,0.8)', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+          <div className={styles.tableContainer} style={{ background: 'var(--surface-color)', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th style={{ background: '#f8fafc', padding: '1.25rem 1.5rem', color: '#64748b' }}>Company Name</th>
-                  <th style={{ background: '#f8fafc', padding: '1.25rem 1.5rem', color: '#64748b' }}>SPOC Name</th>
-                  <th style={{ background: '#f8fafc', padding: '1.25rem 1.5rem', color: '#64748b', textAlign: 'right' }}>Actions</th>
+                  <th style={{ background: 'var(--bg-color)', padding: '1.25rem 1.5rem', color: 'var(--text-secondary)' }}>Company Name</th>
+                  <th style={{ background: 'var(--bg-color)', padding: '1.25rem 1.5rem', color: 'var(--text-secondary)' }}>SPOC Name</th>
+                  {!isViewer && <th style={{ background: 'var(--bg-color)', padding: '1.25rem 1.5rem', color: 'var(--text-secondary)', textAlign: 'right' }}>Actions</th>}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={3} style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                    <td colSpan={3} style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
                       <div style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}>Loading contacts...</div>
                     </td>
                   </tr>
                 ) : filteredSpocs.length === 0 ? (
                   <tr>
-                    <td colSpan={3} style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>
+                    <td colSpan={3} style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)' }}>
                       <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📭</div>
                       No records found.
                     </td>
@@ -449,7 +463,7 @@ export default function SpocsPage() {
                 ) : (
                   filteredSpocs.map((spoc) => (
                     <tr key={spoc.id} style={{ transition: 'background 0.2s' }}>
-                      <td style={{ fontWeight: 600, color: '#334155', padding: '1.25rem 1.5rem' }}>
+                      <td style={{ fontWeight: 600, color: 'var(--text-primary)', padding: '1.25rem 1.5rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #e0e7ff, #f3e8ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4f46e5', fontWeight: 'bold', fontSize: '0.8rem' }}>
                             {spoc.company_name.substring(0, 2).toUpperCase()}
@@ -457,22 +471,24 @@ export default function SpocsPage() {
                           {spoc.company_name}
                         </div>
                       </td>
-                      <td style={{ color: '#475569', padding: '1.25rem 1.5rem', fontWeight: 500 }}>{spoc.spoc_name}</td>
+                      <td style={{ color: 'var(--text-secondary)', padding: '1.25rem 1.5rem', fontWeight: 500 }}>{spoc.spoc_name}</td>
+                      {!isViewer && (
                       <td style={{ padding: '1.25rem 1.5rem', textAlign: 'right' }}>
                         <button 
                           onClick={() => handleEdit(spoc)}
                           style={{ 
-                            background: '#f1f5f9', border: '1px solid #e2e8f0', 
-                            color: '#475569', cursor: 'pointer', fontWeight: 600, 
+                            background: 'var(--surface-hover)', border: '1px solid var(--border-color)', 
+                            color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, 
                             padding: '0.4rem 1rem', borderRadius: '99px', 
                             transition: 'all 0.2s ease', fontSize: '0.85rem'
                           }}
                           onMouseOver={(e) => { e.currentTarget.style.background = '#3b82f6'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = '#3b82f6'; }}
-                          onMouseOut={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#475569'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-color)'; }}
                         >
                           Edit
                         </button>
                       </td>
+                      )}
                     </tr>
                   ))
                 )}

@@ -1,4 +1,5 @@
 'use client';
+import { showToast } from '@/components/GlobalDialogs';
 
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -208,9 +209,9 @@ function AllJobsContent() {
       const res = await fetch('/api/export-sheets', { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to export');
-      alert(`Successfully exported ${data.count} jobs to Google Sheets!`);
+      showToast(`Successfully exported ${data.count} jobs to Google Sheets!`, 'success');
     } catch (err: any) {
-      alert('Error exporting to Google Sheets: ' + err.message);
+      showToast('Error exporting to Google Sheets: ' + err.message, 'error');
     } finally {
       setIsExportingSheets(false);
     }
@@ -462,7 +463,7 @@ function AllJobsContent() {
               fontFamily: "'Outfit', sans-serif"
             }}
             onMouseOver={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.6)';
+              e.currentTarget.style.background = 'var(--surface-hover)';
               e.currentTarget.style.transform = 'translateX(-2px)';
             }}
             onMouseOut={(e) => {
@@ -507,7 +508,7 @@ function AllJobsContent() {
               background: hasAppliedFilters ? '#ffe5e5' : 'none',
               border: 'none',
               cursor: 'pointer',
-              color: hasAppliedFilters ? '#ff3b30' : '#64748b',
+              color: hasAppliedFilters ? '#ff3b30' : 'var(--text-secondary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -516,7 +517,7 @@ function AllJobsContent() {
               transition: 'all 0.2s',
             }}
             onMouseOver={(e) => { e.currentTarget.style.color = '#ff3b30'; e.currentTarget.style.background = '#ffe5e5'; }}
-            onMouseOut={(e) => { e.currentTarget.style.color = hasAppliedFilters ? '#ff3b30' : '#64748b'; e.currentTarget.style.background = hasAppliedFilters ? '#ffe5e5' : 'none'; }}
+            onMouseOut={(e) => { e.currentTarget.style.color = hasAppliedFilters ? '#ff3b30' : 'var(--text-secondary)'; e.currentTarget.style.background = hasAppliedFilters ? '#ffe5e5' : 'none'; }}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24" fill={hasAppliedFilters ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
@@ -669,8 +670,7 @@ function AllJobsContent() {
                         style={{ 
                           padding: '0.5rem 1.25rem', 
                           fontSize: '0.85rem',
-                          background: 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)',
-                          color: '#4f46e5',
+                          background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)', color: '#ffffff',
                           border: 'none',
                           borderRadius: '99px',
                           fontWeight: 700,
@@ -679,8 +679,8 @@ function AllJobsContent() {
                           boxShadow: '0 2px 8px rgba(79, 70, 229, 0.15)',
                           whiteSpace: 'nowrap'
                         }}
-                        onMouseOver={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #4f46e5 0%, #d946ef 100%)'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)'; }}
-                        onMouseOut={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)'; e.currentTarget.style.color = '#4f46e5'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.15)'; }}
+                        onMouseOver={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #a78bfa 0%, #e879f9 100%)'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.15)'; }}
                         onClick={() => router.push(`/dashboard/job/${encodeURIComponent(job.job_number)}`)}
                       >
                         View

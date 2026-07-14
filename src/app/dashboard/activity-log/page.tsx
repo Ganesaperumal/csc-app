@@ -7,12 +7,12 @@ import { getUserColor } from '@/lib/colorUtils';
 import CustomSelect from '../components/CustomSelect';
 
 const cardStyle: React.CSSProperties = {
-  background: 'rgba(255, 255, 255, 0.6)',
+  background: 'var(--surface-color)',
   backdropFilter: 'blur(24px) saturate(180%)',
   WebkitBackdropFilter: 'blur(24px) saturate(180%)',
   border: '1px solid rgba(148, 163, 184, 0.2)',
   borderRadius: '16px',
-  boxShadow: '0 8px 30px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.8)',
+  boxShadow: '0 8px 30px rgba(0,0,0,0.05), inset 0 1px 0 var(--surface-color)',
   padding: '1.5rem 2rem',
 };
 
@@ -166,8 +166,8 @@ export default function ActivityLogPage() {
     padding: '0.65rem 1rem',
     borderRadius: '10px',
     border: '1px solid rgba(148,163,184,0.3)',
-    background: 'rgba(255,255,255,0.7)',
-    color: '#0f172a',
+    background: 'var(--surface-color)',
+    color: 'var(--text-primary)',
     fontSize: '0.875rem',
     fontFamily: "'Outfit', 'Inter', sans-serif",
     outline: 'none',
@@ -196,7 +196,7 @@ export default function ActivityLogPage() {
               Activity Log
             </h1>
           </div>
-          <p style={{ color: '#64748b', fontSize: '0.88rem', marginTop: '0.3rem' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.3rem' }}>
             Full audit trail of all field changes across jobs · Showing last 500 records
           </p>
         </div>
@@ -206,7 +206,7 @@ export default function ActivityLogPage() {
             padding: '0.55rem 1.25rem',
             borderRadius: '99px',
             border: 'none',
-            background: 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)',
+            background: 'linear-gradient(135deg, var(--surface-color), var(--surface-hover))',
             color: '#4f46e5',
             fontWeight: 700,
             fontSize: '0.85rem',
@@ -218,8 +218,8 @@ export default function ActivityLogPage() {
             alignItems: 'center',
             gap: '0.4rem'
           }}
-          onMouseOver={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #4f46e5 0%, #d946ef 100%)'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)'; }}
-          onMouseOut={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)'; e.currentTarget.style.color = '#4f46e5'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.15)'; }}
+          onMouseOver={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, var(--surface-hover), var(--surface-color))'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)'; }}
+          onMouseOut={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, var(--surface-color), var(--surface-hover))'; e.currentTarget.style.color = '#4f46e5'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.15)'; }}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
           Refresh
@@ -284,7 +284,7 @@ export default function ActivityLogPage() {
                 ) : (
                   <div></div>
                 )}
-                <span style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 500 }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 500 }}>
                   {filteredLogs.length} record{filteredLogs.length !== 1 ? 's' : ''}
                 </span>
               </div>
@@ -300,13 +300,13 @@ export default function ActivityLogPage() {
           <div style={{ padding: '2rem', textAlign: 'center' }}>
             <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '12px', padding: '1.5rem', color: '#dc2626', marginBottom: '1rem' }}>
               <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.5rem' }}>⚠️ Could not load Activity Log</div>
-              <div style={{ fontSize: '0.85rem', color: '#64748b' }}>{fetchError}</div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{fetchError}</div>
             </div>
-            <p style={{ color: '#64748b', fontSize: '0.85rem', lineHeight: 1.7 }}>
-              The <code style={{ background: 'rgba(148,163,184,0.15)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>audit_logs</code> table may not exist yet in your Supabase project.<br />
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.7 }}>
+              The <code style={{ background: 'var(--border-color)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>audit_logs</code> table may not exist yet in your Supabase project.<br />
               Please create it with the following SQL in the Supabase SQL editor:
             </p>
-            <pre style={{ background: 'rgba(15,23,42,0.05)', borderRadius: '10px', padding: '1rem', textAlign: 'left', fontSize: '0.78rem', color: '#0f172a', overflowX: 'auto', marginTop: '1rem' }}>
+            <pre style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '10px', padding: '1rem', textAlign: 'left', fontSize: '0.78rem', color: 'var(--text-primary)', overflowX: 'auto', marginTop: '1rem' }}>
 {`CREATE TABLE public.audit_logs (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   created_at timestamptz DEFAULT now(),
@@ -324,16 +324,16 @@ CREATE POLICY "Allow authenticated insert" ON public.audit_logs FOR INSERT WITH 
             </pre>
           </div>
         ) : loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>Loading activity log...</div>
+          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>Loading activity log...</div>
         ) : filteredLogs.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>No records found.</div>
+          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>No records found.</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid rgba(148,163,184,0.2)' }}>
                   {['Time', 'Job Number', 'User', 'Field Changed', 'Old Value', 'New Value'].map(col => (
-                    <th key={col} style={{ padding: '0.6rem 0.9rem 0.6rem 0', textAlign: 'left', color: '#64748b', fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                    <th key={col} style={{ padding: '0.6rem 0.9rem 0.6rem 0', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                       {col}
                     </th>
                   ))}
@@ -344,11 +344,11 @@ CREATE POLICY "Allow authenticated insert" ON public.audit_logs FOR INSERT WITH 
                   <tr
                     key={log.id || idx}
                     style={{ borderBottom: '1px solid rgba(148,163,184,0.1)', transition: 'background 0.15s', cursor: 'pointer' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(241,245,249,0.7)')}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-hover)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     onClick={() => log.job_number && router.push(`/dashboard/job/${encodeURIComponent(log.job_number)}`)}
                   >
-                    <td style={{ padding: '0.7rem 0.9rem 0.7rem 0', color: '#64748b', whiteSpace: 'nowrap', fontSize: '0.78rem' }}>
+                    <td style={{ padding: '0.7rem 0.9rem 0.7rem 0', color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontSize: '0.78rem' }}>
                       {formatDateTime(log.changed_at)}
                     </td>
                     <td style={{ padding: '0.7rem 0.9rem 0.7rem 0', fontWeight: 700, color: '#4f46e5' }}>
@@ -366,14 +366,14 @@ CREATE POLICY "Allow authenticated insert" ON public.audit_logs FOR INSERT WITH 
                         {userMap[log.agent_name?.toLowerCase()] || log.agent_name || 'Unknown'}
                       </span>
                     </td>
-                    <td style={{ padding: '0.7rem 0.9rem 0.7rem 0', color: '#0f172a', fontWeight: 600 }}>
+                    <td style={{ padding: '0.7rem 0.9rem 0.7rem 0', color: 'var(--text-primary)', fontWeight: 600 }}>
                       {FIELD_LABELS[log.field_changed] || log.field_changed || '—'}
                     </td>
                     <td style={{ padding: '0.7rem 0.9rem 0.7rem 0', color: '#dc2626', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {log.old_value || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>empty</span>}
+                      {log.old_value || <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>empty</span>}
                     </td>
                     <td style={{ padding: '0.7rem 0 0.7rem 0', color: '#059669', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {log.new_value || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>empty</span>}
+                      {log.new_value || <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>empty</span>}
                     </td>
                   </tr>
                 ))}

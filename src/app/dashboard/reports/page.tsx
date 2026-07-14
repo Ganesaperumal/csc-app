@@ -73,7 +73,7 @@ function DonutChart({
       <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', alignSelf: 'flex-start' }}>{title}</h4>
       
       {total === 0 ? (
-        <div style={{ height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+        <div style={{ height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
           No data available
         </div>
       ) : (
@@ -121,20 +121,20 @@ function DonutChart({
             }}>
               {hoveredIdx !== null ? (
                 <>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {chartData[hoveredIdx].label}
                   </span>
                   <span style={{ fontSize: '1.4rem', fontWeight: 800, color: chartData[hoveredIdx].color }}>
                     {chartData[hoveredIdx].value}
                   </span>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
                     {chartData[hoveredIdx].percentage.toFixed(1)}%
                   </span>
                 </>
               ) : (
                 <>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>Total</span>
-                  <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>{total}</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Total</span>
+                  <span style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-primary)' }}>{total}</span>
                 </>
               )}
             </div>
@@ -154,10 +154,10 @@ function DonutChart({
                 onMouseLeave={() => setHoveredIdx(null)}
               >
                 <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: slice.color, flexShrink: 0 }} />
-                <span style={{ color: '#334155', fontWeight: hoveredIdx === idx ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                <span style={{ color: 'var(--text-primary)', fontWeight: hoveredIdx === idx ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                   {slice.label}
                 </span>
-                <span style={{ color: '#64748b', fontWeight: 600 }}>{slice.value}</span>
+                <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{slice.value}</span>
               </div>
             ))}
           </div>
@@ -216,7 +216,7 @@ function GroupedBarChart({
         {/* Legend */}
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           {keys.map((k, idx) => (
-            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 600, color: '#475569' }}>
+            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
               <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: keyColors[idx % keyColors.length] }} />
               {labels[idx]}
             </div>
@@ -225,7 +225,7 @@ function GroupedBarChart({
       </div>
 
       {data.length === 0 ? (
-        <div style={{ height: chartHeight, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+        <div style={{ height: chartHeight, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
           No data available
         </div>
       ) : (
@@ -238,7 +238,7 @@ function GroupedBarChart({
               return (
                 <g key={idx}>
                   <line x1={paddingLeft} y1={y} x2={paddingLeft + contentWidth} y2={y} stroke="rgba(148,163,184,0.1)" strokeWidth="1" />
-                  <text x={paddingLeft - 8} y={y + 4} fill="#64748b" fontSize="10" textAnchor="end" fontWeight="600">
+                  <text x={paddingLeft - 8} y={y + 4} fill="var(--text-secondary)" fontSize="10" textAnchor="end" fontWeight="600">
                     {gridVal}
                   </text>
                 </g>
@@ -254,7 +254,7 @@ function GroupedBarChart({
                   <text
                     x={groupStartX + (groupWidth * 0.7) / 2}
                     y={chartHeight - paddingBottom + 18}
-                    fill="#334155"
+                    fill="var(--text-primary)"
                     fontSize="9"
                     fontWeight="700"
                     textAnchor="middle"
@@ -298,7 +298,7 @@ function GroupedBarChart({
                               width="40"
                               height="16"
                               rx="3"
-                              fill="#1e293b"
+                              fill="var(--text-primary)"
                             />
                             <text
                               x={x + barWidth/2}
@@ -383,7 +383,7 @@ function TimelineChart({
       <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>{title}</h4>
       
       {data.length === 0 ? (
-        <div style={{ height: chartHeight, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+        <div style={{ height: chartHeight, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
           No data available
         </div>
       ) : (
@@ -403,7 +403,7 @@ function TimelineChart({
               return (
                 <g key={idx}>
                   <line x1={paddingLeft} y1={y} x2={paddingLeft + contentWidth} y2={y} stroke="rgba(148,163,184,0.08)" strokeWidth="1" />
-                  <text x={paddingLeft - 8} y={y + 4} fill="#64748b" fontSize="10" textAnchor="end" fontWeight="600">
+                  <text x={paddingLeft - 8} y={y + 4} fill="var(--text-secondary)" fontSize="10" textAnchor="end" fontWeight="600">
                     {gridVal}
                   </text>
                 </g>
@@ -426,7 +426,7 @@ function TimelineChart({
                     <text
                       x={p.x}
                       y={chartHeight - paddingBottom + 18}
-                      fill="#64748b"
+                      fill="var(--text-secondary)"
                       fontSize="9"
                       fontWeight="600"
                       textAnchor="middle"
@@ -440,7 +440,7 @@ function TimelineChart({
                     cx={p.x}
                     cy={p.y}
                     r={hoveredPoint === idx ? 6 : 4}
-                    fill={hoveredPoint === idx ? '#4f46e5' : '#ffffff'}
+                    fill={hoveredPoint === idx ? '#4f46e5' : 'var(--bg-color)'}
                     stroke="#4f46e5"
                     strokeWidth="2"
                     style={{ transition: 'all 0.15s ease', cursor: 'pointer' }}
@@ -470,7 +470,7 @@ function TimelineChart({
                   width="90"
                   height="22"
                   rx="4"
-                  fill="#0f172a"
+                  fill="var(--text-primary)"
                   style={{ filter: 'drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.15))' }}
                 />
                 <text
@@ -971,7 +971,7 @@ export default function ReportsPage() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#64748b', fontSize: '1.25rem', fontFamily: "'Outfit', sans-serif" }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: 'var(--text-secondary)', fontSize: '1.25rem', fontFamily: "'Outfit', sans-serif" }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
           <svg className="animate-spin" width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="3"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
           Loading reports and analytics...
@@ -1001,7 +1001,7 @@ export default function ReportsPage() {
               Reports & Analytics
             </h1>
           </div>
-          <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '0.4rem', fontWeight: 500 }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.4rem', fontWeight: 500 }}>
             360° Operations Dashboard · Real-time metrics and Agent activity oversight
           </p>
         </div>
@@ -1013,8 +1013,7 @@ export default function ReportsPage() {
             padding: '0.6rem 1.4rem',
             borderRadius: '99px',
             border: 'none',
-            background: 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)',
-            color: '#4f46e5',
+            background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)', color: '#ffffff',
             fontWeight: 700,
             fontSize: '0.85rem',
             cursor: 'pointer',
@@ -1025,8 +1024,8 @@ export default function ReportsPage() {
             alignItems: 'center',
             gap: '0.4rem'
           }}
-          onMouseOver={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #4f46e5 0%, #d946ef 100%)'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)'; }}
-          onMouseOut={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)'; e.currentTarget.style.color = '#4f46e5'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.15)'; }}
+          onMouseOver={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #a78bfa 0%, #e879f9 100%)'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)'; }}
+          onMouseOut={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.15)'; }}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
           Sync Fresh Data
@@ -1074,7 +1073,7 @@ export default function ReportsPage() {
             background: 'transparent',
             border: 'none',
             borderBottom: activeTab === 'jobs' ? '3px solid #4f46e5' : '3px solid transparent',
-            color: activeTab === 'jobs' ? '#4f46e5' : '#64748b',
+            color: activeTab === 'jobs' ? '#4f46e5' : 'var(--text-secondary)',
             cursor: 'pointer',
             transition: 'all 0.2s',
             fontFamily: "'Outfit', sans-serif"
@@ -1091,7 +1090,7 @@ export default function ReportsPage() {
             background: 'transparent',
             border: 'none',
             borderBottom: activeTab === 'agents' ? '3px solid #4f46e5' : '3px solid transparent',
-            color: activeTab === 'agents' ? '#4f46e5' : '#64748b',
+            color: activeTab === 'agents' ? '#4f46e5' : 'var(--text-secondary)',
             cursor: 'pointer',
             transition: 'all 0.2s',
             fontFamily: "'Outfit', sans-serif"
@@ -1133,19 +1132,19 @@ export default function ReportsPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
               {/* Search input */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Search text</label>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Search text</label>
                 <input 
                   type="text"
                   placeholder="ID, Job No, Customer, Company..."
                   value={jobSearch}
                   onChange={e => setJobSearch(e.target.value)}
-                  style={{ padding: '0.5rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', background: 'white', color: '#0f172a', fontSize: '0.85rem', outline: 'none' }}
+                  style={{ padding: '0.5rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
                 />
               </div>
 
               {/* Branch Filter */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Branch</label>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Branch</label>
                 <CustomSelect
                   placeholder="All Branches"
                   value={filterBranch}
@@ -1160,7 +1159,7 @@ export default function ReportsPage() {
 
               {/* Status Filter */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Goods Track Status</label>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Goods Track Status</label>
                 <CustomSelect
                   placeholder="All Statuses"
                   value={filterStatus}
@@ -1175,7 +1174,7 @@ export default function ReportsPage() {
 
               {/* Goods Type Filter */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Goods Type</label>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Goods Type</label>
                 <CustomSelect
                   placeholder="All Types"
                   value={filterGoodsType}
@@ -1190,7 +1189,7 @@ export default function ReportsPage() {
 
               {/* Operation By Filter */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Operation By</label>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Operation By</label>
                 <CustomSelect
                   placeholder="All Partners"
                   value={filterOperationBy}
@@ -1208,23 +1207,23 @@ export default function ReportsPage() {
 
               {/* Date Start */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Job Date Start</label>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Job Date Start</label>
                 <input 
                   type="date"
                   value={startDate}
                   onChange={e => setStartDate(e.target.value)}
-                  style={{ padding: '0.5rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', background: 'white', color: '#0f172a', fontSize: '0.85rem', outline: 'none' }}
+                  style={{ padding: '0.5rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
                 />
               </div>
 
               {/* Date End */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Job Date End</label>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Job Date End</label>
                 <input 
                   type="date"
                   value={endDate}
                   onChange={e => setEndDate(e.target.value)}
-                  style={{ padding: '0.5rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', background: 'white', color: '#0f172a', fontSize: '0.85rem', outline: 'none' }}
+                  style={{ padding: '0.5rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
                 />
               </div>
             </div>
@@ -1279,7 +1278,7 @@ export default function ReportsPage() {
                         <th 
                           key={col.key} 
                           onClick={() => handleJobsSort(col.key)}
-                          style={{ padding: '0.6rem 0.9rem', color: '#64748b', fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none' }}
+                          style={{ padding: '0.6rem 0.9rem', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none' }}
                         >
                           {col.label} {handleJobsSortIcon(col.key)}
                         </th>
@@ -1289,7 +1288,7 @@ export default function ReportsPage() {
                   <tbody>
                     {filteredActiveJobs.length === 0 ? (
                       <tr>
-                        <td colSpan={6} style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>No jobs match filter criteria.</td>
+                        <td colSpan={6} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>No jobs match filter criteria.</td>
                       </tr>
                     ) : (
                       filteredActiveJobs.map(job => (
@@ -1306,16 +1305,16 @@ export default function ReportsPage() {
                           <td style={{ padding: '0.8rem 0.9rem', fontWeight: 800, color: '#4f46e5' }}>
                             {job.job_number}
                           </td>
-                          <td style={{ padding: '0.8rem 0.9rem', color: '#64748b' }}>
+                          <td style={{ padding: '0.8rem 0.9rem', color: 'var(--text-secondary)' }}>
                             {formatDate(job.job_date)}
                           </td>
-                          <td style={{ padding: '0.8rem 0.9rem', fontWeight: 700, color: '#1e293b' }}>
+                          <td style={{ padding: '0.8rem 0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                             {job.customer_name || '—'}
                           </td>
-                          <td style={{ padding: '0.8rem 0.9rem', color: '#475569', fontWeight: 600 }}>
+                          <td style={{ padding: '0.8rem 0.9rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
                             {job.branch || '—'}
                           </td>
-                          <td style={{ padding: '0.8rem 0.9rem', color: '#0f172a', fontWeight: 600, fontSize: '0.8rem' }}>
+                          <td style={{ padding: '0.8rem 0.9rem', color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.8rem' }}>
                             {job.goods_track_status ? job.goods_track_status.split('. ')[1] || job.goods_track_status : 'Pending'}
                           </td>
                         </tr>
@@ -1370,13 +1369,13 @@ export default function ReportsPage() {
                       <span style={{ 
                         fontSize: '0.85rem', 
                         fontWeight: 700, 
-                        color: isSelected ? '#4338ca' : '#334155'
+                        color: isSelected ? '#4338ca' : 'var(--text-primary)'
                       }}>{agent.label}</span>
                       <span style={{ 
                         fontSize: '0.78rem', 
                         fontWeight: 800, 
-                        background: isSelected ? '#4f46e5' : '#64748b15', 
-                        color: isSelected ? 'white' : '#64748b', 
+                        background: isSelected ? '#4f46e5' : 'var(--text-secondary)15', 
+                        color: isSelected ? 'white' : 'var(--text-secondary)', 
                         padding: '0.2rem 0.6rem', 
                         borderRadius: '20px' 
                       }}>
@@ -1449,24 +1448,24 @@ export default function ReportsPage() {
                       placeholder="Search this agent's logs..."
                       value={agentActivitySearch}
                       onChange={e => setAgentActivitySearch(e.target.value)}
-                      style={{ padding: '0.4rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', background: 'white', color: '#0f172a', fontSize: '0.8rem', outline: 'none', width: '220px' }}
+                      style={{ padding: '0.4rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(148,163,184,0.3)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.8rem', outline: 'none', width: '220px' }}
                     />
                   </div>
 
                   <div style={{ overflowX: 'auto', maxHeight: '350px', overflowY: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
                       <thead>
-                        <tr style={{ borderBottom: '2px solid rgba(148, 163, 184, 0.2)', position: 'sticky', top: 0, background: '#f8fafc', zIndex: 10 }}>
-                          <th style={{ padding: '0.6rem 0.9rem', color: '#64748b', fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase' }}>Time</th>
-                          <th style={{ padding: '0.6rem 0.9rem', color: '#64748b', fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase' }}>Job Number</th>
-                          <th style={{ padding: '0.6rem 0.9rem', color: '#64748b', fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase' }}>Type</th>
-                          <th style={{ padding: '0.6rem 0.9rem', color: '#64748b', fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase' }}>Detail</th>
+                        <tr style={{ borderBottom: '2px solid rgba(148, 163, 184, 0.2)', position: 'sticky', top: 0, background: 'var(--bg-color)', zIndex: 10 }}>
+                          <th style={{ padding: '0.6rem 0.9rem', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase' }}>Time</th>
+                          <th style={{ padding: '0.6rem 0.9rem', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase' }}>Job Number</th>
+                          <th style={{ padding: '0.6rem 0.9rem', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase' }}>Type</th>
+                          <th style={{ padding: '0.6rem 0.9rem', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase' }}>Detail</th>
                         </tr>
                       </thead>
                       <tbody>
                         {selectedAgentTimelineAndLogs.details.length === 0 ? (
                           <tr>
-                            <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>No activity records found.</td>
+                            <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No activity records found.</td>
                           </tr>
                         ) : (
                           selectedAgentTimelineAndLogs.details.map(act => (
@@ -1477,7 +1476,7 @@ export default function ReportsPage() {
                               onMouseEnter={e => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.03)'}
                               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                             >
-                              <td style={{ padding: '0.7rem 0.9rem', color: '#64748b', whiteSpace: 'nowrap', fontSize: '0.78rem' }}>
+                              <td style={{ padding: '0.7rem 0.9rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontSize: '0.78rem' }}>
                                 {new Date(act.time).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
                               </td>
                               <td style={{ padding: '0.7rem 0.9rem', fontWeight: 700, color: '#4f46e5', whiteSpace: 'nowrap' }}>
@@ -1492,7 +1491,7 @@ export default function ReportsPage() {
                                   {act.type}
                                 </span>
                               </td>
-                              <td style={{ padding: '0.7rem 0.9rem', color: '#334155', maxWidth: '350px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={act.detail}>
+                              <td style={{ padding: '0.7rem 0.9rem', color: 'var(--text-primary)', maxWidth: '350px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={act.detail}>
                                 {act.detail}
                               </td>
                             </tr>
@@ -1505,7 +1504,7 @@ export default function ReportsPage() {
 
               </div>
             ) : (
-              <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>Select an agent to see their details</div>
+              <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Select an agent to see their details</div>
             )}
           </div>
 
