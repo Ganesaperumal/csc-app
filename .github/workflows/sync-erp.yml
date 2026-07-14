@@ -22,22 +22,28 @@ jobs:
           cache: 'npm' # Automatically caches node_modules if package-lock.json exists
 
       - name: Install Node Dependencies
-        run: npm ci # Faster, clean install designed specifically for automated environments
+        run: |
+          cd scripts
+          npm install
 
       - name: Cache Playwright Chromium Browser
         id: playwright-cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-playwright-${{ hashFiles('scripts/package-lock.json') }}
 
       - name: Install Playwright Chromium (Only if cache misses)
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install chromium --with-deps
+        run: |
+          cd scripts
+          npx playwright install chromium --with-deps
 
       - name: Install Playwright System Dependencies (If cache hits)
         if: steps.playwright-cache.outputs.cache-hit == 'main' || steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
+        run: |
+          cd scripts
+          npx playwright install-deps chromium
 
       - name: Run Playwright Sync Script
         env:
@@ -48,4 +54,5 @@ jobs:
           CRON_SECRET_KEY: ${{ secrets.CRON_SECRET_KEY }}
         run: |
           echo "GitHub Action successfully triggered!"
-          node scripts/github_sync.js
+          cd scripts
+          node github_sync.js
