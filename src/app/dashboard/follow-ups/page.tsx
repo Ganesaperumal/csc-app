@@ -284,7 +284,7 @@ export default function FollowUpsPage() {
                 </div>
 
                 {/* Call summary comment */}
-                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.4)', padding: '0.5rem', borderRadius: '6px', borderLeft: `3px solid ${badgeBg}`, lineClamp: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'var(--surface-color)', padding: '0.5rem', borderRadius: '6px', borderLeft: `3px solid ${badgeBg}`, lineClamp: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {task.summary}
                 </p>
 
@@ -338,7 +338,7 @@ export default function FollowUpsPage() {
               placeholder="Search tasks..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ padding: '0.5rem 2rem 0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.4)', color: 'var(--text-primary)', fontSize: '0.85rem', minWidth: '200px' }}
+              style={{ padding: '0.5rem 2rem 0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', fontSize: '0.85rem', minWidth: '200px' }}
             />
             <span style={{ position: 'absolute', right: '10px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>🔍</span>
           </div>
