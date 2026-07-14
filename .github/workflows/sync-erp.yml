@@ -5,7 +5,7 @@ on:
   schedule:
     # Runs at 10:30 AM, 1:30 PM, 5:30 PM, and 8:30 PM IST (05:00, 08:00, 12:00, 15:00 UTC)
     # Changed minute from :30 to :00 to match your comment's intent, shifted by 5.5 hours for IST.
-    - cron: '0 5,8,12,15 * * *' 
+    - cron: '0 4,7,10,13,16 * * *' 
 
 jobs:
   sync:
