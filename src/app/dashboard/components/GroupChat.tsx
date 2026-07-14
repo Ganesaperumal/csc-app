@@ -95,7 +95,7 @@ export default function GroupChat({ user }: { user: any }) {
               </span>
               <div style={{ 
                 background: isMe ? 'linear-gradient(135deg, #4f46e5, #7c3aed)' : userColor.bg, 
-                color: isMe ? 'white' : userColor.text,
+                color: isMe ? 'white' : 'var(--text-primary)',
                 border: isMe ? 'none' : `1px solid ${userColor.text}40`,
                 padding: '0.5rem 0.75rem', 
                 borderRadius: '12px',
