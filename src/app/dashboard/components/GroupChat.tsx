@@ -113,16 +113,16 @@ export default function GroupChat({ user }: { user: any }) {
         })}
         <div ref={bottomRef} />
       </div>
-      <form onSubmit={sendMessage} style={{ display: 'flex', padding: '0.5rem', background: 'var(--surface-color)', borderTop: '1px solid var(--border-color)' }}>
+      <form onSubmit={sendMessage} style={{ display: 'flex', padding: '0.5rem', background: 'var(--surface-color)', borderTop: '1px solid var(--border-color)', width: '100%', boxSizing: 'border-box' }}>
         <input
           type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder={canChat ? "Type a message..." : "Chat disabled"}
           disabled={!canChat}
-          style={{ flex: 1, padding: '0.5rem', borderRadius: '20px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+          style={{ flex: 1, minWidth: 0, padding: '0.5rem 1rem', borderRadius: '20px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', boxSizing: 'border-box' }}
         />
-        <button type="submit" disabled={!canChat || !newMessage.trim()} style={{ background: 'none', border: 'none', color: '#4f46e5', marginLeft: '0.5rem', cursor: canChat ? 'pointer' : 'not-allowed' }}>
+        <button type="submit" disabled={!canChat || !newMessage.trim()} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', color: '#4f46e5', marginLeft: '0.5rem', cursor: canChat ? 'pointer' : 'not-allowed' }}>
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>
       </form>
