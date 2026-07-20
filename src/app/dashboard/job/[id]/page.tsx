@@ -1011,6 +1011,23 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                 <label>🏋️‍♂️ HEAVY ITEMS</label>
                 <ToggleSwitch disabled={isViewer} name="heavy_items" value={job.heavy_items === true || job.heavy_items === 'Yes'} onChange={(val) => handleFieldChange('heavy_items', val)} />
               </div>
+              <div className={styles.inputGroup}>
+                <label>🛡️ INSURANCE</label>
+                <ToggleSwitch disabled={isViewer} name="insurance" value={job.insurance === true || job.insurance === 'Yes'} onChange={(val) => handleFieldChange('insurance', val)} />
+              </div>
+              {(job.insurance === true || job.insurance === 'Yes') && (
+                <div className={styles.inputGroup}>
+                  <label>💰 INSURANCE VALUE</label>
+                  <input 
+                    disabled={isViewer} 
+                    type="text" 
+                    name="insurance_value" 
+                    value={job.insurance_value || ''} 
+                    onChange={handleChange} 
+                    placeholder="Enter value" 
+                  />
+                </div>
+              )}
 
               {/* Subheadings for site details */}
               <div style={{ gridColumn: '1', fontWeight: 'bold', fontSize: '0.9rem', color: '#8b5cf6', textTransform: 'uppercase', borderBottom: '1px solid rgba(139, 92, 246, 0.2)', paddingBottom: '0.3rem', marginTop: '0.6rem', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
