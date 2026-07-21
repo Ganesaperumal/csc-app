@@ -286,28 +286,32 @@ export default function AdminPage() {
   const handleSyncPods = async () => {
     setSyncingPods(true);
     try {
-      showToast('⏳ Fetching all jobs with PODs...', 'info');
-      // Fetch all jobs that have a pod_url
+      showToast('⏳ Fetching all jobs with documents...', 'info');
       const { data: jobs, error } = await supabase
         .from('jobs')
-        .select('job_number, pod_url')
-        .not('pod_url', 'is', null);
+        .select('job_number, documents');
         
       if (error) throw error;
       
-      if (!jobs || jobs.length === 0) {
-        showToast('✅ No active PODs found to sync.', 'success');
+      const jobsWithDocs = jobs?.filter(j => j.documents && j.documents.length > 0) || [];
+      if (jobsWithDocs.length === 0) {
+        showToast('✅ No active documents found to sync.', 'success');
         setSyncingPods(false);
         return;
       }
 
-      showToast(`⏳ Verifying ${jobs.length} POD links with Cloudflare...`, 'info');
-      const urls = jobs.map(j => j.pod_url).filter(Boolean);
+      showToast(`⏳ Verifying ${jobsWithDocs.length} jobs' document links...`, 'info');
+      let allUrls: string[] = [];
+      jobsWithDocs.forEach(j => {
+        j.documents.forEach((d: any) => {
+          if (d.url) allUrls.push(d.url);
+        });
+      });
       
-      const res = await fetch('/api/pod/verify', {
+      const res = await fetch('/api/documents/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urls })
+        body: JSON.stringify({ urls: allUrls })
       });
       const verifyData = await res.json();
       
@@ -316,23 +320,25 @@ export default function AdminPage() {
       const missingUrls = verifyData.results.filter((r: any) => !r.ok).map((r: any) => r.url);
       
       if (missingUrls.length === 0) {
-        showToast('✅ All POD links are healthy!', 'success');
+        showToast('✅ All document links are healthy!', 'success');
         setSyncingPods(false);
         return;
       }
       
-      const missingJobNumbers = jobs.filter(j => missingUrls.includes(j.pod_url)).map(j => j.job_number);
-      showToast(`⏳ Cleaning up ${missingJobNumbers.length} broken POD records...`, 'info');
+      showToast(`⏳ Cleaning up ${missingUrls.length} broken document records...`, 'info');
       
-      // Clear the pod_url on the jobs table
-      const { error: updateError } = await supabase
-        .from('jobs')
-        .update({ pod_url: null, pod_uploaded_on: null })
-        .in('job_number', missingJobNumbers);
-        
-      if (updateError) throw updateError;
+      for (const job of jobsWithDocs) {
+        const validDocs = job.documents.filter((d: any) => !missingUrls.includes(d.url));
+        if (validDocs.length !== job.documents.length) {
+          const { error: updateError } = await supabase
+            .from('jobs')
+            .update({ documents: validDocs })
+            .eq('job_number', job.job_number);
+          if (updateError) throw updateError;
+        }
+      }
       
-      showToast(`✅ Successfully cleaned up ${missingJobNumbers.length} orphaned PODs!`, 'success');
+      showToast(`✅ Successfully cleaned up ${missingUrls.length} orphaned documents!`, 'success');
     } catch (err: any) {
       showToast(`❌ Error syncing PODs: ${err.message}`, 'error');
     } finally {

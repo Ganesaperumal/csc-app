@@ -20,13 +20,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Format validation on server side
-    // Standard format: POD-YY-X.pdf (e.g., POD-26-1.pdf, POD-26-1234.pdf)
-    const normalizedFilename = filename.toUpperCase().replace(/[_]/g, '-');
-    const isValidFormat = /^POD-\d{2}-\d+\.PDF$/.test(normalizedFilename);
-
-    if (!isValidFormat) {
-       return NextResponse.json({ error: 'Invalid filename format. Expected POD-YY-X.pdf' }, { status: 400 });
-    }
+    // Standardize filename
+    const normalizedFilename = filename.toUpperCase().replace(/[_ ]/g, '-');
 
     // Command to put object in bucket
     const command = new PutObjectCommand({

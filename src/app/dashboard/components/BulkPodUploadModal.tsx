@@ -7,17 +7,28 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
   const [files, setFiles] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
 
-  // Parse filename to see if it matches POD-YY-X.pdf format
+  const prefixToDocType: Record<string, string> = {
+    'POD': 'POD',
+    'INV': 'Invoice',
+    'PO': 'PO',
+    'DC': 'DC',
+    'LR': 'LR',
+    'DN': 'DN'
+  };
+
+  // Parse filename to see if it matches PREFIX-YY-X.pdf format
   const parseFilename = (name: string) => {
     // Auto correct _ to - and lowercase to uppercase
     const normalized = name.toUpperCase().replace(/_/g, '-');
-    const regex = /^POD-(\d{2})-(\d+)\.PDF$/;
+    const regex = /^(POD|INV|PO|DC|LR|DN)-(\d{2})-(\d+)\.PDF$/;
     const match = normalized.match(regex);
     
     if (match) {
-      return { isValid: true, normalizedName: normalized, jobIdMatch: `JB/${match[2]}/${match[1]}/DEL` }; // Assuming basic format matching
+      const prefix = match[1];
+      const docType = prefixToDocType[prefix];
+      return { isValid: true, normalizedName: normalized, jobIdMatch: `JB/${match[3]}/${match[2]}/DEL`, docType };
     }
-    return { isValid: false, normalizedName: name, jobIdMatch: null };
+    return { isValid: false, normalizedName: name, jobIdMatch: null, docType: null };
   };
 
   const [processing, setProcessing] = useState(false);
@@ -29,17 +40,20 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
     
     // Process accepted files sequentially
     for (const file of acceptedFiles) {
-      const { isValid, normalizedName, jobIdMatch } = parseFilename(file.name);
+      const { isValid, normalizedName, jobIdMatch, docType } = parseFilename(file.name);
       
       let status = isValid ? 'Ready' : 'Rejected';
       let existingPod = null;
 
       if (isValid && jobIdMatch) {
         try {
-          const { data } = await supabase.from('job_pods').select('*').eq('job_number', jobIdMatch).eq('status', 'active').maybeSingle();
-          if (data) {
-            status = 'Conflict';
-            existingPod = data;
+          const { data } = await supabase.from('jobs').select('documents').eq('job_number', jobIdMatch).maybeSingle();
+          if (data && data.documents) {
+            const hasDoc = data.documents.some((d: any) => d.type === docType);
+            if (hasDoc) {
+              status = 'Conflict';
+              existingPod = { filename: `${docType} for ${jobIdMatch}` }; // dummy object to trigger conflict UI
+            }
           }
         } catch (err) {
           console.error(err);
@@ -53,6 +67,7 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
         isValid, 
         status, 
         jobIdMatch, 
+        docType,
         existingPod,
         uploadProgress: 0,
         uploadStatus: 'pending'
@@ -122,7 +137,7 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
     await Promise.all(readyFiles.map(async (f) => {
       try {
         // 1. Get presigned URL
-        const res = await fetch('/api/pod/presign', {
+        const res = await fetch('/api/documents/presign', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ filename: f.normalizedName, contentType: f.file.type })
@@ -133,14 +148,14 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
         await uploadFileWithProgress(presignedUrl, f.file, f.normalizedName);
 
         // 3. Save to Supabase DB via API route
-        await fetch('/api/pod/save', {
+        await fetch('/api/documents/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             job_number: f.jobIdMatch,
             filename: f.normalizedName,
             r2_url: publicUrl,
-            file_size_bytes: f.file.size
+            document_type: f.docType
           })
         });
       } catch (err) {
@@ -156,7 +171,7 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
   return (
     <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="modal-content" style={{ background: 'var(--bg-color)', padding: '2rem', borderRadius: '12px', width: '800px', maxHeight: '80vh', overflowY: 'auto' }}>
-        <h2 style={{ marginBottom: '1rem' }}>Bulk Upload PODs (Cloudflare R2)</h2>
+        <h2 style={{ marginBottom: '1rem' }}>Bulk Upload Documents (Cloudflare R2)</h2>
         
         <div {...getRootProps()} style={{ border: '2px dashed var(--border-color)', padding: '2rem', textAlign: 'center', borderRadius: '8px', cursor: 'pointer', marginBottom: '1.5rem', background: isDragActive ? 'rgba(59, 130, 246, 0.1)' : 'transparent' }}>
           <input {...getInputProps()} />
@@ -165,7 +180,7 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
           ) : (
             <>
               <p>Drag & drop PDF files here, or click to select files</p>
-              <small>Only standard format (e.g., POD-26-1234.pdf) will be accepted.</small>
+              <small>Only standard format (e.g., POD-26-1234.pdf, INV-26-1234.pdf) will be accepted.</small>
             </>
           )}
         </div>
@@ -212,7 +227,7 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
           <button onClick={onClose} style={{ padding: '0.5rem 1rem', background: 'transparent', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', cursor: 'pointer' }}>Cancel</button>
           <button onClick={handleUploadAll} disabled={uploading || files.filter(f => f.status === 'Ready').length === 0} style={{ padding: '0.5rem 1rem', background: '#3b82f6', border: 'none', borderRadius: '6px', color: 'white', fontWeight: 'bold', cursor: 'pointer', opacity: uploading ? 0.6 : 1 }}>
-            {uploading ? 'Uploading...' : `Upload ${files.filter(f => f.status === 'Ready').length} Valid PODs`}
+            {uploading ? 'Uploading...' : `Upload ${files.filter(f => f.status === 'Ready').length} Valid Documents`}
           </button>
         </div>
       </div>

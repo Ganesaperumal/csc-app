@@ -389,9 +389,12 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState('');
   
-  // POD State
+  // Document State
   const [uploadingPod, setUploadingPod] = useState(false);
   const [podUploadProgress, setPodUploadProgress] = useState<number | null>(null);
+  const [selectedDocType, setSelectedDocType] = useState('POD');
+  const [newDocType, setNewDocType] = useState('');
+  const [customDocTypes, setCustomDocTypes] = useState<string[]>([]);
 
   const handleGenerateAISummary = async () => {
     if (!job) return;
@@ -564,28 +567,20 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
     setUploadingPod(true);
     setPodUploadProgress(0);
     
-    // Auto-rename to standard format based on job ID
-    // Examples: JB/1234/26/DEL -> POD-26-1234.pdf, JB/1/25/DEL -> POD-25-1.pdf, 10536 -> POD-26-10536.pdf
-    let finalName = file.name;
-    const parts = decodedId.split('/').filter(Boolean);
-    const nums = parts.filter(p => /^\d+$/.test(p));
-    
-    if (nums.length >= 2) {
-      // Typically format is JB / {jobNumber} / {year} / DEL
-      const seqNum = nums[0];
-      const yearNum = nums[1].padStart(2, '0');
-      finalName = `POD-${yearNum}-${seqNum}.pdf`;
-    } else if (nums.length === 1) {
-      const currentYearTwoDigits = new Date().getFullYear().toString().slice(-2);
-      finalName = `POD-${currentYearTwoDigits}-${nums[0]}.pdf`;
-    } else {
-      const currentYearTwoDigits = new Date().getFullYear().toString().slice(-2);
-      const cleanId = decodedId.replace(/[^0-9]/g, '') || '1';
-      finalName = `POD-${currentYearTwoDigits}-${cleanId}.pdf`;
+    const currentYearTwoDigits = new Date().getFullYear().toString().slice(-2);
+    const cleanId = decodedId.replace(/[^0-9]/g, '') || '1';
+    const actualDocType = selectedDocType === 'Add New...' ? newDocType : selectedDocType;
+    if (!actualDocType) {
+      showToast('Please specify a document type.', 'error');
+      setUploadingPod(false);
+      return;
     }
 
+    const docPrefix = actualDocType.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const finalName = `${docPrefix}-${currentYearTwoDigits}-${cleanId}.pdf`;
+
     try {
-      const res = await fetch('/api/pod/presign', {
+      const res = await fetch('/api/documents/presign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename: finalName, contentType: file.type })
@@ -620,14 +615,14 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
       });
 
       // DB insert/update via API route (bypasses RLS)
-      const saveRes = await fetch('/api/pod/save', {
+      const saveRes = await fetch('/api/documents/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           job_number: decodedId,
           filename: data.finalFilename,
           r2_url: data.publicUrl,
-          file_size_bytes: file.size,
+          document_type: actualDocType
         })
       });
       const saveData = await saveRes.json();
@@ -676,6 +671,16 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
       if (!isViewer && data?.goods_type?.toLowerCase().includes('vehicle') && data.car_included !== true) {
         data.car_included = true;
         supabase.from('jobs').update({ car_included: true }).eq('job_number', decodedId).then(() => {});
+      }
+
+      if (data.documents) {
+        const types = new Set<string>();
+        data.documents.forEach((d: any) => {
+          if (d.type && !['POD', 'Invoice', 'PO'].includes(d.type)) {
+            types.add(d.type);
+          }
+        });
+        setCustomDocTypes(Array.from(types));
       }
 
       setJob(data);
@@ -1818,6 +1823,67 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
 
+          {/* Documents Section */}
+          <div className={`glass ${styles.logsSection}`} style={{ height: 'auto', display: 'flex', flexDirection: 'column', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <h3 style={{ margin: 0 }}>Documents</h3>
+              {uploadingPod && podUploadProgress !== null && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, marginLeft: '1rem', marginRight: '1rem' }}>
+                  <div style={{ flex: 1, height: '8px', background: 'rgba(148, 163, 184, 0.2)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', background: '#3b82f6', width: `${podUploadProgress}%`, transition: 'width 0.2s ease' }}></div>
+                  </div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#3b82f6' }}>{podUploadProgress}%</span>
+                </div>
+              )}
+              {!isViewer && (
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <select 
+                    value={selectedDocType} 
+                    onChange={(e) => setSelectedDocType(e.target.value)}
+                    style={{ padding: '0.4rem', borderRadius: '6px', border: '1px solid rgba(148, 163, 184, 0.3)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
+                    disabled={uploadingPod}
+                  >
+                    <option value="POD">POD</option>
+                    <option value="Invoice">Invoice</option>
+                    <option value="PO">PO</option>
+                    {customDocTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                    <option value="Add New...">Add New...</option>
+                  </select>
+                  
+                  {selectedDocType === 'Add New...' && (
+                    <input 
+                      type="text" 
+                      placeholder="Type..." 
+                      value={newDocType} 
+                      onChange={(e) => setNewDocType(e.target.value)}
+                      style={{ padding: '0.4rem', width: '100px', borderRadius: '6px', border: '1px solid rgba(148, 163, 184, 0.3)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
+                      disabled={uploadingPod}
+                    />
+                  )}
+
+                  <label style={{ cursor: 'pointer', padding: '0.4rem 0.8rem', background: '#3b82f6', color: 'white', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold', opacity: uploadingPod ? 0.6 : 1 }}>
+                    {uploadingPod ? 'Uploading...' : 'Upload'}
+                    <input type="file" accept="application/pdf" onChange={handlePodUpload} disabled={uploadingPod || isViewer} style={{ display: 'none' }} />
+                  </label>
+                </div>
+              )}
+            </div>
+            
+            <div className={styles.logsList}>
+              {job.documents && job.documents.length > 0 ? (
+                job.documents.map((doc: any, i: number) => (
+                  <div key={i} style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(148, 163, 184, 0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <a href={`/api/documents/view?filename=${doc.filename || `POD-${job.job_number.split('/')[2]}-${job.job_number.split('/')[1]}.PDF`}`} target="_blank" rel="noreferrer" style={{ color: '#818cf8', fontWeight: 'bold', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      📄 View {doc.type} ({new Date(doc.uploaded_on).toLocaleDateString()})
+                    </a>
+                  </div>
+                ))
+              ) : (
+                <div className="text-muted" style={{ fontSize: '0.85rem' }}>No documents uploaded yet.</div>
+              )}
+            </div>
+          </div>
+
           {/* WhatsApp Status Updates Section */}
           <div className={`glass ${styles.logsSection}`} style={{ height: 'auto', display: 'flex', flexDirection: 'column', padding: '1rem 1.25rem', marginBottom: '1.5rem' }}>
             <h3 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid rgba(148, 163, 184, 0.12)', paddingBottom: '0.5rem', marginBottom: '0.5rem' }}>
@@ -1864,39 +1930,6 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   />
                 );
               })}
-            </div>
-          </div>
-          
-          {/* POD Documents Section */}
-          <div className={`glass ${styles.logsSection}`} style={{ height: 'auto', display: 'flex', flexDirection: 'column', marginBottom: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-              <h3 style={{ margin: 0 }}>POD Documents</h3>
-              {uploadingPod && podUploadProgress !== null && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, marginLeft: '1rem', marginRight: '1rem' }}>
-                  <div style={{ flex: 1, height: '8px', background: 'rgba(148, 163, 184, 0.2)', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', background: '#3b82f6', width: `${podUploadProgress}%`, transition: 'width 0.2s ease' }}></div>
-                  </div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#3b82f6' }}>{podUploadProgress}%</span>
-                </div>
-              )}
-              {!isViewer && (
-                <label style={{ cursor: 'pointer', padding: '0.4rem 0.8rem', background: '#3b82f6', color: 'white', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold', opacity: uploadingPod ? 0.6 : 1 }}>
-                  {uploadingPod ? 'Uploading...' : 'Upload POD'}
-                  <input type="file" accept="application/pdf" onChange={handlePodUpload} disabled={uploadingPod || isViewer} style={{ display: 'none' }} />
-                </label>
-              )}
-            </div>
-            
-            <div className={styles.logsList}>
-              {job.pod_url ? (
-                <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(148, 163, 184, 0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <a href={`/api/pod/view?filename=POD-${job.job_number.split('/')[2]}-${job.job_number.split('/')[1]}.PDF`} target="_blank" rel="noreferrer" style={{ color: '#818cf8', fontWeight: 'bold', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    📄 View POD-{job.job_number.split('/')[2]}-{job.job_number.split('/')[1]}
-                  </a>
-                </div>
-              ) : (
-                <div className="text-muted" style={{ fontSize: '0.85rem' }}>No POD uploaded yet.</div>
-              )}
             </div>
           </div>
 
