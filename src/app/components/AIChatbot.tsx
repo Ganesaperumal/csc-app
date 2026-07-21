@@ -74,13 +74,13 @@ export default function AIChatbot() {
         <div style={{ 
           width: '350px', 
           height: '500px', 
-          backgroundColor: '#fff', 
+          backgroundColor: 'var(--bg-color, #ffffff)', 
           borderRadius: '16px', 
-          boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+          boxShadow: 'var(--glass-shadow, 0 10px 40px rgba(0,0,0,0.15))',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          border: '1px solid #e2e8f0'
+          border: '1px solid var(--border-color, #e2e8f0)'
         }}>
           {/* Header */}
           <div style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)', padding: '15px', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -108,24 +108,25 @@ export default function AIChatbot() {
           </div>
           
           {/* Messages */}
-          <div style={{ flex: 1, padding: '15px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', background: '#f8fafc' }}>
+          <div style={{ flex: 1, padding: '15px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', background: 'var(--surface-color, #f8fafc)' }}>
             {messages.map((msg, i) => (
               <div key={i} style={{ 
                 alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                backgroundColor: msg.role === 'user' ? '#4f46e5' : '#e2e8f0',
-                color: msg.role === 'user' ? '#fff' : '#1e293b',
+                backgroundColor: msg.role === 'user' ? '#4f46e5' : 'var(--bg-color, #e2e8f0)',
+                color: msg.role === 'user' ? '#fff' : 'var(--text-primary, #1e293b)',
                 padding: '10px 14px',
                 borderRadius: '12px',
                 maxWidth: '80%',
                 fontSize: '0.9rem',
                 lineHeight: '1.4',
-                whiteSpace: 'pre-wrap'
+                whiteSpace: 'pre-wrap',
+                border: msg.role === 'ai' ? '1px solid var(--border-color, rgba(255,255,255,0.1))' : 'none'
               }}>
                 {msg.text}
               </div>
             ))}
             {loading && (
-              <div style={{ alignSelf: 'flex-start', backgroundColor: '#e2e8f0', color: '#64748b', padding: '10px 14px', borderRadius: '12px', fontSize: '0.8rem' }}>
+              <div style={{ alignSelf: 'flex-start', backgroundColor: 'var(--bg-color, #e2e8f0)', color: 'var(--text-secondary, #64748b)', padding: '10px 14px', borderRadius: '12px', fontSize: '0.8rem' }}>
                 Thinking...
               </div>
             )}
@@ -133,13 +134,13 @@ export default function AIChatbot() {
           </div>
           
           {/* Input */}
-          <form onSubmit={handleSend} style={{ borderTop: '1px solid #e2e8f0', padding: '10px', display: 'flex', gap: '8px', background: '#fff' }}>
+          <form onSubmit={handleSend} style={{ borderTop: '1px solid var(--border-color, #e2e8f0)', padding: '10px', display: 'flex', gap: '8px', background: 'var(--bg-color, #fff)' }}>
             <input 
               type="text" 
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask me anything..."
-              style={{ flex: 1, padding: '10px', border: '1px solid #cbd5e1', borderRadius: '20px', outline: 'none', fontSize: '0.9rem', color: '#000' }}
+              style={{ flex: 1, padding: '10px', border: '1px solid var(--border-color, #cbd5e1)', borderRadius: '20px', outline: 'none', fontSize: '0.9rem', color: 'var(--text-primary, #000)', background: 'var(--surface-color, #fff)' }}
             />
             <button 
               type="submit" 
@@ -155,8 +156,8 @@ export default function AIChatbot() {
           onClick={() => setIsOpen(true)}
           style={{
             width: '65px', height: '65px', borderRadius: '35px',
-            background: '#ffffff',
-            border: '2px solid rgba(240, 147, 251, 0.3)',
+            background: 'var(--bg-color, #1e293b)',
+            border: '2px solid rgba(240, 147, 251, 0.4)',
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'transform 0.2s',
             animation: 'pulse-glow 3s infinite alternate'

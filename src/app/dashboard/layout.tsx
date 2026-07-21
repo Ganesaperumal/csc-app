@@ -79,6 +79,14 @@ export default function DashboardLayout({
           
         if (profile) {
           setRole(profile.role);
+          if (profile.role === 'SPOC') {
+            document.documentElement.classList.remove('dark-theme');
+            localStorage.setItem('csc_theme', 'light');
+            if (!pathname.startsWith('/dashboard/job/')) {
+              router.push('/spoc-portal');
+              return;
+            }
+          }
         }
         
         setLoading(false);
@@ -144,6 +152,7 @@ export default function DashboardLayout({
       </main>
       <CommandPalette />
       <AIChatbot />
+      <GlobalDialogs />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import styles from './login.module.css';
@@ -12,20 +12,92 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const router = useRouter();
 
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profile?.role === 'SPOC') {
+          router.push('/spoc-portal');
+        } else {
+          router.push('/dashboard');
+        }
+      }
+    };
+    checkExistingSession();
+  }, [router]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
+    const cleanInput = username.trim().toLowerCase();
+    const cleanPassword = password.trim();
+    const primaryEmail = `${cleanInput}@transworldintl.com`;
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: `${username.trim()}@transworldintl.com`.toLowerCase(),
-      password,
+    let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: primaryEmail,
+      password: cleanPassword,
     });
 
-    if (error) {
-      setError(error.message);
+    // Fallback 1: Try phone number email format if input was username (e.g. spoc / 9876543210)
+    if (authError && cleanPassword) {
+      const phoneEmail = `${cleanPassword}@transworldintl.com`.toLowerCase();
+      const fallback1 = await supabase.auth.signInWithPassword({
+        email: phoneEmail,
+        password: cleanPassword,
+      });
+      if (!fallback1.error) {
+        authError = null;
+        authData = fallback1.data;
+      }
+    }
+
+    // Fallback 2: Look up profile by username or name in profiles table to find matching auth email
+    if (authError) {
+      const { data: matchedProfiles } = await supabase
+        .from('profiles')
+        .select('username, id')
+        .or(`username.ilike.${cleanInput},name.ilike.${cleanInput}`);
+
+      if (matchedProfiles && matchedProfiles.length > 0) {
+        for (const p of matchedProfiles) {
+          if (p.username) {
+            const profileEmail = `${p.username}@transworldintl.com`.toLowerCase();
+            const fallback2 = await supabase.auth.signInWithPassword({
+              email: profileEmail,
+              password: cleanPassword,
+            });
+            if (!fallback2.error) {
+              authError = null;
+              authData = fallback2.data;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (authError) {
+      setError(authError.message);
       setLoading(false);
     } else {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        if (profile?.role === 'SPOC') {
+          router.push('/spoc-portal');
+          return;
+        }
+      }
       router.push('/dashboard');
     }
   };
@@ -49,7 +121,7 @@ export default function LoginPage() {
               required
               value={username}
               onChange={(e) => setUsername(e.target.value.toLowerCase())}
-              placeholder="e.g. admin"
+              placeholder="e.g. spoc"
             />
           </div>
           

@@ -154,7 +154,10 @@ export default function SpocsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!companyName.trim() || !spocName.trim()) {
+    const cleanCompany = companyName.trim();
+    const cleanSpoc = spocName.trim().toLowerCase();
+    
+    if (!cleanCompany || !cleanSpoc) {
       setError('Company Name and SPOC Name are required.');
       return;
     }
@@ -163,11 +166,11 @@ export default function SpocsPage() {
     setError(null);
     
     if (editingId) {
-      const { error } = await supabase.from('company_spocs').update({ company_name: companyName, spoc_name: spocName }).eq('id', editingId);
+      const { error } = await supabase.from('company_spocs').update({ company_name: cleanCompany, spoc_name: cleanSpoc }).eq('id', editingId);
       if (error) setError(error.message);
       else { handleCancel(); fetchData(); }
     } else {
-      const { error } = await supabase.from('company_spocs').insert([{ company_name: companyName, spoc_name: spocName }]);
+      const { error } = await supabase.from('company_spocs').insert([{ company_name: cleanCompany, spoc_name: cleanSpoc }]);
       if (error) setError(error.message);
       else { handleCancel(); fetchData(); }
     }
@@ -320,7 +323,7 @@ export default function SpocsPage() {
                     color: 'var(--text-primary)', transition: 'all 0.2s ease'
                   }}
                   value={spocName} 
-                  onChange={(e) => setSpocName(e.target.value)} 
+                  onChange={(e) => setSpocName(e.target.value.toLowerCase())} 
                   placeholder="Select or type SPOC name..."
                   onFocus={(e) => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)'; e.currentTarget.style.background = '#fff'; }}
                   onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.background = 'var(--bg-color)'; }}

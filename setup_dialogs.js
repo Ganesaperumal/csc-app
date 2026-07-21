@@ -1,3 +1,8 @@
+const fs = require('fs');
+const path = require('path');
+
+// 1. Create GlobalDialogs.tsx
+const dialogsContent = `
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -65,13 +70,13 @@ export default function GlobalDialogs() {
           zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}>
           <div style={{
-            background: '#ffffff', padding: '24px', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
-            maxWidth: '420px', width: '90%', border: '1px solid #e2e8f0', animation: 'scaleIn 0.2s ease-out'
+            background: 'var(--surface-color)', padding: '24px', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+            maxWidth: '420px', width: '90%', border: '1px solid var(--border-color)', animation: 'scaleIn 0.2s ease-out'
           }}>
-            <h3 style={{ margin: '0 0 16px 0', color: '#0f172a', fontSize: '18px', fontWeight: 800 }}>Confirmation Required</h3>
-            <p style={{ margin: '0 0 24px 0', color: '#475569', fontSize: '15px', lineHeight: 1.5, fontWeight: 500 }}>{confirm.message}</p>
+            <h3 style={{ margin: '0 0 16px 0', color: 'var(--text-primary)', fontSize: '18px', fontWeight: 800 }}>Confirmation Required</h3>
+            <p style={{ margin: '0 0 24px 0', color: 'var(--text-secondary)', fontSize: '15px', lineHeight: 1.5, fontWeight: 500 }}>{confirm.message}</p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button onClick={() => { confirm.resolve(false); setConfirm(null); }} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#f8fafc', color: '#334155', cursor: 'pointer', fontWeight: 600, fontSize: '14px' }}>Cancel</button>
+              <button onClick={() => { confirm.resolve(false); setConfirm(null); }} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600, fontSize: '14px' }}>Cancel</button>
               <button onClick={() => { confirm.resolve(true); setConfirm(null); }} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#4f46e5', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: '14px' }}>Confirm</button>
             </div>
           </div>
@@ -85,3 +90,23 @@ export default function GlobalDialogs() {
     document.body
   );
 }
+`;
+fs.mkdirSync('src/components', { recursive: true });
+fs.writeFileSync('src/components/GlobalDialogs.tsx', dialogsContent);
+
+// 2. Add GlobalDialogs to src/app/dashboard/layout.tsx
+const layoutPath = 'src/app/dashboard/layout.tsx';
+let layoutContent = fs.readFileSync(layoutPath, 'utf8');
+if (!layoutContent.includes('GlobalDialogs')) {
+  layoutContent = layoutContent.replace(
+    /import AIChatbot from '\.\.\/components\/AIChatbot';/,
+    "import AIChatbot from '../components/AIChatbot';\nimport GlobalDialogs from '@/components/GlobalDialogs';"
+  );
+  layoutContent = layoutContent.replace(
+    /<\/div>\s*<\/div>\s*<\/div>\s*\)\s*;\s*\}\s*$/,
+    "        <GlobalDialogs />\n      </div>\n    </div>\n  </div>\n  );\n}\n"
+  );
+  fs.writeFileSync(layoutPath, layoutContent);
+}
+
+console.log("GlobalDialogs configured");

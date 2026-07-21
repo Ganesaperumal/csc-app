@@ -8,6 +8,7 @@ import styles from './jobDetails.module.css';
 import { getUserColor } from '@/lib/colorUtils';
 import JobMap from '../../components/JobMap';
 import CustomSelect from '../../components/CustomSelect';
+import JobSearchBar from '@/components/JobSearchBar';
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
@@ -300,31 +301,34 @@ const WhatsAppStageRow = ({
 
       {/* Row 2: Preview and Action Button */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', gap: '1rem' }}>
-        <button 
+        <button
           onClick={() => setShowPreview(!showPreview)}
-          style={{ 
-            background: 'none', border: 'none', color: '#818cf8', fontSize: '0.75rem', 
-            fontWeight: 700, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '2px' 
+          style={{
+            background: 'none', border: 'none', color: '#818cf8',
+            fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: 0,
+            display: 'flex', alignItems: 'center', gap: '2px'
           }}
         >
           {showPreview ? 'Hide Message Preview ▲' : 'Show Message Preview ▼'}
         </button>
 
-        <button
-          onClick={onSend}
-          disabled={disabled}
-          style={{
-            padding: '0.4rem 0.9rem', borderRadius: '8px', border: 'none',
-            background: sentInfo ? '#3b82f6' : '#10b981', color: 'white',
-            fontSize: '0.75rem', fontWeight: 700, cursor: disabled ? 'not-allowed' : 'pointer',
-            boxShadow: sentInfo ? '0 2px 6px rgba(59,130,246,0.15)' : '0 2px 6px rgba(16,185,129,0.15)',
-            whiteSpace: 'nowrap',
-            flexShrink: 0,
-            opacity: disabled ? 0.6 : 1
-          }}
-        >
-          {sentInfo ? 'Resend Update' : 'Send Update'}
-        </button>
+        {!disabled && (
+          <button
+            onClick={onSend}
+            disabled={disabled}
+            style={{
+              padding: '0.4rem 0.9rem', borderRadius: '8px', border: 'none',
+              background: sentInfo ? '#3b82f6' : '#10b981', color: 'white',
+              fontSize: '0.75rem', fontWeight: 700, cursor: disabled ? 'not-allowed' : 'pointer',
+              boxShadow: sentInfo ? '0 2px 6px rgba(59,130,246,0.15)' : '0 2px 6px rgba(16,185,129,0.15)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              opacity: disabled ? 0.6 : 1
+            }}
+          >
+            {sentInfo ? 'Resend Update' : 'Send Update'}
+          </button>
+        )}
       </div>
 
       {showPreview && (
@@ -338,6 +342,15 @@ const WhatsAppStageRow = ({
       )}
     </div>
   );
+};
+
+
+const isFieldVisible = (isViewer: boolean, val: any) => {
+  if (!isViewer) return true;
+  if (val === null || val === undefined || val === '') return false;
+  const strVal = String(val).toUpperCase();
+  if (strVal === 'NO' || strVal === 'FALSE' || val === false || strVal === 'NULL' || strVal === 'UNDEFINED') return false;
+  return true;
 };
 
 export default function JobDetailsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -366,7 +379,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const [newShipmentLocation, setNewShipmentLocation] = useState('');
   const [agentName, setAgentName] = useState('Agent');
   const [userRole, setUserRole] = useState<string>('');
-  const isViewer = userRole === 'Viewer';
+  const isViewer = userRole === 'Viewer' || userRole === 'SPOC';
+  const isSPOC = userRole === 'SPOC';
   const [supervisors, setSupervisors] = useState<string[]>([]);
   const [viewingAgents, setViewingAgents] = useState<string[]>([]);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
@@ -374,6 +388,10 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState('');
+  
+  // POD State
+  const [uploadingPod, setUploadingPod] = useState(false);
+  const [podUploadProgress, setPodUploadProgress] = useState<number | null>(null);
 
   const handleGenerateAISummary = async () => {
     if (!job) return;
@@ -539,6 +557,94 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
     fetchSupervisors();
     fetchWhatsAppLogs();
   }, [decodedId]);
+
+  const handlePodUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    setUploadingPod(true);
+    setPodUploadProgress(0);
+    
+    // Auto-rename to standard format based on job ID
+    // Examples: JB/1234/26/DEL -> POD-26-1234.pdf, JB/1/25/DEL -> POD-25-1.pdf, 10536 -> POD-26-10536.pdf
+    let finalName = file.name;
+    const parts = decodedId.split('/').filter(Boolean);
+    const nums = parts.filter(p => /^\d+$/.test(p));
+    
+    if (nums.length >= 2) {
+      // Typically format is JB / {jobNumber} / {year} / DEL
+      const seqNum = nums[0];
+      const yearNum = nums[1].padStart(2, '0');
+      finalName = `POD-${yearNum}-${seqNum}.pdf`;
+    } else if (nums.length === 1) {
+      const currentYearTwoDigits = new Date().getFullYear().toString().slice(-2);
+      finalName = `POD-${currentYearTwoDigits}-${nums[0]}.pdf`;
+    } else {
+      const currentYearTwoDigits = new Date().getFullYear().toString().slice(-2);
+      const cleanId = decodedId.replace(/[^0-9]/g, '') || '1';
+      finalName = `POD-${currentYearTwoDigits}-${cleanId}.pdf`;
+    }
+
+    try {
+      const res = await fetch('/api/pod/presign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: finalName, contentType: file.type })
+      });
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.error);
+
+      // Upload to R2 with progress tracking
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            setPodUploadProgress(Math.round((event.loaded / event.total) * 100));
+          }
+        };
+        
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(xhr.response);
+          } else {
+            reject(new Error(`Cloudflare R2 Upload failed with status ${xhr.status}`));
+          }
+        };
+        
+        xhr.onerror = () => reject(new Error('Network error during upload'));
+        
+        xhr.open('PUT', data.presignedUrl, true);
+        xhr.setRequestHeader('Content-Type', file.type);
+        xhr.send(file);
+      });
+
+      // DB insert/update via API route (bypasses RLS)
+      const saveRes = await fetch('/api/pod/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_number: decodedId,
+          filename: data.finalFilename,
+          r2_url: data.publicUrl,
+          file_size_bytes: file.size,
+        })
+      });
+      const saveData = await saveRes.json();
+      if (!saveRes.ok) throw new Error(saveData.error);
+
+      showToast('POD uploaded successfully!', 'success');
+      fetchJobDetails();
+    } catch (err: any) {
+      console.error('POD Upload Exception:', err);
+      showToast(err.message || 'Error uploading POD', 'error');
+      alert('Upload failed: ' + (err.message || 'Check console for details'));
+    } finally {
+      setUploadingPod(false);
+      setPodUploadProgress(null);
+      e.target.value = '';
+    }
+  };
 
   const fetchSupervisors = async () => {
     try {
@@ -797,6 +903,10 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const currentCoordinator = job.csc_coordinator || job.last_comm_by || (latestCustomerComm ? latestCustomerComm.agent_name : '');
 
   const handleBack = () => {
+    if (userRole === 'SPOC') {
+      router.push('/spoc-portal');
+      return;
+    }
     if (typeof window !== 'undefined') {
       const lastPage = sessionStorage.getItem('csc_last_jobs_page');
       if (lastPage) {
@@ -838,27 +948,31 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
       </datalist>
       <div className={styles.header}>
         <div className={styles.headerTitle}>
-          <button 
-            onClick={handleBack} 
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '0.4rem', 
-              padding: '0.5rem 1.25rem', borderRadius: '99px', border: 'none', 
-              background: 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)', 
-              color: '#4f46e5', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', 
-              transition: 'all 0.2s ease', boxShadow: '0 2px 8px rgba(79, 70, 229, 0.15)',
-            }}
-            onMouseOver={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #4f46e5 0%, #d946ef 100%)'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)'; }}
-            onMouseOut={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)'; e.currentTarget.style.color = '#4f46e5'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.15)'; }}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-            Back
-          </button>
+          {userRole === 'SPOC' ? (
+            <JobSearchBar />
+          ) : (
+            <button 
+              onClick={handleBack} 
+              style={{ 
+                display: 'flex', alignItems: 'center', gap: '0.4rem', 
+                padding: '0.5rem 1.25rem', borderRadius: '99px', border: 'none', 
+                background: 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)', 
+                color: '#4f46e5', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', 
+                transition: 'all 0.2s ease', boxShadow: '0 2px 8px rgba(79, 70, 229, 0.15)',
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #4f46e5 0%, #d946ef 100%)'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)'; }}
+              onMouseOut={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)'; e.currentTarget.style.color = '#4f46e5'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.15)'; }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+              Back
+            </button>
+          )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <h1 style={{ display: 'flex', gap: '2rem', alignItems: 'baseline', margin: 0 }}>
-              {job.job_date && <span style={{ color: '#ec4899' }}>{formatDate(job.job_date)}</span>}
-              <span style={{ color: '#10b981' }}>{job.job_number}</span>
-              {job.enq_number && <span style={{ color: '#3b82f6' }}>{job.enq_number}</span>}
-              {job.customer_name && <span style={{ color: '#8b5cf6', fontSize: '1.6rem', fontWeight: 600 }}>{job.customer_name}</span>}
+            <h1 style={{ display: 'flex', gap: '1.5rem', alignItems: 'baseline', margin: 0, fontSize: '1.25rem' }}>
+              {job.job_date && <span style={{ color: '#ec4899', fontSize: '1.2rem' }}>{formatDate(job.job_date)}</span>}
+              <span style={{ color: '#10b981', fontSize: '1.35rem' }}>{job.job_number}</span>
+              {job.enq_number && <span style={{ color: '#3b82f6', fontSize: '1.2rem' }}>{job.enq_number}</span>}
+              {job.customer_name && <span style={{ color: '#8b5cf6', fontSize: '1.45rem', fontWeight: 600 }}>{job.customer_name}</span>}
             </h1>
             <button 
               onClick={handleGenerateAISummary}
@@ -874,35 +988,54 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
             </button>
           </div>
         </div>
-        
-
         <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          {/* Live Viewing Agents */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginRight: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Viewing:</span>
-            {viewingAgents.map((agent, i) => (
-              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(99, 102, 241, 0.12)', color: '#4f46e5', border: '1px solid rgba(99, 102, 241, 0.2)', padding: '0.2rem 0.5rem', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 600 }}>
-                <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
-                {agent} {agent === agentName ? '(You)' : ''}
-              </span>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', borderLeft: '1px solid rgba(148, 163, 184, 0.3)', paddingLeft: '1rem' }}>
-            {isViewer ? (
-              <span style={{ color: '#ef4444', fontWeight: 600, fontSize: '0.8rem' }}>🔒 View Only</span>
-            ) : saving ? (
-              <>
-                <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
-                Saving...
-              </>
-            ) : (
-              <>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                Saved
-              </>
-            )}
-          </div>
+          {!isViewer && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', paddingLeft: '1rem' }}>
+              {saving ? (
+                <>
+                  <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  Saved
+                </>
+              )}
+            </div>
+          )}
+          {userRole === 'SPOC' && (
+            <button 
+              onClick={async () => {
+                await supabase.auth.signOut();
+                window.location.href = '/login';
+              }}
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--border-color)',
+                color: 'var(--text-secondary)',
+                padding: '0.4rem 0.8rem',
+                borderRadius: '6px',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                marginLeft: '0.5rem'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                e.currentTarget.style.color = '#dc2626';
+                e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = 'var(--text-secondary)';
+                e.currentTarget.style.borderColor = 'var(--border-color)';
+              }}
+            >
+              Sign Out
+            </button>
+          )}
         </div>
       </div>
 
@@ -947,12 +1080,24 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <span className={styles.textPrimary}>Customer Details</span>
             </h3>
             <div className={styles.grid}>
-              <div className={styles.inputGroup}><label>👤 NAME</label><input disabled={isViewer} name="customer_name" value={job.customer_name || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>🏢 COMPANY</label><input disabled={isViewer} name="company" value={job.company || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>📞 CONTACT</label><input disabled={isViewer} name="customer_phone" value={job.customer_phone || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>📦 TYPE OF GOODS</label><input disabled={isViewer} name="goods_type" value={job.goods_type || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>🛫 ORIGIN</label><input disabled={isViewer} name="origin" value={job.origin || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>🛬 DESTINATION</label><input disabled={isViewer} name="destination" value={job.destination || ''} onChange={handleChange} /></div>
+                              {isFieldVisible(isViewer, job.customer_name || '') && (
+                                <div className={styles.inputGroup}><label>👤 NAME</label><input disabled={isViewer} name="customer_name" value={job.customer_name || ''} onChange={handleChange} /></div>
+                              )}
+                              {isFieldVisible(isViewer, job.company || '') && (
+                                <div className={styles.inputGroup}><label>🏢 COMPANY</label><input disabled={isViewer} name="company" value={job.company || ''} onChange={handleChange} /></div>
+                              )}
+                              {isFieldVisible(isViewer, job.customer_phone || '') && (
+                                <div className={styles.inputGroup}><label>📞 CONTACT</label><input disabled={isViewer} name="customer_phone" value={job.customer_phone || ''} onChange={handleChange} /></div>
+                              )}
+                              {isFieldVisible(isViewer, job.goods_type || '') && (
+                                <div className={styles.inputGroup}><label>📦 TYPE OF GOODS</label><input disabled={isViewer} name="goods_type" value={job.goods_type || ''} onChange={handleChange} /></div>
+                              )}
+                              {isFieldVisible(isViewer, job.origin || '') && (
+                                <div className={styles.inputGroup}><label>🛫 ORIGIN</label><input disabled={isViewer} name="origin" value={job.origin || ''} onChange={handleChange} /></div>
+                              )}
+                              {isFieldVisible(isViewer, job.destination || '') && (
+                                <div className={styles.inputGroup}><label>🛬 DESTINATION</label><input disabled={isViewer} name="destination" value={job.destination || ''} onChange={handleChange} /></div>
+                              )}
               {/* ERP-synced invoice fields — read-only, shown only when erp_status is Billed */}
               {job.erp_status?.toLowerCase() === 'billed' && (
                 <>
@@ -966,7 +1111,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   </div>
                 </>
               )}
-              <div className={styles.inputGroup}><label>🎯 SPOC</label><input disabled={isViewer} name="spoc_name" value={job.spoc_name || ''} onChange={handleChange} /></div>
+                              {isFieldVisible(isViewer, job.spoc_name || '') && (
+                                <div className={styles.inputGroup}><label>🎯 SPOC</label><input disabled={isViewer} name="spoc_name" value={job.spoc_name || ''} onChange={handleChange} /></div>
+                              )}
             </div>
           </div>
 
@@ -979,43 +1126,47 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <span style={{ background: 'linear-gradient(90deg, #a78bfa, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontWeight: 600 }}>Operation Site Details</span>
             </h3>
             <div className={styles.grid}>
-              <div className={styles.inputGroup}>
-                <label>🤝 OPERATION BY</label>
-                <div style={{ display: 'flex', gap: '1.5rem', flexGrow: 1, alignItems: 'center' }}>
-                  <label style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', textTransform: 'none', fontSize: '0.9rem', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 400 }}>
-                    <input disabled={isViewer} type="radio" name="operation_by" value="TI" checked={job.operation_by === 'TI'} onChange={handleChange} style={{ width: '16px', height: '16px', margin: 0, cursor: 'pointer', accentColor: '#4f46e5' }} /> 
-                    TI
-                  </label>
-                  <label style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', textTransform: 'none', fontSize: '0.9rem', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 400 }}>
-                    <input disabled={isViewer} type="radio" name="operation_by" value="Outsourced" checked={job.operation_by === 'Outsourced'} onChange={handleChange} style={{ width: '16px', height: '16px', margin: 0, cursor: 'pointer', accentColor: '#4f46e5' }} /> 
-                    Outsourced
-                  </label>
+              {isFieldVisible(isViewer, job.operation_by) && (
+                <div className={styles.inputGroup}>
+                  <label>🤝 OPERATION BY</label>
+                  <div style={{ display: 'flex', gap: '1.5rem', flexGrow: 1, alignItems: 'center' }}>
+                    <label style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', textTransform: 'none', fontSize: '0.9rem', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 400 }}>
+                      <input disabled={isViewer} type="radio" name="operation_by" value="TI" checked={job.operation_by === 'TI'} onChange={handleChange} style={{ width: '16px', height: '16px', margin: 0, cursor: 'pointer', accentColor: '#4f46e5' }} /> 
+                      TI
+                    </label>
+                    <label style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', textTransform: 'none', fontSize: '0.9rem', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 400 }}>
+                      <input disabled={isViewer} type="radio" name="operation_by" value="Outsourced" checked={job.operation_by === 'Outsourced'} onChange={handleChange} style={{ width: '16px', height: '16px', margin: 0, cursor: 'pointer', accentColor: '#4f46e5' }} /> 
+                      Outsourced
+                    </label>
+                  </div>
                 </div>
-              </div>
-              <div className={styles.inputGroup}>
-                <label style={job.operation_by !== 'Outsourced' ? { opacity: 0.6 } : undefined}>🤝 OUTSOURCING PARTNER</label>
-                <input 
-                  name="outsourcing_partner" 
-                  value={job.operation_by === 'Outsourced' ? (job.outsourcing_partner || '') : ''} 
-                  onChange={handleChange} 
-                  disabled={job.operation_by !== 'Outsourced'} 
-                  placeholder={job.operation_by === 'Outsourced' ? "Partner name" : "N/A"} 
-                  style={job.operation_by !== 'Outsourced' ? { opacity: 0.6, cursor: 'not-allowed', background: 'var(--surface-color)' } : undefined}
-                />
-              </div>
-              <div className={styles.inputGroup}>
-                <label>🚗 CAR INCLUDED?</label>
-                <ToggleSwitch disabled={isViewer} name="car_included" value={job.car_included === true} onChange={(val) => handleFieldChange('car_included', val)} />
-              </div>
-              <div className={styles.inputGroup}>
-                <label>🏋️‍♂️ HEAVY ITEMS</label>
-                <ToggleSwitch disabled={isViewer} name="heavy_items" value={job.heavy_items === true || job.heavy_items === 'Yes'} onChange={(val) => handleFieldChange('heavy_items', val)} />
-              </div>
-              <div className={styles.inputGroup}>
-                <label>🛡️ INSURANCE</label>
-                <ToggleSwitch disabled={isViewer} name="insurance" value={job.insurance === true || job.insurance === 'Yes'} onChange={(val) => handleFieldChange('insurance', val)} />
-              </div>
-              {(job.insurance === true || job.insurance === 'Yes') && (
+              )}
+              {isFieldVisible(isViewer, job.operation_by === 'Outsourced' ? job.outsourcing_partner : '') && (
+                <div className={styles.inputGroup}>
+                  <label style={job.operation_by !== 'Outsourced' ? { opacity: 0.6 } : undefined}>🤝 OUTSOURCING PARTNER</label>
+                  <input 
+                    name="outsourcing_partner" 
+                    value={job.operation_by === 'Outsourced' ? (job.outsourcing_partner || '') : ''} 
+                    onChange={handleChange} 
+                    disabled={job.operation_by !== 'Outsourced'} 
+                    placeholder={job.operation_by === 'Outsourced' ? "Partner name" : "N/A"} 
+                    style={job.operation_by !== 'Outsourced' ? { opacity: 0.6, cursor: 'not-allowed', background: 'var(--surface-color)' } : undefined}
+                  />
+                </div>
+              )}
+              {isFieldVisible(isViewer, job.car_included) && (
+                <div className={styles.inputGroup}>
+                  <label>🚗 CAR INCLUDED?</label>
+                  <ToggleSwitch disabled={isViewer} name="car_included" value={job.car_included === true} onChange={(val) => handleFieldChange('car_included', val)} />
+                </div>
+              )}
+              {isFieldVisible(isViewer, job.heavy_items) && (
+                <div className={styles.inputGroup}>
+                  <label>🏋️‍♂️ HEAVY ITEMS</label>
+                  <ToggleSwitch disabled={isViewer} name="heavy_items" value={job.heavy_items === true || job.heavy_items === 'Yes'} onChange={(val) => handleFieldChange('heavy_items', val)} />
+                </div>
+              )}
+              {isFieldVisible(isViewer, job.insurance_value) && (
                 <div className={styles.inputGroup}>
                   <label>💰 INSURANCE VALUE</label>
                   <input 
@@ -1030,31 +1181,47 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               )}
 
               {/* Subheadings for site details */}
-              <div style={{ gridColumn: '1', fontWeight: 'bold', fontSize: '0.9rem', color: '#8b5cf6', textTransform: 'uppercase', borderBottom: '1px solid rgba(139, 92, 246, 0.2)', paddingBottom: '0.3rem', marginTop: '0.6rem', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                🛫 ORIGIN SITE:
-              </div>
-              <div style={{ gridColumn: '2', fontWeight: 'bold', fontSize: '0.9rem', color: '#ec4899', textTransform: 'uppercase', borderBottom: '1px solid rgba(236, 72, 153, 0.2)', paddingBottom: '0.3rem', marginTop: '0.6rem', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                🛬 DESTINATION SITE:
-              </div>
+              {(isFieldVisible(isViewer, job.origin_floor) || isFieldVisible(isViewer, job.origin_service_lift) || isFieldVisible(isViewer, job.origin_parking)) && (
+                <div style={{ gridColumn: '1', fontWeight: 'bold', fontSize: '0.9rem', color: '#8b5cf6', textTransform: 'uppercase', borderBottom: '1px solid rgba(139, 92, 246, 0.2)', paddingBottom: '0.3rem', marginTop: '0.6rem', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  🛫 ORIGIN SITE:
+                </div>
+              )}
+              {(isFieldVisible(isViewer, job.dest_floor) || isFieldVisible(isViewer, job.dest_service_lift) || isFieldVisible(isViewer, job.dest_parking)) && (
+                <div style={{ gridColumn: '2', fontWeight: 'bold', fontSize: '0.9rem', color: '#ec4899', textTransform: 'uppercase', borderBottom: '1px solid rgba(236, 72, 153, 0.2)', paddingBottom: '0.3rem', marginTop: '0.6rem', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  🛬 DESTINATION SITE:
+                </div>
+              )}
 
-              <div className={styles.inputGroup}><label>🏢 FLOOR</label><input disabled={isViewer} type="number" name="origin_floor" value={job.origin_floor || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>🏢 FLOOR</label><input disabled={isViewer} type="number" name="dest_floor" value={job.dest_floor || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}>
-                <label>🛗 SERVICE LIFT</label>
-                <ToggleSwitch disabled={isViewer} name="origin_service_lift" value={job.origin_service_lift === true || job.origin_service_lift === 'Yes'} onChange={(val) => handleFieldChange('origin_service_lift', val)} />
-              </div>
-              <div className={styles.inputGroup}>
-                <label>🛗 SERVICE LIFT</label>
-                <ToggleSwitch disabled={isViewer} name="dest_service_lift" value={job.dest_service_lift === true || job.dest_service_lift === 'Yes'} onChange={(val) => handleFieldChange('dest_service_lift', val)} />
-              </div>
-              <div className={styles.inputGroup}>
-                <label>🅿️ PARKING</label>
-                <ToggleSwitch disabled={isViewer} name="origin_parking" value={job.origin_parking === true || job.origin_parking === 'Yes'} onChange={(val) => handleFieldChange('origin_parking', val)} />
-              </div>
-              <div className={styles.inputGroup}>
-                <label>🅿️ PARKING</label>
-                <ToggleSwitch disabled={isViewer} name="dest_parking" value={job.dest_parking === true || job.dest_parking === 'Yes'} onChange={(val) => handleFieldChange('dest_parking', val)} />
-              </div>
+              {isFieldVisible(isViewer, job.origin_floor) && (
+                <div className={styles.inputGroup}><label>🏢 FLOOR</label><input disabled={isViewer} type="number" name="origin_floor" value={job.origin_floor || ''} onChange={handleChange} /></div>
+              )}
+              {isFieldVisible(isViewer, job.dest_floor) && (
+                <div className={styles.inputGroup}><label>🏢 FLOOR</label><input disabled={isViewer} type="number" name="dest_floor" value={job.dest_floor || ''} onChange={handleChange} /></div>
+              )}
+              {isFieldVisible(isViewer, job.origin_service_lift) && (
+                <div className={styles.inputGroup}>
+                  <label>🛗 SERVICE LIFT</label>
+                  <ToggleSwitch disabled={isViewer} name="origin_service_lift" value={job.origin_service_lift === true || job.origin_service_lift === 'Yes'} onChange={(val) => handleFieldChange('origin_service_lift', val)} />
+                </div>
+              )}
+              {isFieldVisible(isViewer, job.dest_service_lift) && (
+                <div className={styles.inputGroup}>
+                  <label>🛗 SERVICE LIFT</label>
+                  <ToggleSwitch disabled={isViewer} name="dest_service_lift" value={job.dest_service_lift === true || job.dest_service_lift === 'Yes'} onChange={(val) => handleFieldChange('dest_service_lift', val)} />
+                </div>
+              )}
+              {isFieldVisible(isViewer, job.origin_parking) && (
+                <div className={styles.inputGroup}>
+                  <label>🅿️ PARKING</label>
+                  <ToggleSwitch disabled={isViewer} name="origin_parking" value={job.origin_parking === true || job.origin_parking === 'Yes'} onChange={(val) => handleFieldChange('origin_parking', val)} />
+                </div>
+              )}
+              {isFieldVisible(isViewer, job.dest_parking) && (
+                <div className={styles.inputGroup}>
+                  <label>🅿️ PARKING</label>
+                  <ToggleSwitch disabled={isViewer} name="dest_parking" value={job.dest_parking === true || job.dest_parking === 'Yes'} onChange={(val) => handleFieldChange('dest_parking', val)} />
+                </div>
+              )}
             </div>
           </div>
 
@@ -1067,24 +1234,28 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <span className={styles.textTracking}>Tracking Details</span>
             </h3>
             <div className={styles.grid}>
-              <div className={styles.inputGroup}>
-                <label>👤 CSC Coordinator</label>
-                <CustomSelect disabled={isViewer}
-                  placeholder="- Select CSC Coordinator-"
-                  value={currentCoordinator}
-                  onChange={(val) => handleFieldChange('csc_coordinator', val)}
-                  options={[
-                    { value: '', label: '- Select CSC Coordinator-' },
-                    { value: 'Shruti', label: 'Shruti' },
-                    { value: 'Rabecca', label: 'Rabecca' },
-                    { value: 'Chandrama', label: 'Chandrama' }
-                  ]}
-                />
-              </div>
-              <div className={styles.inputGroup}>
-                <label>📅 FOLLOW-UP DATE</label>
-                <DateInput disabled={isViewer} name="follow_up_date" value={job.follow_up_date || ''} onChange={handleChange} />
-              </div>
+              {(!isSPOC || currentCoordinator) && (
+                <div className={styles.inputGroup}>
+                  <label>👤 CSC Coordinator</label>
+                  <CustomSelect disabled={isViewer}
+                    placeholder="- Select CSC Coordinator-"
+                    value={currentCoordinator}
+                    onChange={(val) => handleFieldChange('csc_coordinator', val)}
+                    options={[
+                      { value: '', label: '- Select CSC Coordinator-' },
+                      { value: 'Shruti', label: 'Shruti' },
+                      { value: 'Rabecca', label: 'Rabecca' },
+                      { value: 'Chandrama', label: 'Chandrama' }
+                    ]}
+                  />
+                </div>
+              )}
+              {(!isSPOC || job.follow_up_date) && (
+                <div className={styles.inputGroup}>
+                  <label>📅 FOLLOW-UP DATE</label>
+                  <DateInput disabled={isViewer} name="follow_up_date" value={job.follow_up_date || ''} onChange={handleChange} />
+                </div>
+              )}
 
               <div className={styles.inputGroup}>
                 <label>🔗 Tracking Link</label>
@@ -1122,15 +1293,19 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   {copied ? '✓ Copied!' : '🔗 Copy Tracking Link'}
                 </button>
               </div>
-              <div className={styles.inputGroup}>
-                <label>🕒 LAST COMM DATE</label>
-                <input value={lastCommDate ? formatDate(lastCommDate) : 'N/A'} disabled />
-              </div>
+              {(!isSPOC || lastCommDate) && (
+                <div className={styles.inputGroup}>
+                  <label>🕒 LAST COMM DATE</label>
+                  <input value={lastCommDate ? formatDate(lastCommDate) : 'N/A'} disabled />
+                </div>
+              )}
 
-              <div className={styles.inputGroupFullWidth} style={{ gridColumn: 'span 2' }}>
-                <label>💬 LAST COMMUNICATION DETAILS WITH CUSTOMERS</label>
-                <textarea value={latestCustomerComm ? latestCustomerComm.summary : 'N/A'} disabled rows={3} style={{ opacity: 0.8 }} />
-              </div>
+              {(!isSPOC || latestCustomerComm) && (
+                <div className={styles.inputGroupFullWidth} style={{ gridColumn: 'span 2' }}>
+                  <label>💬 LAST COMMUNICATION DETAILS WITH CUSTOMERS</label>
+                  <textarea value={latestCustomerComm ? latestCustomerComm.summary : 'N/A'} disabled rows={3} style={{ opacity: 0.8 }} />
+                </div>
+              )}
             </div>
           </div>
 
@@ -1149,9 +1324,15 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   <CarStatusSlider name="car_track_status" options={CAR_TRACK_OPTIONS} value={job.car_track_status} onChange={handleChange} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className={styles.inputGroup}><label>🏎️ CAR PICKUP DATE</label><DateInput disabled={isViewer} name="car_pickup_date" value={job.car_pickup_date || ''} onChange={handleChange} /></div>
-                  <div className={styles.inputGroup}><label>🏁 CAR DELIVERY</label><DateInput disabled={isViewer} name="car_delivery_date" value={job.car_delivery_date || ''} onChange={handleChange} /></div>
-                  <div className={styles.inputGroup}><label>🚛 CAR TRANSPORTER</label><input disabled={isViewer} type="text" name="car_transporter" value={job.car_transporter || ''} onChange={handleChange} placeholder="Transporter name" /></div>
+                                      {isFieldVisible(isViewer, job.car_pickup_date || '') && (
+                                        <div className={styles.inputGroup}><label>🏎️ CAR PICKUP DATE</label><DateInput disabled={isViewer} name="car_pickup_date" value={job.car_pickup_date || ''} onChange={handleChange} /></div>
+                                      )}
+                                      {isFieldVisible(isViewer, job.car_delivery_date || '') && (
+                                        <div className={styles.inputGroup}><label>🏁 CAR DELIVERY</label><DateInput disabled={isViewer} name="car_delivery_date" value={job.car_delivery_date || ''} onChange={handleChange} /></div>
+                                      )}
+                                      {isFieldVisible(isViewer, job.car_transporter || '') && (
+                                        <div className={styles.inputGroup}><label>🚛 CAR TRANSPORTER</label><input disabled={isViewer} type="text" name="car_transporter" value={job.car_transporter || ''} onChange={handleChange} placeholder="Transporter name" /></div>
+                                      )}
                 </div>
               </div>
             </div>
@@ -1166,13 +1347,27 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <span className={styles.textCOM}>Origin Service</span>
             </h3>
             <div className={styles.grid}>
-              <div className={styles.inputGroup}><label>📆 PACKING DATE</label><DateInput disabled={isViewer} name="packing_date" value={job.packing_date || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>👔 SUPERVISOR</label><input disabled={isViewer} name="packing_team_supervisor" value={job.packing_team_supervisor || ''} onChange={handleChange} list="supervisors-list" /></div>
-              <div className={styles.inputGroup}><label>👷‍♂️ HANDYMAN</label><input disabled={isViewer} name="handyman_origin" value={job.handyman_origin || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>📝 REMARKS ON HANDYMAN</label><input disabled={isViewer} name="handyman_origin_remarks" value={job.handyman_origin_remarks || ''} onChange={handleChange} placeholder="Remarks on handyman" /></div>
-              <div className={styles.inputGroup}><label>⌚ COMMITTED TIME</label><input disabled={isViewer} type="time" name="committed_time" value={job.committed_time || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>⏱️ REPORTED TIME</label><input disabled={isViewer} type="time" name="reported_time" value={job.reported_time || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>📝 INSTRUCTIONS</label><textarea disabled={isViewer} name="origin_instructions" value={job.origin_instructions || ''} onChange={handleChange} /></div>
+                              {isFieldVisible(isViewer, job.packing_date || '') && (
+                                <div className={styles.inputGroup}><label>📆 PACKING DATE</label><DateInput disabled={isViewer} name="packing_date" value={job.packing_date || ''} onChange={handleChange} /></div>
+                              )}
+                              {isFieldVisible(isViewer, job.packing_team_supervisor || '') && (
+                                <div className={styles.inputGroup}><label>👔 SUPERVISOR</label><input disabled={isViewer} name="packing_team_supervisor" value={job.packing_team_supervisor || ''} onChange={handleChange} list="supervisors-list" /></div>
+                              )}
+                              {isFieldVisible(isViewer, job.handyman_origin || '') && (
+                                <div className={styles.inputGroup}><label>👷‍♂️ HANDYMAN</label><input disabled={isViewer} name="handyman_origin" value={job.handyman_origin || ''} onChange={handleChange} /></div>
+                              )}
+                              {isFieldVisible(isViewer, job.handyman_origin_remarks || '') && (
+                                <div className={styles.inputGroup}><label>📝 REMARKS ON HANDYMAN</label><input disabled={isViewer} name="handyman_origin_remarks" value={job.handyman_origin_remarks || ''} onChange={handleChange} placeholder="Remarks on handyman" /></div>
+                              )}
+                              {isFieldVisible(isViewer, job.committed_time || '') && (
+                                <div className={styles.inputGroup}><label>⌚ COMMITTED TIME</label><input disabled={isViewer} type="time" name="committed_time" value={job.committed_time || ''} onChange={handleChange} /></div>
+                              )}
+                              {isFieldVisible(isViewer, job.reported_time || '') && (
+                                <div className={styles.inputGroup}><label>⏱️ REPORTED TIME</label><input disabled={isViewer} type="time" name="reported_time" value={job.reported_time || ''} onChange={handleChange} /></div>
+                              )}
+                              {isFieldVisible(isViewer, job.origin_instructions || '') && (
+                                <div className={styles.inputGroup}><label>📝 INSTRUCTIONS</label><textarea disabled={isViewer} name="origin_instructions" value={job.origin_instructions || ''} onChange={handleChange} /></div>
+                              )}
             </div>
           </div>
 
@@ -1185,26 +1380,50 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <span className={styles.textLogistics}>Cargo Service</span>
             </h3>
             <div className={styles.grid}>
-              <div className={styles.inputGroup}><label>🚀 DISPATCH DATE</label><DateInput disabled={isViewer} name="dispatch_date" value={job.dispatch_date || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>⏳ TRANSIT DAYS</label><input disabled={isViewer} type="number" name="transit_days" value={job.transit_days || ''} onChange={handleChange} /></div>
+                              {isFieldVisible(isViewer, job.dispatch_date || '') && (
+                                <div className={styles.inputGroup}><label>🚀 DISPATCH DATE</label><DateInput disabled={isViewer} name="dispatch_date" value={job.dispatch_date || ''} onChange={handleChange} /></div>
+                              )}
+                              {isFieldVisible(isViewer, job.transit_days || '') && (
+                                <div className={styles.inputGroup}><label>⏳ TRANSIT DAYS</label><input disabled={isViewer} type="number" name="transit_days" value={job.transit_days || ''} onChange={handleChange} /></div>
+                              )}
 
-              <div className={styles.inputGroup}><label>🚗 VEHICLE TYPE</label><input disabled={isViewer} type="text" name="vehicle_type" value={job.vehicle_type || ''} onChange={handleChange} placeholder="e.g. 20ft, 40ft, Trailer" /></div>
-              <div className={styles.inputGroup}><label>🚚 SHIPMENT TYPE</label><input disabled={isViewer} type="text" name="shipment_type" value={job.shipment_type || ''} onChange={handleChange} /></div>
+                              {isFieldVisible(isViewer, job.vehicle_type || '') && (
+                                <div className={styles.inputGroup}><label>🚗 VEHICLE TYPE</label><input disabled={isViewer} type="text" name="vehicle_type" value={job.vehicle_type || ''} onChange={handleChange} placeholder="e.g. 20ft, 40ft, Trailer" /></div>
+                              )}
+                              {isFieldVisible(isViewer, job.shipment_type || '') && (
+                                <div className={styles.inputGroup}><label>🚚 SHIPMENT TYPE</label><input disabled={isViewer} type="text" name="shipment_type" value={job.shipment_type || ''} onChange={handleChange} /></div>
+                              )}
 
-              <div className={styles.inputGroup}><label>🚛 TRUCK NUMBER</label><input disabled={isViewer} type="text" name="truck_number" value={job.truck_number || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>👨‍✈️ DRIVER DETAILS</label><input disabled={isViewer} type="text" name="driver_details" value={job.driver_details || ''} onChange={handleChange} placeholder="e.g. Ram - 9876543210" /></div>
+                              {isFieldVisible(isViewer, job.truck_number || '') && (
+                                <div className={styles.inputGroup}><label>🚛 TRUCK NUMBER</label><input disabled={isViewer} type="text" name="truck_number" value={job.truck_number || ''} onChange={handleChange} /></div>
+                              )}
+                              {isFieldVisible(isViewer, job.driver_details || '') && (
+                                <div className={styles.inputGroup}><label>👨‍✈️ DRIVER DETAILS</label><input disabled={isViewer} type="text" name="driver_details" value={job.driver_details || ''} onChange={handleChange} placeholder="e.g. Ram - 9876543210" /></div>
+                              )}
 
-              <div className={styles.inputGroup}><label>🎯 EXPECTED REACHING DATE</label><DateInput disabled={isViewer} name="expected_to_reach_dest" value={job.expected_to_reach_dest || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>🏁 ACTUAL REACHED DATE</label><DateInput disabled={isViewer} name="reached_destination" value={job.reached_destination || ''} onChange={handleChange} /></div>
+                              {isFieldVisible(isViewer, job.expected_to_reach_dest || '') && (
+                                <div className={styles.inputGroup}><label>🎯 EXPECTED REACHING DATE</label><DateInput disabled={isViewer} name="expected_to_reach_dest" value={job.expected_to_reach_dest || ''} onChange={handleChange} /></div>
+                              )}
+                              {isFieldVisible(isViewer, job.reached_destination || '') && (
+                                <div className={styles.inputGroup}><label>🏁 ACTUAL REACHED DATE</label><DateInput disabled={isViewer} name="reached_destination" value={job.reached_destination || ''} onChange={handleChange} /></div>
+                              )}
 
-              <div className={styles.inputGroup}>
-                <label>⚠️ DEVIATION</label>
-                <ToggleSwitch disabled={isViewer} name="deviation" value={job.deviation === true} onChange={(val) => handleFieldChange('deviation', val)} />
-              </div>
-              <div className={styles.inputGroup}><label>✍️ REASON</label><input disabled={isViewer} name="deviation_reason" value={job.deviation_reason || ''} onChange={handleChange} /></div>
+              {(!isSPOC || job.deviation === true) && (
+                <div className={styles.inputGroup}>
+                  <label>⚠️ DEVIATION</label>
+                  <ToggleSwitch disabled={isViewer} name="deviation" value={job.deviation === true} onChange={(val) => handleFieldChange('deviation', val)} />
+                </div>
+              )}
+                              {isFieldVisible(isViewer, job.deviation_reason || '') && (
+                                <div className={styles.inputGroup}><label>✍️ REASON</label><input disabled={isViewer} name="deviation_reason" value={job.deviation_reason || ''} onChange={handleChange} /></div>
+                              )}
 
-              <div className={styles.inputGroup}><label>🔔 PRE-ALERT</label><input disabled={isViewer} type="text" name="pre_alert_status" value={job.pre_alert_status || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>💬 REMARKS</label><input disabled={isViewer} type="text" name="remarks" value={job.remarks || ''} onChange={handleChange} placeholder="Remarks" /></div>
+                              {isFieldVisible(isViewer, job.pre_alert_status || '') && (
+                                <div className={styles.inputGroup}><label>🔔 PRE-ALERT</label><input disabled={isViewer} type="text" name="pre_alert_status" value={job.pre_alert_status || ''} onChange={handleChange} /></div>
+                              )}
+                              {isFieldVisible(isViewer, job.remarks || '') && (
+                                <div className={styles.inputGroup}><label>💬 REMARKS</label><input disabled={isViewer} type="text" name="remarks" value={job.remarks || ''} onChange={handleChange} placeholder="Remarks" /></div>
+                              )}
             </div>
 
 
@@ -1219,27 +1438,41 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <span style={{ background: '-webkit-linear-gradient(45deg, #10b981, #0ea5e9)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 600 }}>Destination Service</span>
             </h3>
             <div className={styles.grid}>
-              <div className={styles.inputGroup}><label>📅 PLANNED DELIVERY DATE</label><DateInput disabled={isViewer} name="planned_delivery" value={job.planned_delivery || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>✅ ACTUAL DELIVERY DATE</label><DateInput disabled={isViewer} name="actual_delivery" value={job.actual_delivery || ''} onChange={handleChange} /></div>
+                              {isFieldVisible(isViewer, job.planned_delivery || '') && (
+                                <div className={styles.inputGroup}><label>📅 PLANNED DELIVERY DATE</label><DateInput disabled={isViewer} name="planned_delivery" value={job.planned_delivery || ''} onChange={handleChange} /></div>
+                              )}
+                              {isFieldVisible(isViewer, job.actual_delivery || '') && (
+                                <div className={styles.inputGroup}><label>✅ ACTUAL DELIVERY DATE</label><DateInput disabled={isViewer} name="actual_delivery" value={job.actual_delivery || ''} onChange={handleChange} /></div>
+                              )}
               
-              <div className={styles.inputGroup}><label>👔 SUPERVISOR</label><input disabled={isViewer} name="dest_supervisor" value={job.dest_supervisor || ''} onChange={handleChange} list="supervisors-list" /></div>
-              <div className={styles.inputGroup}><label>👷‍♂️ HANDYMAN</label><input disabled={isViewer} name="handyman_destination" value={job.handyman_destination || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}><label>📝 REMARKS ON HANDYMAN</label><input disabled={isViewer} name="handyman_dest_remarks" value={job.handyman_dest_remarks || ''} onChange={handleChange} placeholder="Remarks on handyman" /></div>
+                              {isFieldVisible(isViewer, job.dest_supervisor || '') && (
+                                <div className={styles.inputGroup}><label>👔 SUPERVISOR</label><input disabled={isViewer} name="dest_supervisor" value={job.dest_supervisor || ''} onChange={handleChange} list="supervisors-list" /></div>
+                              )}
+                              {isFieldVisible(isViewer, job.handyman_destination || '') && (
+                                <div className={styles.inputGroup}><label>👷‍♂️ HANDYMAN</label><input disabled={isViewer} name="handyman_destination" value={job.handyman_destination || ''} onChange={handleChange} /></div>
+                              )}
+                              {isFieldVisible(isViewer, job.handyman_dest_remarks || '') && (
+                                <div className={styles.inputGroup}><label>📝 REMARKS ON HANDYMAN</label><input disabled={isViewer} name="handyman_dest_remarks" value={job.handyman_dest_remarks || ''} onChange={handleChange} placeholder="Remarks on handyman" /></div>
+                              )}
               
-              <div className={styles.inputGroup}>
-                <label>🚨 INCIDENTS</label>
-                <CustomSelect disabled={isViewer}
-                  placeholder="None"
-                  value={job.incidents || ''}
-                  onChange={(val) => handleFieldChange('incidents', val)}
-                  options={[
-                    { value: '', label: 'None' },
-                    { value: 'Damages', label: 'Damages' },
-                    { value: 'Complaints', label: 'Complaints' }
-                  ]}
-                />
-              </div>
-              <div className={styles.inputGroup}><label>📝 INSTRUCTIONS</label><textarea disabled={isViewer} name="dest_instructions" value={job.dest_instructions || ''} onChange={handleChange} /></div>
+              {(!isSPOC || job.incidents) && (
+                <div className={styles.inputGroup}>
+                  <label>🚨 INCIDENTS</label>
+                  <CustomSelect disabled={isViewer}
+                    placeholder="None"
+                    value={job.incidents || ''}
+                    onChange={(val) => handleFieldChange('incidents', val)}
+                    options={[
+                      { value: '', label: 'None' },
+                      { value: 'Damages', label: 'Damages' },
+                      { value: 'Complaints', label: 'Complaints' }
+                    ]}
+                  />
+                </div>
+              )}
+                              {isFieldVisible(isViewer, job.dest_instructions || '') && (
+                                <div className={styles.inputGroup}><label>📝 INSTRUCTIONS</label><textarea disabled={isViewer} name="dest_instructions" value={job.dest_instructions || ''} onChange={handleChange} /></div>
+                              )}
             </div>
           </div>
 
@@ -1252,14 +1485,22 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <span style={{ background: 'linear-gradient(90deg, #f43f5e, #eab308)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontWeight: 600 }}>Customer Service</span>
             </h3>
             <div className={styles.grid}>
-              <div className={styles.inputGroup}><label>💯 JTR %</label><input disabled={isViewer} type="number" name="jtr_percentage" value={job.jtr_percentage || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup}>
-                <label>⭐ GOOGLE REVIEW</label>
-                <ToggleSwitch disabled={isViewer} name="google_review_taken" value={job.google_review_taken === true || job.google_review_taken === 'Yes'} onChange={(val) => handleFieldChange('google_review_taken', val)} />
-              </div>
+                              {isFieldVisible(isViewer, job.jtr_percentage || '') && (
+                                <div className={styles.inputGroup}><label>💯 JTR %</label><input disabled={isViewer} type="number" name="jtr_percentage" value={job.jtr_percentage || ''} onChange={handleChange} /></div>
+                              )}
+              {(!isSPOC || (job.google_review_taken === true || job.google_review_taken === 'Yes')) && (
+                <div className={styles.inputGroup}>
+                  <label>⭐ GOOGLE REVIEW</label>
+                  <ToggleSwitch disabled={isViewer} name="google_review_taken" value={job.google_review_taken === true || job.google_review_taken === 'Yes'} onChange={(val) => handleFieldChange('google_review_taken', val)} />
+                </div>
+              )}
               
-              <div className={styles.inputGroup}><label>📢 REFERRALS</label><textarea disabled={isViewer} name="referrals" value={job.referrals || ''} onChange={handleChange} /></div>
-              <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}><label>💬 CUSTOMER FEEDBACK</label><textarea disabled={isViewer} name="customer_feedback" value={job.customer_feedback || ''} onChange={handleChange} rows={4} style={{ resize: 'vertical', minHeight: '90px' }} placeholder="Customer feedback and comments..." /></div>
+                              {isFieldVisible(isViewer, job.referrals || '') && (
+                                <div className={styles.inputGroup}><label>📢 REFERRALS</label><textarea disabled={isViewer} name="referrals" value={job.referrals || ''} onChange={handleChange} /></div>
+                              )}
+                {isFieldVisible(isViewer, job.customer_feedback || '') && (
+                  <div className={styles.inputGroup} style={{ gridColumn: '1 / -1' }}><label>💬 CUSTOMER FEEDBACK</label><textarea disabled={isViewer} name="customer_feedback" value={job.customer_feedback || ''} onChange={handleChange} rows={4} style={{ resize: 'vertical', minHeight: '90px' }} placeholder="Customer feedback and comments..." /></div>
+                )}
             </div>
           </div>
 
@@ -1322,26 +1563,28 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   </div>
                 ))}
                 
-                <div style={{ position: 'relative', marginBottom: '2.5rem', background: 'var(--surface-color)', padding: '1.2rem', borderRadius: '12px', border: '1px dashed var(--border-color)', width: '100%', boxSizing: 'border-box' }}>
-                  <div style={{ position: 'absolute', left: '-3.7rem', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', borderRadius: '50%', background: 'transparent', border: '2px dashed var(--text-secondary)', zIndex: 2 }}></div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', width: '100%' }}>
-                    <input disabled={isViewer} type="date" id="new_track_date" style={{ padding: '0.6rem', fontSize: '0.85rem', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.3)' }} />
-                    <input disabled={isViewer} type="text" id="new_track_location" placeholder="Current Location" style={{ padding: '0.6rem', fontSize: '0.85rem', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.3)' }} />
-                    <input disabled={isViewer} type="text" id="new_track_remarks" placeholder="Remarks (Optional)" style={{ padding: '0.6rem', fontSize: '0.85rem', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.3)' }} />
-                    <button type="button" onClick={async () => {
-                      const d = (document.getElementById('new_track_date') as HTMLInputElement).value;
-                      const l = (document.getElementById('new_track_location') as HTMLInputElement).value;
-                      const r = (document.getElementById('new_track_remarks') as HTMLInputElement).value;
-                      if (!d || !l) return showToast('Date and Location are required to add an update', 'info');
-                      
-                      await handleAddShipmentLog(undefined, d, l, r);
-                      
-                      (document.getElementById('new_track_date') as HTMLInputElement).value = '';
-                      (document.getElementById('new_track_location') as HTMLInputElement).value = '';
-                      (document.getElementById('new_track_remarks') as HTMLInputElement).value = '';
-                    }} style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '0.7rem 1rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 2px 8px rgba(59,130,246,0.3)', marginTop: '0.5rem' }} disabled={isViewer}>+ Add Update</button>
+                {!isViewer && (
+                  <div style={{ position: 'relative', marginBottom: '2.5rem', background: 'var(--surface-color)', padding: '1.2rem', borderRadius: '12px', border: '1px dashed var(--border-color)', width: '100%', boxSizing: 'border-box' }}>
+                    <div style={{ position: 'absolute', left: '-3.7rem', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', borderRadius: '50%', background: 'transparent', border: '2px dashed var(--text-secondary)', zIndex: 2 }}></div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', width: '100%' }}>
+                      <input disabled={isViewer} type="date" id="new_track_date" style={{ padding: '0.6rem', fontSize: '0.85rem', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.3)' }} />
+                      <input disabled={isViewer} type="text" id="new_track_location" placeholder="Current Location" style={{ padding: '0.6rem', fontSize: '0.85rem', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.3)' }} />
+                      <input disabled={isViewer} type="text" id="new_track_remarks" placeholder="Remarks (Optional)" style={{ padding: '0.6rem', fontSize: '0.85rem', borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.3)' }} />
+                      <button type="button" onClick={async () => {
+                        const d = (document.getElementById('new_track_date') as HTMLInputElement).value;
+                        const l = (document.getElementById('new_track_location') as HTMLInputElement).value;
+                        const r = (document.getElementById('new_track_remarks') as HTMLInputElement).value;
+                        if (!d || !l) return showToast('Date and Location are required to add an update', 'info');
+                        
+                        await handleAddShipmentLog(undefined, d, l, r);
+                        
+                        (document.getElementById('new_track_date') as HTMLInputElement).value = '';
+                        (document.getElementById('new_track_location') as HTMLInputElement).value = '';
+                        (document.getElementById('new_track_remarks') as HTMLInputElement).value = '';
+                      }} style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '0.7rem 1rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 2px 8px rgba(59,130,246,0.3)', marginTop: '0.5rem' }} disabled={isViewer}>+ Add Update</button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Destination Point */}
                 <div style={{ position: 'relative' }}>
@@ -1364,19 +1607,21 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           <div className={`glass ${styles.logsSection}`} style={{ height: 'auto', display: 'flex', flexDirection: 'column', marginBottom: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
               <h3 style={{ margin: 0 }}>📞 Communications</h3>
-              <button
-                type="button"
-                onClick={() => setCommFormOpen(!commFormOpen)}
-                style={{
-                  background: commFormOpen ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-                  color: '#fff', border: 'none', borderRadius: '8px', padding: '0.45rem 1rem',
-                  fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
-                  boxShadow: commFormOpen ? '0 3px 12px rgba(239,68,68,0.3)' : '0 3px 12px rgba(99,102,241,0.3)',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {commFormOpen ? '✕ Cancel' : '+ Log Call'}
-              </button>
+              {!isViewer && (
+                <button
+                  type="button"
+                  onClick={() => setCommFormOpen(!commFormOpen)}
+                  style={{
+                    background: commFormOpen ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                    color: '#fff', border: 'none', borderRadius: '8px', padding: '0.45rem 1rem',
+                    fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
+                    boxShadow: commFormOpen ? '0 3px 12px rgba(239,68,68,0.3)' : '0 3px 12px rgba(99,102,241,0.3)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {commFormOpen ? '✕ Cancel' : '+ Log Call'}
+                </button>
+              )}
             </div>
 
             {commFormOpen && (
@@ -1594,6 +1839,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                 const messageText = getWhatsAppMessageText(stageItem.name);
                 const sentInfo = whatsappLogs.find((log: any) => log.stage_name === stageItem.name);
                 
+                if (isSPOC && !sentInfo) return null;
+
                 return (
                   <WhatsAppStageRow
                     key={stageItem.name}
@@ -1619,8 +1866,42 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               })}
             </div>
           </div>
+          
+          {/* POD Documents Section */}
+          <div className={`glass ${styles.logsSection}`} style={{ height: 'auto', display: 'flex', flexDirection: 'column', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <h3 style={{ margin: 0 }}>POD Documents</h3>
+              {uploadingPod && podUploadProgress !== null && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, marginLeft: '1rem', marginRight: '1rem' }}>
+                  <div style={{ flex: 1, height: '8px', background: 'rgba(148, 163, 184, 0.2)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', background: '#3b82f6', width: `${podUploadProgress}%`, transition: 'width 0.2s ease' }}></div>
+                  </div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#3b82f6' }}>{podUploadProgress}%</span>
+                </div>
+              )}
+              {!isViewer && (
+                <label style={{ cursor: 'pointer', padding: '0.4rem 0.8rem', background: '#3b82f6', color: 'white', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold', opacity: uploadingPod ? 0.6 : 1 }}>
+                  {uploadingPod ? 'Uploading...' : 'Upload POD'}
+                  <input type="file" accept="application/pdf" onChange={handlePodUpload} disabled={uploadingPod || isViewer} style={{ display: 'none' }} />
+                </label>
+              )}
+            </div>
+            
+            <div className={styles.logsList}>
+              {job.pod_url ? (
+                <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(148, 163, 184, 0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <a href={`/api/pod/view?filename=POD-${job.job_number.split('/')[2]}-${job.job_number.split('/')[1]}.PDF`} target="_blank" rel="noreferrer" style={{ color: '#818cf8', fontWeight: 'bold', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    📄 View POD-{job.job_number.split('/')[2]}-{job.job_number.split('/')[1]}
+                  </a>
+                </div>
+              ) : (
+                <div className="text-muted" style={{ fontSize: '0.85rem' }}>No POD uploaded yet.</div>
+              )}
+            </div>
+          </div>
 
           {/* Notes Section */}
+          {(!isSPOC || notes.length > 0) && (
           <div className={`glass ${styles.logsSection}`} style={{ height: 'auto', display: 'flex', flexDirection: 'column' }}>
             <h3 style={{ margin: 0, marginBottom: '0.75rem' }}>Notes</h3>
             
@@ -1655,6 +1936,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               {notes.length === 0 && <div className="text-muted">No notes recorded yet.</div>}
             </div>
           </div>
+          )}
         </div>
       </div>
 

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import Papa from 'papaparse';
 import CustomSelect from '../components/CustomSelect';
 import { useRouter } from 'next/navigation';
+import BulkPodUploadModal from '../components/BulkPodUploadModal';
 
 const cardStyle: React.CSSProperties = {
   background: 'var(--surface-color)',
@@ -64,6 +65,8 @@ export default function AdminPage() {
   const [loadingBulkUpdate, setLoadingBulkUpdate] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [syncingPods, setSyncingPods] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -280,6 +283,63 @@ export default function AdminPage() {
     }
   };
 
+  const handleSyncPods = async () => {
+    setSyncingPods(true);
+    try {
+      showToast('⏳ Fetching all jobs with PODs...', 'info');
+      // Fetch all jobs that have a pod_url
+      const { data: jobs, error } = await supabase
+        .from('jobs')
+        .select('job_number, pod_url')
+        .not('pod_url', 'is', null);
+        
+      if (error) throw error;
+      
+      if (!jobs || jobs.length === 0) {
+        showToast('✅ No active PODs found to sync.', 'success');
+        setSyncingPods(false);
+        return;
+      }
+
+      showToast(`⏳ Verifying ${jobs.length} POD links with Cloudflare...`, 'info');
+      const urls = jobs.map(j => j.pod_url).filter(Boolean);
+      
+      const res = await fetch('/api/pod/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls })
+      });
+      const verifyData = await res.json();
+      
+      if (!res.ok) throw new Error(verifyData.error || 'Verification failed');
+      
+      const missingUrls = verifyData.results.filter((r: any) => !r.ok).map((r: any) => r.url);
+      
+      if (missingUrls.length === 0) {
+        showToast('✅ All POD links are healthy!', 'success');
+        setSyncingPods(false);
+        return;
+      }
+      
+      const missingJobNumbers = jobs.filter(j => missingUrls.includes(j.pod_url)).map(j => j.job_number);
+      showToast(`⏳ Cleaning up ${missingJobNumbers.length} broken POD records...`, 'info');
+      
+      // Clear the pod_url on the jobs table
+      const { error: updateError } = await supabase
+        .from('jobs')
+        .update({ pod_url: null, pod_uploaded_on: null })
+        .in('job_number', missingJobNumbers);
+        
+      if (updateError) throw updateError;
+      
+      showToast(`✅ Successfully cleaned up ${missingJobNumbers.length} orphaned PODs!`, 'success');
+    } catch (err: any) {
+      showToast(`❌ Error syncing PODs: ${err.message}`, 'error');
+    } finally {
+      setSyncingPods(false);
+    }
+  };
+
   if (checkingAuth) {
     return <div style={{ padding: '2rem', color: 'var(--text-secondary)' }}>Checking permissions...</div>;
   }
@@ -397,6 +457,41 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* Bulk POD Upload Section */}
+        <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Bulk Upload PODs</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+            Bulk upload Proof of Delivery (POD) files to Cloudflare R2.
+          </p>
+          
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <button 
+              onClick={() => setShowBulkUpload(true)}
+              style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}
+            >
+              📄 Bulk Upload PODs
+            </button>
+          </div>
+        </div>
+
+        {/* Sync POD Storage Section */}
+        <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Sync POD Storage</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+            Verify all POD links against Cloudflare storage. If any files were deleted from Cloudflare, this tool will automatically clean up the orphaned database records.
+          </p>
+          
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <button 
+              onClick={handleSyncPods}
+              disabled={syncingPods}
+              style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: syncingPods ? 'var(--border-color)' : 'linear-gradient(135deg, #ef4444, #b91c1c)', color: 'white', border: 'none', cursor: syncingPods ? 'not-allowed' : 'pointer', fontWeight: 600, boxShadow: '0 4px 12px rgba(239,68,68,0.3)' }}
+            >
+              {syncingPods ? '🔄 Syncing...' : '🧹 Clean up Missing PODs'}
+            </button>
+          </div>
+        </div>
+
         {/* Job Logs Section */}
         <div>
           <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Job Logs Table</h3>
@@ -430,6 +525,13 @@ export default function AdminPage() {
           </div>
         </div>
       </div>
+
+      {showBulkUpload && (
+        <BulkPodUploadModal 
+          onClose={() => setShowBulkUpload(false)} 
+          onUploadComplete={() => {}} 
+        />
+      )}
 
     </div>
   );
