@@ -8,7 +8,7 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { job_number, r2_url, document_type, filename } = await req.json();
+    const { job_number, r2_url, document_type, filename, file_size } = await req.json();
 
     if (!job_number || !r2_url || !document_type) {
       return NextResponse.json({ error: 'job_number, r2_url, and document_type are required' }, { status: 400 });
@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
       type: document_type,
       url: r2_url,
       filename,
+      file_size: file_size || 0,
       uploaded_on: new Date().toISOString()
     };
 
@@ -60,3 +61,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
+
