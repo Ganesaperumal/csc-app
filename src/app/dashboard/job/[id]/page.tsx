@@ -1812,14 +1812,6 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           <div className={`glass ${styles.logsSection}`} style={{ height: 'auto', display: 'flex', flexDirection: 'column', marginBottom: '1.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
               <h3 style={{ margin: 0 }}>Documents</h3>
-              {uploadingPod && podUploadProgress !== null && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, marginLeft: '1rem', marginRight: '1rem' }}>
-                  <div style={{ flex: 1, height: '8px', background: 'rgba(148, 163, 184, 0.2)', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', background: '#3b82f6', width: `${podUploadProgress}%`, transition: 'width 0.2s ease' }}></div>
-                  </div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#3b82f6' }}>{podUploadProgress}%</span>
-                </div>
-              )}
               {!isViewer && (
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                   <select 
@@ -1846,8 +1838,49 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                     />
                   )}
 
-                  <label style={{ cursor: 'pointer', padding: '0.4rem 0.8rem', background: '#3b82f6', color: 'white', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold', opacity: uploadingPod ? 0.6 : 1 }}>
-                    {uploadingPod ? 'Uploading...' : 'Upload'}
+                  <label 
+                    style={{ 
+                      position: 'relative',
+                      overflow: 'hidden',
+                      cursor: uploadingPod ? 'not-allowed' : 'pointer', 
+                      padding: '0.45rem 1rem', 
+                      background: '#2563eb', 
+                      color: 'white', 
+                      borderRadius: '6px', 
+                      fontSize: '0.8rem', 
+                      fontWeight: 'bold',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      userSelect: 'none',
+                      boxShadow: '0 2px 6px rgba(37, 99, 235, 0.3)'
+                    }}
+                  >
+                    {/* Animated Progress Bar fill inside button */}
+                    {uploadingPod && (
+                      <div 
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          height: '100%',
+                          width: `${podUploadProgress ?? 0}%`,
+                          background: 'rgba(255, 255, 255, 0.3)',
+                          transition: 'width 0.2s linear',
+                          zIndex: 1
+                        }} 
+                      />
+                    )}
+                    <span style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      {uploadingPod ? (
+                        <>
+                          <span style={{ display: 'inline-block', width: '12px', height: '12px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                          Uploading {podUploadProgress ?? 0}%
+                        </>
+                      ) : (
+                        'Upload'
+                      )}
+                    </span>
                     <input type="file" accept="application/pdf" onChange={handlePodUpload} disabled={uploadingPod || isViewer} style={{ display: 'none' }} />
                   </label>
                 </div>
