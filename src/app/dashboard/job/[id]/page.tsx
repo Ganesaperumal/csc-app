@@ -1875,7 +1875,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                       {uploadingPod ? (
                         <>
                           <span style={{ display: 'inline-block', width: '12px', height: '12px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                          Uploading {podUploadProgress ?? 0}%
+                          {podUploadProgress ?? 0}%
                         </>
                       ) : (
                         'Upload'
