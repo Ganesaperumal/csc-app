@@ -567,8 +567,6 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
     setUploadingPod(true);
     setPodUploadProgress(0);
     
-    const currentYearTwoDigits = new Date().getFullYear().toString().slice(-2);
-    const cleanId = decodedId.replace(/[^0-9]/g, '') || '1';
     const actualDocType = selectedDocType === 'Add New...' ? newDocType : selectedDocType;
     if (!actualDocType) {
       showToast('Please specify a document type.', 'error');
@@ -576,20 +574,12 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
       return;
     }
 
-    const docPrefix = actualDocType.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const finalName = `${docPrefix}-${currentYearTwoDigits}-${cleanId}.pdf`;
-
     try {
-      const res = await fetch('/api/documents/presign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: finalName, contentType: file.type })
-      });
-      const data = await res.json();
-      
-      if (!res.ok) throw new Error(data.error);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('job_number', decodedId);
+      formData.append('document_type', actualDocType);
 
-      // Upload to R2 with progress tracking
       await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         
@@ -601,38 +591,33 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
         
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
-            resolve(xhr.response);
+            try {
+              const responseData = JSON.parse(xhr.responseText);
+              resolve(responseData);
+            } catch {
+              resolve(xhr.response);
+            }
           } else {
-            reject(new Error(`Cloudflare R2 Upload failed with status ${xhr.status}`));
+            let errorMsg = `Upload failed with status ${xhr.status}`;
+            try {
+              const errObj = JSON.parse(xhr.responseText);
+              if (errObj.error) errorMsg = errObj.error;
+            } catch {}
+            reject(new Error(errorMsg));
           }
         };
         
         xhr.onerror = () => reject(new Error('Network error during upload'));
         
-        xhr.open('PUT', data.presignedUrl, true);
-        xhr.setRequestHeader('Content-Type', file.type);
-        xhr.send(file);
+        xhr.open('POST', '/api/documents/upload', true);
+        xhr.send(formData);
       });
 
-      // DB insert/update via API route (bypasses RLS)
-      const saveRes = await fetch('/api/documents/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          job_number: decodedId,
-          filename: data.finalFilename,
-          r2_url: data.publicUrl,
-          document_type: actualDocType
-        })
-      });
-      const saveData = await saveRes.json();
-      if (!saveRes.ok) throw new Error(saveData.error);
-
-      showToast('POD uploaded successfully!', 'success');
+      showToast(`${actualDocType} uploaded successfully!`, 'success');
       fetchJobDetails();
     } catch (err: any) {
-      console.error('POD Upload Exception:', err);
-      showToast(err.message || 'Error uploading POD', 'error');
+      console.error('Document Upload Exception:', err);
+      showToast(err.message || 'Error uploading document', 'error');
       alert('Upload failed: ' + (err.message || 'Check console for details'));
     } finally {
       setUploadingPod(false);
