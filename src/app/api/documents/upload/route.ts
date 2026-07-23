@@ -1,20 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { createClient } from '@supabase/supabase-js';
-
-const s3 = new S3Client({
-  region: 'auto',
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
-  },
-});
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
+
+const BUCKET_NAME = 'documents';
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,7 +32,6 @@ export async function POST(req: NextRequest) {
       xxxx = parts[1];
       yy = parts[2];
     } else {
-      // Fallback extraction if job_number format varies
       const matches = jobNumber.match(/\d+/g);
       if (matches && matches.length >= 2) {
         xxxx = matches[0];
@@ -54,25 +45,36 @@ export async function POST(req: NextRequest) {
     const docPrefix = documentType.toUpperCase().replace(/[^A-Z0-9]/g, '');
     const finalFilename = `${docPrefix}-${yy}-${xxxx}.pdf`;
 
-    // Convert file to Buffer for server-side S3 PutObject
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const bucketName = process.env.R2_BUCKET_NAME || 'csc-pods';
+    // Ensure storage bucket exists
+    const { data: buckets } = await supabaseAdmin.storage.listBuckets();
+    if (buckets && !buckets.some(b => b.name === BUCKET_NAME)) {
+      await supabaseAdmin.storage.createBucket(BUCKET_NAME, { public: true });
+    }
 
-    // Upload direct to Cloudflare R2 from server side (avoids CORS)
-    await s3.send(
-      new PutObjectCommand({
-        Bucket: bucketName,
-        Key: finalFilename,
-        Body: buffer,
-        ContentType: file.type || 'application/pdf',
-      })
-    );
+    // Upload file to Supabase Storage
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from(BUCKET_NAME)
+      .upload(finalFilename, buffer, {
+        contentType: file.type || 'application/pdf',
+        upsert: true
+      });
 
-    const publicUrl = `https://${process.env.R2_PUBLIC_DOMAIN}/${finalFilename}`;
+    if (uploadError) {
+      console.error('Supabase Storage Upload Error:', uploadError);
+      return NextResponse.json({ error: 'Storage Upload Failed: ' + uploadError.message }, { status: 500 });
+    }
 
-    // Update database job record with document info
+    // Get public URL
+    const { data: publicUrlData } = supabaseAdmin.storage
+      .from(BUCKET_NAME)
+      .getPublicUrl(finalFilename);
+
+    const publicUrl = publicUrlData.publicUrl;
+
+    // Update job record in Supabase DB
     const { data: job, error: fetchError } = await supabaseAdmin
       .from('jobs')
       .select('documents')
@@ -118,7 +120,7 @@ export async function POST(req: NextRequest) {
       job: updated
     });
   } catch (error: any) {
-    console.error('Error handling direct document upload:', error);
+    console.error('Error handling document upload:', error);
     return NextResponse.json({ error: error.message || 'Server upload failed' }, { status: 500 });
   }
 }
