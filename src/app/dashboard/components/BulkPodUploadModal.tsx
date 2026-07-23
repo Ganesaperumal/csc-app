@@ -11,7 +11,7 @@ interface FileItem {
   extractedNum: string; // 1-5 digit job number extracted
   docType: string; // POD, DC, DN, INV, PO, PI, MA, LR, Invoice
   year: string; // 24, 25, 26, 27, 28
-  jobIdMatch: string; // JB/{extractedNum}/{year}/DEL
+  matchedJobNumber: string; // Actual job_number found in DB (e.g. JB/463/26/BLR)
   status: 'Ready' | 'Ready (Larger File)' | 'Conflict' | 'Job Not Found' | 'Invalid Job ID';
   existingSize?: number;
   forceOverwrite?: boolean;
@@ -46,34 +46,61 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
     return match ? match[0] : '';
   };
 
-  const validateFileRow = async (extractedNum: string, year: string, docType: string, newFileSize: number): Promise<{ status: 'Ready' | 'Ready (Larger File)' | 'Conflict' | 'Job Not Found' | 'Invalid Job ID', existingSize?: number }> => {
+  const validateFileRow = async (extractedNum: string, year: string, docType: string, newFileSize: number): Promise<{ 
+    status: 'Ready' | 'Ready (Larger File)' | 'Conflict' | 'Job Not Found' | 'Invalid Job ID', 
+    matchedJobNumber: string,
+    existingSize?: number 
+  }> => {
     if (!extractedNum || !/^\d{1,5}$/.test(extractedNum)) {
-      return { status: 'Invalid Job ID' };
+      return { status: 'Invalid Job ID', matchedJobNumber: '' };
     }
 
-    const jobId = `JB/${extractedNum}/${year}/DEL`;
+    const numVal = parseInt(extractedNum, 10);
+    const pattern = `JB/${extractedNum}/${year}/%`;
+    const fallbackPattern = `%/${extractedNum}/%`;
+
     try {
-      const { data } = await supabase.from('jobs').select('documents').eq('job_number', jobId).maybeSingle();
+      // 1. Search by exact erp_job_id OR job_number pattern with target year
+      let { data } = await supabase
+        .from('jobs')
+        .select('job_number, erp_job_id, documents')
+        .or(`erp_job_id.eq.${numVal},job_number.ilike.${pattern}`)
+        .limit(1)
+        .maybeSingle();
+
+      // 2. Fallback: if not found, search by job_number containing the number
       if (!data) {
-        return { status: 'Job Not Found' };
+        const { data: fallbackData } = await supabase
+          .from('jobs')
+          .select('job_number, erp_job_id, documents')
+          .ilike('job_number', fallbackPattern)
+          .limit(1)
+          .maybeSingle();
+        data = fallbackData;
       }
+
+      if (!data || !data.job_number) {
+        return { status: 'Job Not Found', matchedJobNumber: '' };
+      }
+
+      const matchedJobNumber = data.job_number;
+
       if (data.documents && Array.isArray(data.documents)) {
         const existingDoc = data.documents.find((d: any) => d.type === docType);
         if (existingDoc) {
           const existingSize = existingDoc.file_size || 0;
-          // Compare file sizes: if new file is larger, auto-mark Ready (Larger File)
           if (newFileSize > existingSize) {
-            return { status: 'Ready (Larger File)', existingSize };
+            return { status: 'Ready (Larger File)', matchedJobNumber, existingSize };
           }
-          return { status: 'Conflict', existingSize };
+          return { status: 'Conflict', matchedJobNumber, existingSize };
         }
       }
-    } catch (err) {
-      console.error(err);
-      return { status: 'Job Not Found' };
-    }
 
-    return { status: 'Ready' };
+      return { status: 'Ready', matchedJobNumber };
+    } catch (err) {
+      console.error('Job validation error:', err);
+      return { status: 'Job Not Found', matchedJobNumber: '' };
+    }
   };
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -85,9 +112,8 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
       const extractedNum = extractJobNum(file.name);
       const year = globalYear;
       const docType = globalDocType;
-      const jobIdMatch = extractedNum ? `JB/${extractedNum}/${year}/DEL` : '';
 
-      const { status, existingSize } = await validateFileRow(extractedNum, year, docType, file.size);
+      const { status, matchedJobNumber, existingSize } = await validateFileRow(extractedNum, year, docType, file.size);
 
       newItems.push({
         id: `${file.name}-${Math.random().toString(36).substr(2, 9)}`,
@@ -97,7 +123,7 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
         extractedNum,
         docType,
         year,
-        jobIdMatch,
+        matchedJobNumber,
         status,
         existingSize,
         forceOverwrite: false,
@@ -121,16 +147,15 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
     const year = updates.year !== undefined ? updates.year : target.year;
     const docType = updates.docType !== undefined ? updates.docType : target.docType;
     const forceOverwrite = updates.forceOverwrite !== undefined ? updates.forceOverwrite : target.forceOverwrite;
-    const jobIdMatch = extractedNum ? `JB/${extractedNum}/${year}/DEL` : '';
 
-    const { status, existingSize } = await validateFileRow(extractedNum, year, docType, target.fileSize);
+    const { status, matchedJobNumber, existingSize } = await validateFileRow(extractedNum, year, docType, target.fileSize);
 
     setFiles(prev => prev.map(f => f.id === id ? {
       ...f,
       extractedNum,
       year,
       docType,
-      jobIdMatch,
+      matchedJobNumber,
       status,
       existingSize,
       forceOverwrite
@@ -146,13 +171,12 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
   const applyGlobalSettings = async () => {
     setProcessing(true);
     const updatedFiles = await Promise.all(files.map(async (f) => {
-      const jobIdMatch = f.extractedNum ? `JB/${f.extractedNum}/${globalYear}/DEL` : '';
-      const { status, existingSize } = await validateFileRow(f.extractedNum, globalYear, globalDocType, f.fileSize);
+      const { status, matchedJobNumber, existingSize } = await validateFileRow(f.extractedNum, globalYear, globalDocType, f.fileSize);
       return {
         ...f,
         docType: globalDocType,
         year: globalYear,
-        jobIdMatch,
+        matchedJobNumber,
         status,
         existingSize
       };
@@ -220,7 +244,7 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            job_number: f.jobIdMatch,
+            job_number: f.matchedJobNumber,
             filename: uploadFilename,
             r2_url: publicUrl,
             document_type: f.docType,
@@ -244,17 +268,17 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
 
   return (
     <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="modal-content" style={{ background: 'var(--bg-color)', padding: '2rem', borderRadius: '12px', width: '1000px', maxHeight: '85vh', overflowY: 'auto' }}>
+      <div className="modal-content" style={{ background: 'var(--bg-color)', padding: '2rem', borderRadius: '12px', width: '1050px', maxHeight: '85vh', overflowY: 'auto' }}>
         <h2 style={{ marginBottom: '1rem' }}>Bulk Upload Documents (Cloudflare R2 & Supabase)</h2>
         
         <div {...getRootProps()} style={{ border: '2px dashed var(--border-color)', padding: '1.5rem', textAlign: 'center', borderRadius: '8px', cursor: 'pointer', marginBottom: '1.5rem', background: isDragActive ? 'rgba(59, 130, 246, 0.1)' : 'transparent' }}>
           <input {...getInputProps()} />
           {processing ? (
-            <p style={{ color: '#3b82f6', fontWeight: 'bold' }}>Validating job numbers and comparing file sizes, please wait...</p>
+            <p style={{ color: '#3b82f6', fontWeight: 'bold' }}>Searching jobs across all branches & ERP IDs in Supabase, please wait...</p>
           ) : (
             <>
               <p style={{ fontWeight: 'bold' }}>Drag & drop PDF files here, or click to select files</p>
-              <small style={{ color: 'gray' }}>Continuous 1-5 digits in the filename will be extracted automatically. Larger PDF files will auto-override existing smaller documents.</small>
+              <small style={{ color: 'gray' }}>Continuous 1-5 digits will be matched against ERP Job IDs and all branch Job Numbers in Supabase automatically.</small>
             </>
           )}
         </div>
@@ -303,7 +327,7 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
                   <th style={{ padding: '0.5rem' }}>Job No (1-5 Digits)</th>
                   <th style={{ padding: '0.5rem' }}>Year</th>
                   <th style={{ padding: '0.5rem' }}>Doc Type</th>
-                  <th style={{ padding: '0.5rem' }}>Computed Job ID</th>
+                  <th style={{ padding: '0.5rem' }}>Matched Supabase Job Number</th>
                   <th style={{ padding: '0.5rem' }}>Supabase Match & Size Status</th>
                   <th style={{ padding: '0.5rem' }}></th>
                 </tr>
@@ -346,7 +370,11 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
                       </select>
                     </td>
                     <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>
-                      {f.jobIdMatch || <span style={{ color: 'gray' }}>Invalid</span>}
+                      {f.matchedJobNumber ? (
+                        <span style={{ color: '#10b981' }}>{f.matchedJobNumber}</span>
+                      ) : (
+                        <span style={{ color: 'gray' }}>No match found</span>
+                      )}
                     </td>
                     <td style={{ padding: '0.5rem' }}>
                       {f.uploadStatus === 'uploading' || f.uploadStatus === 'success' || f.uploadStatus === 'error' ? (
