@@ -270,6 +270,7 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
     <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="modal-content" style={{ background: 'var(--bg-color)', padding: '2rem', borderRadius: '12px', width: '1050px', maxHeight: '85vh', overflowY: 'auto' }}>
         <h2 style={{ marginBottom: '1rem' }}>Bulk Upload Documents (Cloudflare R2 & Supabase)</h2>
+
         
         <div {...getRootProps()} style={{ border: '2px dashed var(--border-color)', padding: '1.5rem', textAlign: 'center', borderRadius: '8px', cursor: 'pointer', marginBottom: '1.5rem', background: isDragActive ? 'rgba(59, 130, 246, 0.1)' : 'transparent' }}>
           <input {...getInputProps()} />

@@ -463,11 +463,11 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Bulk POD Upload Section */}
+        {/* Bulk Document Upload Section */}
         <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Bulk Upload PODs</h3>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Bulk Upload Documents</h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-            Bulk upload Proof of Delivery (POD) files to Cloudflare R2.
+            Bulk upload Documents to Cloudflare R2.
           </p>
           
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -475,7 +475,7 @@ export default function AdminPage() {
               onClick={() => setShowBulkUpload(true)}
               style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}
             >
-              📄 Bulk Upload PODs
+              📄 Bulk Upload Documents
             </button>
           </div>
         </div>
