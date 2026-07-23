@@ -327,8 +327,11 @@ export default function FollowUpsPage() {
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 'bold', backgroundImage: 'linear-gradient(45deg, #4f46e5, #7c3aed)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
-            ⏰ Follow-up Tasks
+          <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span>⏰</span>
+            <span style={{ backgroundImage: 'linear-gradient(45deg, #4f46e5, #7c3aed)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
+              Follow-up Tasks
+            </span>
           </h1>
           <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
             {isAdmin ? `Admin Dashboard — Managing follow-ups for all active coordinators` : `Coordinator Portal — Managing follow-up reminders for ${agentName}`}
