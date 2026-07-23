@@ -885,7 +885,7 @@ function JobsTable() {
                       if (n.follow_up_date) {
                         const today = new Date();
                         const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                        if (n.follow_up_date <= todayStr) isUrgent = true;
+                        if (n.follow_up_date < todayStr) isUrgent = true;
                       } else {
                         isUrgent = true;
                       }

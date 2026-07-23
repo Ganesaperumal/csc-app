@@ -181,17 +181,23 @@ export default function FollowUpsPage() {
   });
 
   // Category splits
-  const overdueTasks = filteredTasks.filter(t => !t.follow_up_completed && (t.follow_up_date === null || t.follow_up_date <= todayStr));
+  const overdueTasks = filteredTasks.filter(t => !t.follow_up_completed && (t.follow_up_date === null || t.follow_up_date < todayStr));
+  const todayTasks = filteredTasks.filter(t => !t.follow_up_completed && t.follow_up_date === todayStr);
   const upcomingTasks = filteredTasks.filter(t => !t.follow_up_completed && t.follow_up_date !== null && t.follow_up_date > todayStr);
   const completedTasks = filteredTasks.filter(t => t.follow_up_completed);
 
-  const renderTaskColumn = (title: string, list: Task[], theme: 'danger' | 'primary' | 'success') => {
+  const renderTaskColumn = (title: string, list: Task[], theme: 'danger' | 'warning' | 'primary' | 'success') => {
     let headerBg = 'rgba(239, 68, 68, 0.1)';
     let headerBorder = 'rgba(239, 68, 68, 0.2)';
     let badgeBg = '#ef4444';
     let icon = '🚨';
 
-    if (theme === 'primary') {
+    if (theme === 'warning') {
+      headerBg = 'rgba(245, 158, 11, 0.1)';
+      headerBorder = 'rgba(245, 158, 11, 0.2)';
+      badgeBg = '#f59e0b';
+      icon = '⏰';
+    } else if (theme === 'primary') {
       headerBg = 'rgba(59, 130, 246, 0.1)';
       headerBorder = 'rgba(59, 130, 246, 0.2)';
       badgeBg = '#3b82f6';
@@ -369,7 +375,8 @@ export default function FollowUpsPage() {
       ) : (
         /* Board Columns Grid */
         <div style={{ display: 'flex', flex: 1, gap: '1.25rem', flexWrap: 'wrap', overflowX: 'auto', minHeight: 0 }}>
-          {renderTaskColumn('Overdue / Due Today', overdueTasks, 'danger')}
+          {renderTaskColumn('Overdue', overdueTasks, 'danger')}
+          {renderTaskColumn('Due Today', todayTasks, 'warning')}
           {renderTaskColumn('Upcoming Reminders', upcomingTasks, 'primary')}
           {renderTaskColumn('Completed Tasks', completedTasks, 'success')}
         </div>
