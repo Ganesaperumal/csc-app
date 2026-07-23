@@ -210,7 +210,7 @@ export default function FollowUpsPage() {
     }
 
     return (
-      <div style={{ flex: 1, minWidth: '300px', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(255,255,255,0.2)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem', backdropFilter: 'blur(8px)', contentVisibility: 'auto' }}>
+      <div style={{ flex: '0 0 calc((100% - 2.5rem) / 3)', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(255,255,255,0.2)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem', backdropFilter: 'blur(8px)', contentVisibility: 'auto' }}>
         
         {/* Column Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: headerBg, border: `1px solid ${headerBorder}`, padding: '0.6rem 1rem', borderRadius: '8px' }}>
@@ -374,7 +374,7 @@ export default function FollowUpsPage() {
         </div>
       ) : (
         /* Board Columns Grid */
-        <div style={{ display: 'flex', flex: 1, gap: '1.25rem', flexWrap: 'wrap', overflowX: 'auto', minHeight: 0 }}>
+        <div style={{ display: 'flex', flex: 1, gap: '1.25rem', flexWrap: 'nowrap', overflowX: 'auto', minHeight: 0, paddingBottom: '0.5rem' }}>
           {renderTaskColumn('Overdue', overdueTasks, 'danger')}
           {renderTaskColumn('Due Today', todayTasks, 'warning')}
           {renderTaskColumn('Upcoming Reminders', upcomingTasks, 'primary')}
