@@ -480,23 +480,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Sync POD Storage Section */}
-        <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Sync POD Storage</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-            Verify all POD links against Cloudflare storage. If any files were deleted from Cloudflare, this tool will automatically clean up the orphaned database records.
-          </p>
-          
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <button 
-              onClick={handleSyncPods}
-              disabled={syncingPods}
-              style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: syncingPods ? 'var(--border-color)' : 'linear-gradient(135deg, #ef4444, #b91c1c)', color: 'white', border: 'none', cursor: syncingPods ? 'not-allowed' : 'pointer', fontWeight: 600, boxShadow: '0 4px 12px rgba(239,68,68,0.3)' }}
-            >
-              {syncingPods ? '🔄 Syncing...' : '🧹 Clean up Missing PODs'}
-            </button>
-          </div>
-        </div>
 
         {/* Job Logs Section */}
         <div>
