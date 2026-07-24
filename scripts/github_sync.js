@@ -9,9 +9,52 @@ const ERP_USERNAME = process.env.ERP_USERNAME;
 const ERP_PASSWORD = process.env.ERP_PASSWORD;
 const API_URL = process.env.API_URL || 'https://your-vercel-app-url.vercel.app/api/ingest-erp'; // Must be set in GitHub Secrets!
 
+const http = require('http');
+const https = require('https');
+
 if (!CRON_SECRET_KEY || !ERP_SITE || !ERP_USERNAME || !ERP_PASSWORD) {
   console.error('Error: Missing required environment variables (ERP credentials or CRON_SECRET_KEY).');
   process.exit(1);
+}
+
+function sendPostRequest(targetUrl, payloadString, token) {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(targetUrl);
+    const transport = urlObj.protocol === 'https:' ? https : http;
+    const bodyBuffer = Buffer.from(payloadString, 'utf-8');
+
+    const options = {
+      hostname: urlObj.hostname,
+      port: urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80),
+      path: urlObj.pathname + urlObj.search,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': bodyBuffer.length,
+        'Authorization': `Bearer ${token}`
+      }
+    };
+
+    const req = transport.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          try {
+            resolve(JSON.parse(data));
+          } catch (e) {
+            resolve({ message: data });
+          }
+        } else {
+          reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+        }
+      });
+    });
+
+    req.on('error', (err) => reject(err));
+    req.write(bodyBuffer);
+    req.end();
+  });
 }
 
 async function downloadActiveJobs() {
@@ -155,37 +198,18 @@ async function syncERP() {
     for (let i = 0; i < formattedData.length; i += BATCH_SIZE) {
       const batch = formattedData.slice(i, i + BATCH_SIZE);
       const jsonBody = JSON.stringify(batch);
-      const jsonBuffer = Buffer.from(jsonBody, 'utf-8');
 
       console.log(`Sending batch ${Math.floor(i / BATCH_SIZE) + 1} of ${Math.ceil(formattedData.length / BATCH_SIZE)} (${batch.length} jobs)...`);
 
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': String(jsonBuffer.length),
-          'Authorization': `Bearer ${CRON_SECRET_KEY}`
-        },
-        body: jsonBuffer
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        console.log(`✅ Batch ${Math.floor(i / BATCH_SIZE) + 1} Sync Successful:`, result.message);
-      } else {
-        console.error(`❌ Batch ${Math.floor(i / BATCH_SIZE) + 1} Sync Failed:`, result.error);
-        throw new Error(result.error || 'Batch sync failed');
-      }
+      const result = await sendPostRequest(API_URL, jsonBody, CRON_SECRET_KEY);
+      console.log(`✅ Batch ${Math.floor(i / BATCH_SIZE) + 1} Sync Successful:`, result.message || 'OK');
     }
   } catch (err) {
     console.error('❌ Fatal Error during Sync:', err);
     // Emergency unlock if it failed before reaching the API
     try {
-      await fetch(API_URL.replace('/ingest-erp', '/admin/delete-jobs').replace('delete-jobs', 'unlock-sync'), {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${CRON_SECRET_KEY}` }
-      });
+      const unlockUrl = API_URL.replace('/ingest-erp', '/admin/delete-jobs').replace('delete-jobs', 'unlock-sync');
+      await sendPostRequest(unlockUrl, '{}', CRON_SECRET_KEY);
     } catch(e) {}
   } finally {
     if (excelFilePath && fs.existsSync(excelFilePath)) {
