@@ -149,23 +149,32 @@ async function syncERP() {
       return;
     }
 
-    console.log(`Sending ${formattedData.length} valid jobs to the API...`);
+    console.log(`Sending ${formattedData.length} valid jobs to the API in batches...`);
 
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${CRON_SECRET_KEY}`
-      },
-      body: JSON.stringify(formattedData)
-    });
+    const BATCH_SIZE = 500;
+    for (let i = 0; i < formattedData.length; i += BATCH_SIZE) {
+      const batch = formattedData.slice(i, i + BATCH_SIZE);
+      const jsonBody = JSON.stringify(batch);
 
-    const result = await response.json();
+      console.log(`Sending batch ${Math.floor(i / BATCH_SIZE) + 1} of ${Math.ceil(formattedData.length / BATCH_SIZE)} (${batch.length} jobs)...`);
 
-    if (response.ok) {
-      console.log('✅ Sync Successful:', result.message);
-    } else {
-      console.error('❌ Sync Failed:', result.error);
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${CRON_SECRET_KEY}`
+        },
+        body: jsonBody
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        console.log(`✅ Batch ${Math.floor(i / BATCH_SIZE) + 1} Sync Successful:`, result.message);
+      } else {
+        console.error(`❌ Batch ${Math.floor(i / BATCH_SIZE) + 1} Sync Failed:`, result.error);
+        throw new Error(result.error || 'Batch sync failed');
+      }
     }
   } catch (err) {
     console.error('❌ Fatal Error during Sync:', err);
