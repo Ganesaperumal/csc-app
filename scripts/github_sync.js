@@ -155,6 +155,7 @@ async function syncERP() {
     for (let i = 0; i < formattedData.length; i += BATCH_SIZE) {
       const batch = formattedData.slice(i, i + BATCH_SIZE);
       const jsonBody = JSON.stringify(batch);
+      const jsonBuffer = Buffer.from(jsonBody, 'utf-8');
 
       console.log(`Sending batch ${Math.floor(i / BATCH_SIZE) + 1} of ${Math.ceil(formattedData.length / BATCH_SIZE)} (${batch.length} jobs)...`);
 
@@ -162,9 +163,10 @@ async function syncERP() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Content-Length': String(jsonBuffer.length),
           'Authorization': `Bearer ${CRON_SECRET_KEY}`
         },
-        body: jsonBody
+        body: jsonBuffer
       });
 
       const result = await response.json();
