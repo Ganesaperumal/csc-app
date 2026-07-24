@@ -17,7 +17,10 @@ if (!CRON_SECRET_KEY || !ERP_SITE || !ERP_USERNAME || !ERP_PASSWORD) {
   process.exit(1);
 }
 
-function sendPostRequest(targetUrl, payloadString, token) {
+function sendPostRequest(targetUrl, payloadString, token, redirects = 0) {
+  if (redirects > 5) {
+    return Promise.reject(new Error('Too many redirects'));
+  }
   return new Promise((resolve, reject) => {
     const urlObj = new URL(targetUrl);
     const transport = urlObj.protocol === 'https:' ? https : http;
@@ -36,6 +39,11 @@ function sendPostRequest(targetUrl, payloadString, token) {
     };
 
     const req = transport.request(options, (res) => {
+      if ([301, 302, 307, 308].includes(res.statusCode) && res.headers.location) {
+        const redirectUrl = new URL(res.headers.location, targetUrl).toString();
+        return sendPostRequest(redirectUrl, payloadString, token, redirects + 1).then(resolve).catch(reject);
+      }
+
       let data = '';
       res.on('data', (chunk) => { data += chunk; });
       res.on('end', () => {
