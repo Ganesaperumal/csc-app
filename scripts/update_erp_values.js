@@ -59,21 +59,24 @@ function processEnquiryValues() {
   // Wait, if it's an HTML table, XLSX reads it straight into JSON.
   let data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
   
-  // Find the header row (contains 'Master Enq No')
   let headerIndex = -1;
-  for (let i = 0; i < Math.min(20, data.length); i++) {
-    if (data[i] && data[i].includes('Master Enq No')) {
-      headerIndex = i;
-      break;
+  let headers = [];
+  for (let i = 0; i < Math.min(50, data.length); i++) {
+    if (data[i] && Array.isArray(data[i])) {
+      const cleanRow = data[i].map(c => String(c || '').replace(/\s+/g, ' ').trim());
+      if (cleanRow.includes('Master Enq No')) {
+        headerIndex = i;
+        headers = cleanRow;
+        break;
+      }
     }
   }
 
   if (headerIndex === -1) {
-    console.error("Could not find header row in the report.");
+    console.error("Could not find header row containing 'Master Enq No' in the report.");
     return {};
   }
 
-  const headers = data[headerIndex];
   const rows = data.slice(headerIndex + 1);
 
   const enqIdx = headers.indexOf('Master Enq No');
@@ -82,9 +85,9 @@ function processEnquiryValues() {
 
   let enqValues = {};
   for (const row of rows) {
-    if (!row || !row[enqIdx]) continue;
+    if (!row || row.length <= enqIdx) continue;
     
-    let enqNo = String(row[enqIdx]).trim();
+    let enqNo = String(row[enqIdx] || '').trim();
     let val1 = parseFloat(row[quoteValIdx]) || 0;
     let val2 = parseFloat(row[finalQuoteValIdx]) || 0;
     
@@ -109,7 +112,8 @@ async function updateSupabaseJobs(enqValues) {
   });
 
   if (!res.ok) {
-    throw new Error(`Failed to fetch jobs: ${res.statusText}`);
+    const errorText = await res.text();
+    throw new Error(`Failed to fetch jobs: ${res.statusText} - ${errorText}\n\n⚠️ IMPORTANT: Did you run the SQL command 'ALTER TABLE jobs ADD COLUMN IF NOT EXISTS quote_value NUMERIC;' in Supabase?`);
   }
 
   const jobs = await res.json();
