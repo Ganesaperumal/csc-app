@@ -35,9 +35,9 @@ async function downloadEnquiryReport() {
 
   await page.waitForSelector('#tcfrmdt', { state: 'visible' });
 
-  // Set From Date to capture all enquiries for the financial year
-  console.log("Setting date range (01-Apr-2026)...");
-  await page.fill('#tcfrmdt', '01-Apr-2026');
+  // Set From Date to capture all enquiries back to 2024 since many missing values are /25/ and /24/
+  console.log("Setting date range (01-Apr-2024)...");
+  await page.fill('#tcfrmdt', '01-Apr-2024');
   await page.waitForTimeout(1000);
 
   // Download the report
