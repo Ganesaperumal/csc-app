@@ -80,8 +80,8 @@ function processEnquiryValues() {
     if (!row || row.length <= enqIdx) continue;
     
     let enqNo = String(row[enqIdx] || '').trim();
-    let val1 = parseFloat(row[quoteValIdx]) || 0;
-    let val2 = parseFloat(row[finalQuoteValIdx]) || 0;
+    let val1 = parseFloat(String(row[quoteValIdx] || '').replace(/,/g, '')) || 0;
+    let val2 = parseFloat(String(row[finalQuoteValIdx] || '').replace(/,/g, '')) || 0;
     
     let finalVal = val2 > 0 ? val2 : val1;
     if (enqNo && finalVal > 0) {
@@ -96,7 +96,7 @@ async function updateSupabaseJobs(enqValues) {
   console.log("Connecting to Supabase to update jobs with missing values...");
   
   // Fetch jobs where quote_value is null or 0
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/jobs?select=job_number,enq_number&or=(quote_value.is.null,quote_value.eq.0)`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/jobs?select=job_number,enq_number&or=(quote_value.is.null,quote_value.eq.0)&limit=5000`, {
     headers: {
       'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`
@@ -105,7 +105,7 @@ async function updateSupabaseJobs(enqValues) {
 
   if (!res.ok) {
     const errorText = await res.text();
-    throw new Error(`Failed to fetch jobs: ${res.statusText} - ${errorText}\n\n⚠️ IMPORTANT: Did you run the SQL command 'ALTER TABLE jobs ADD COLUMN IF NOT EXISTS quote_value NUMERIC;' in Supabase?`);
+    throw new Error(`Failed to fetch jobs: ${res.statusText} - ${errorText}`);
   }
 
   const jobs = await res.json();
@@ -117,8 +117,9 @@ async function updateSupabaseJobs(enqValues) {
   console.log(`Found ${jobs.length} jobs in Supabase needing value updates.`);
 
   const cleanEnq = str => String(str || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  
+  let jobsToUpdate = [];
 
-  let updates = 0;
   for (const job of jobs) {
     let enq = String(job.enq_number || '').trim();
     if (!enq) continue;
@@ -136,6 +137,18 @@ async function updateSupabaseJobs(enqValues) {
     }
 
     if (matchedVal) {
+      jobsToUpdate.push({ job_number: job.job_number, quote_value: matchedVal });
+    }
+  }
+
+  console.log(`Matched ${jobsToUpdate.length} jobs to update.`);
+
+  let updates = 0;
+  // Update in chunks of 50 to massively speed up API calls
+  const chunkSize = 50;
+  for (let i = 0; i < jobsToUpdate.length; i += chunkSize) {
+    const chunk = jobsToUpdate.slice(i, i + chunkSize);
+    await Promise.all(chunk.map(async (job) => {
       const updateRes = await fetch(`${SUPABASE_URL}/rest/v1/jobs?job_number=eq.${encodeURIComponent(job.job_number)}`, {
         method: 'PATCH',
         headers: {
@@ -144,14 +157,11 @@ async function updateSupabaseJobs(enqValues) {
           'Content-Type': 'application/json',
           'Prefer': 'return=minimal'
         },
-        body: JSON.stringify({ quote_value: matchedVal })
+        body: JSON.stringify({ quote_value: job.quote_value })
       });
-      if (updateRes.ok) {
-        updates++;
-      } else {
-        console.error(`Failed to update job ${job.job_number}`);
-      }
-    }
+      if (updateRes.ok) updates++;
+    }));
+    console.log(`Updated ${updates}/${jobsToUpdate.length}...`);
   }
   
   console.log(`Successfully updated ${updates} jobs with enquiry values!`);
