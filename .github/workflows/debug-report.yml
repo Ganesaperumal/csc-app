@@ -1,0 +1,40 @@
+name: Generate Debug Report
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'scripts/package-lock.json'
+
+      - name: Install Node Dependencies
+        run: |
+          cd scripts
+          npm install
+          npx playwright install chromium --with-deps
+
+      - name: Run Debug Script
+        env:
+          ERP_USERNAME: ${{ secrets.ERP_USERNAME }}
+          ERP_PASSWORD: ${{ secrets.ERP_PASSWORD }}
+          ERP_SITE: ${{ secrets.ERP_SITE }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          cd scripts
+          node debug_report.js
+
+      - name: Upload Debug Report CSV
+        uses: actions/upload-artifact@v4
+        with:
+          name: erp-debug-report
+          path: scripts/debug_report.csv
