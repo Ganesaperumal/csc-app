@@ -31,8 +31,8 @@ jobs:
           cd scripts
           node debug_report.js
 
-      - name: Upload Debug Report CSV to file.io
+      - name: Upload Debug Report CSV to transfer.sh
         run: |
           cd scripts
-          echo "Uploading debug_report.csv to file.io..."
-          curl -F "file=@debug_report.csv" https://file.io/?expires=1d
+          echo "Uploading debug_report.csv to transfer.sh..."
+          curl --upload-file debug_report.csv https://transfer.sh/debug_report.csv
