@@ -4,7 +4,6 @@ import pandas as pd
 from supabase import create_client, Client
 from playwright.async_api import async_playwright
 
-# Environment variables from GitHub Secrets
 SUPABASE_URL = os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 ERP_SITE = os.environ.get("ERP_SITE", "")
@@ -20,14 +19,12 @@ async def download_enquiry_report():
         context = await browser.new_context(accept_downloads=True)
         page = await context.new_page()
 
-        # Login
         await page.goto(ERP_SITE)
         await page.fill('#tcusr', ERP_USERNAME)
         await page.fill('#tcpwd', ERP_PASSWORD)
         async with page.expect_navigation():
             await page.click("input[name='login']")
 
-        # Navigate to Enquiry Report
         await page.wait_for_selector('#r4c1', state='visible')
         await page.click('#r4c1')
         await page.wait_for_timeout(500)
@@ -36,8 +33,6 @@ async def download_enquiry_report():
         await page.click('#r3c4')
 
         await page.wait_for_selector('#tcfrmdt', state='visible')
-
-        # Download the report
         async with page.expect_download(timeout=120000) as download_info:
             await page.click('#btnexp')
 
@@ -63,7 +58,6 @@ def process_enquiry_values():
         val1 = row.get('Quote Value', 0)
         val2 = row.get('Final Quote Value', 0)
         
-        # Take Final Quote Value if > 0, else Quote Value
         try:
             val2_float = float(val2) if pd.notnull(val2) else 0
             val1_float = float(val1) if pd.notnull(val1) else 0
@@ -80,20 +74,20 @@ def update_supabase_jobs(enq_values):
     print("Connecting to Supabase to update jobs with missing values...")
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
     
-    # Fetch jobs where quote_value is 0 or NULL
-    res = supabase.table('jobs').select('id, enq_number').or_('quote_value.is.null,quote_value.eq.0').execute()
+    res = supabase.table('jobs').select('job_number, enq_number').or_('quote_value.is.null,quote_value.eq.0').execute()
     jobs = res.data
     
     if not jobs:
         print("No jobs found with missing values.")
         return
         
+    print(f"Found {len(jobs)} jobs in Supabase needing value updates.")
+    
     updates = 0
     for job in jobs:
         enq = job.get('enq_number')
         if not enq: continue
             
-        # Match enquiry number
         matched_val = enq_values.get(enq)
         if not matched_val:
             for rep_enq, val in enq_values.items():
@@ -102,7 +96,7 @@ def update_supabase_jobs(enq_values):
                     break
         
         if matched_val:
-            supabase.table('jobs').update({'quote_value': matched_val}).eq('id', job['id']).execute()
+            supabase.table('jobs').update({'quote_value': matched_val}).eq('job_number', job['job_number']).execute()
             updates += 1
             
     print(f"Successfully updated {updates} jobs with enquiry values!")
@@ -110,6 +104,7 @@ def update_supabase_jobs(enq_values):
 async def main():
     await download_enquiry_report()
     enq_values = process_enquiry_values()
+    print(f"Extracted {len(enq_values)} valid quote values from the report.")
     update_supabase_jobs(enq_values)
 
 if __name__ == "__main__":
