@@ -91,7 +91,7 @@ async function updateSupabaseJobs(enqValues) {
   console.log("Connecting to Supabase to update jobs with missing values...");
   
   // Fetch jobs where quote_value is null or 0
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/jobs?select=job_number,enq_number&or=(quote_value.is.null,quote_value.eq.0)`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/jobs?select=job_number,enq_number,enquiry_number&or=(quote_value.is.null,quote_value.eq.0)`, {
     headers: {
       'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`
@@ -111,15 +111,19 @@ async function updateSupabaseJobs(enqValues) {
   
   console.log(`Found ${jobs.length} jobs in Supabase needing value updates.`);
 
+  const cleanEnq = str => String(str || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
   let updates = 0;
   for (const job of jobs) {
-    let enq = job.enq_number;
+    let enq = String(job.enq_number || job.enquiry_number || '').trim();
     if (!enq) continue;
 
     let matchedVal = enqValues[enq];
     if (!matchedVal) {
+      const cleanedEnq = cleanEnq(enq);
       for (const [repEnq, val] of Object.entries(enqValues)) {
-        if (repEnq.includes(enq) || enq.includes(repEnq)) {
+        const cleanedRep = cleanEnq(repEnq);
+        if (cleanedRep && cleanedEnq && (cleanedRep.includes(cleanedEnq) || cleanedEnq.includes(cleanedRep))) {
           matchedVal = val;
           break;
         }
