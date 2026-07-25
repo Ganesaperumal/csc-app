@@ -55,33 +55,21 @@ function processEnquiryValues() {
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
   
-  // Try parsing to JSON. The header is usually at row 8 (index 7). 
   // Wait, if it's an HTML table, XLSX reads it straight into JSON.
   let data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+  let headerIndex = 7; // 8th row (index 7)
   
-  let headerIndex = -1;
-  let headers = [];
-  for (let i = 0; i < Math.min(50, data.length); i++) {
-    if (data[i] && Array.isArray(data[i])) {
-      const cleanRow = data[i].map(c => String(c || '').replace(/\s+/g, ' ').trim());
-      if (cleanRow.includes('Master Enq No')) {
-        headerIndex = i;
-        headers = cleanRow;
-        break;
-      }
-    }
-  }
-
-  if (headerIndex === -1) {
-    console.error("Could not find header row containing 'Master Enq No' in the report.");
+  if (data.length <= 8) {
+    console.error("Report does not contain enough rows.");
     return {};
   }
 
-  const rows = data.slice(headerIndex + 1);
+  const rows = data.slice(8);
 
-  const enqIdx = headers.indexOf('Master Enq No');
-  const quoteValIdx = headers.indexOf('Quote Value');
-  const finalQuoteValIdx = headers.indexOf('Final Quote Value');
+  // Column J = index 9, BA = index 52, BB = index 53
+  const enqIdx = 9;
+  const quoteValIdx = 52;
+  const finalQuoteValIdx = 53;
 
   let enqValues = {};
   for (const row of rows) {
@@ -104,7 +92,7 @@ async function updateSupabaseJobs(enqValues) {
   console.log("Connecting to Supabase to update jobs with missing values...");
   
   // Fetch jobs where quote_value is null or 0
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/jobs?select=id,enq_number&or=(quote_value.is.null,quote_value.eq.0)`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/jobs?select=job_number,enq_number&or=(quote_value.is.null,quote_value.eq.0)`, {
     headers: {
       'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`
@@ -138,7 +126,7 @@ async function updateSupabaseJobs(enqValues) {
     }
 
     if (matchedVal) {
-      const updateRes = await fetch(`${SUPABASE_URL}/rest/v1/jobs?id=eq.${job.id}`, {
+      const updateRes = await fetch(`${SUPABASE_URL}/rest/v1/jobs?job_number=eq.${encodeURIComponent(job.job_number)}`, {
         method: 'PATCH',
         headers: {
           'apikey': SUPABASE_KEY,
@@ -151,7 +139,7 @@ async function updateSupabaseJobs(enqValues) {
       if (updateRes.ok) {
         updates++;
       } else {
-        console.error(`Failed to update job ${job.id}`);
+        console.error(`Failed to update job ${job.job_number}`);
       }
     }
   }
