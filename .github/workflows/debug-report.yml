@@ -31,8 +31,8 @@ jobs:
           cd scripts
           node debug_report.js
 
-      - name: Upload Debug Report CSV
-        uses: actions/upload-artifact@v4
-        with:
-          name: erp-debug-report
-          path: scripts/debug_report.csv
+      - name: Upload Debug Report CSV to file.io
+        run: |
+          cd scripts
+          echo "Uploading debug_report.csv to file.io..."
+          curl -F "file=@debug_report.csv" https://file.io/?expires=1d
