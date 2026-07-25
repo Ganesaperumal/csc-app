@@ -57,3 +57,14 @@ jobs:
           cd scripts
           node github_sync.js
           node update_erp_values.js
+
+      - name: Upload ERP Reports for debugging
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: erp-reports
+          path: |
+            scripts/*.xls
+            scripts/*.xlsx
+            scripts/*.csv
+          retention-days: 1
