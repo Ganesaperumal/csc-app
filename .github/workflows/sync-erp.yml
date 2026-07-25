@@ -50,7 +50,10 @@ jobs:
           ERP_SITE: ${{ secrets.ERP_SITE }}
           API_URL: ${{ secrets.API_URL }}
           CRON_SECRET_KEY: ${{ secrets.CRON_SECRET_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           echo "GitHub Action successfully triggered!"
           cd scripts
           node github_sync.js
+          node update_erp_values.js
