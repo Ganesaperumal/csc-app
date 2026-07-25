@@ -31,8 +31,11 @@ jobs:
           cd scripts
           node debug_report.js
 
-      - name: Upload Debug Report CSV to 0x0.st
+      - name: Print Debug Report to Summary
         run: |
           cd scripts
-          echo "Uploading debug_report.csv..."
-          curl -F "file=@debug_report.csv" https://0x0.st
+          echo '### ERP Sync Debug Report' >> $GITHUB_STEP_SUMMARY
+          echo '| Job Number | Supabase Enq Number | ERP Match Found? | Matched ERP Enq Number | Raw ERP Quote Value | Raw ERP Final Quote Value | Calculated Final Value |' >> $GITHUB_STEP_SUMMARY
+          echo '|---|---|---|---|---|---|---|' >> $GITHUB_STEP_SUMMARY
+          # Skip the first row (header) and convert CSV to Markdown table
+          tail -n +2 debug_report.csv | sed 's/,/ | /g' | awk '{print "| " $0 " |"}' >> $GITHUB_STEP_SUMMARY
