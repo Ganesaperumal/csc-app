@@ -95,20 +95,29 @@ function processEnquiryValues() {
 async function updateSupabaseJobs(enqValues) {
   console.log("Connecting to Supabase to update jobs with missing values...");
   
-  // Fetch jobs where quote_value is null or 0
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/jobs?select=job_number,enq_number&or=(quote_value.is.null,quote_value.eq.0)&limit=5000`, {
-    headers: {
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`
+  let jobs = [];
+  let offset = 0;
+  const limit = 1000;
+  
+  while (true) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/jobs?select=job_number,enq_number&or=(quote_value.is.null,quote_value.eq.0)&limit=${limit}&offset=${offset}`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    });
+    
+    if (!res.ok) {
+      console.error('Failed to fetch jobs', await res.text());
+      break;
     }
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`Failed to fetch jobs: ${res.statusText} - ${errorText}`);
+    
+    const batch = await res.json();
+    jobs.push(...batch);
+    
+    if (batch.length < limit) {
+      break; // Reached the end
+    }
+    offset += limit;
   }
 
-  const jobs = await res.json();
   if (!jobs || jobs.length === 0) {
     console.log("No jobs found with missing values.");
     return;
@@ -129,7 +138,7 @@ async function updateSupabaseJobs(enqValues) {
       const cleanedEnq = cleanEnq(enq);
       for (const [repEnq, val] of Object.entries(enqValues)) {
         const cleanedRep = cleanEnq(repEnq);
-        if (cleanedRep && cleanedEnq && (cleanedRep.includes(cleanedEnq) || cleanedEnq.includes(cleanedRep))) {
+        if (cleanedRep && cleanedEnq && cleanedRep === cleanedEnq) {
           matchedVal = val;
           break;
         }
