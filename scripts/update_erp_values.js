@@ -35,6 +35,11 @@ async function downloadEnquiryReport() {
 
   await page.waitForSelector('#tcfrmdt', { state: 'visible' });
 
+  // Set From Date to capture all enquiries for the financial year
+  console.log("Setting date range (01-Apr-2026)...");
+  await page.fill('#tcfrmdt', '01-Apr-2026');
+  await page.waitForTimeout(1000);
+
   // Download the report
   const [download] = await Promise.all([
     page.waitForEvent('download', { timeout: 120000 }),
@@ -91,7 +96,7 @@ async function updateSupabaseJobs(enqValues) {
   console.log("Connecting to Supabase to update jobs with missing values...");
   
   // Fetch jobs where quote_value is null or 0
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/jobs?select=job_number,enq_number,enquiry_number&or=(quote_value.is.null,quote_value.eq.0)`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/jobs?select=job_number,enq_number&or=(quote_value.is.null,quote_value.eq.0)`, {
     headers: {
       'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`
@@ -115,7 +120,7 @@ async function updateSupabaseJobs(enqValues) {
 
   let updates = 0;
   for (const job of jobs) {
-    let enq = String(job.enq_number || job.enquiry_number || '').trim();
+    let enq = String(job.enq_number || '').trim();
     if (!enq) continue;
 
     let matchedVal = enqValues[enq];
