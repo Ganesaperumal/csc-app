@@ -770,7 +770,7 @@ export default function UnbilledManagementPage() {
                   const isFiltered = (columnFilters[col.id] && columnFilters[col.id].length > 0);
                   const isSorted = columnSorts[col.id];
                   return (
-                    <th key={col.id} style={{ position: 'sticky', top: 0, zIndex: 100, background: 'var(--surface-color)', padding: '1rem 0.85rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', whiteSpace: 'nowrap' }}>
+                    <th key={col.id} style={{ position: 'sticky', top: 0, zIndex: 100, padding: '1rem 0.85rem', boxShadow: '0 2px 4px rgba(0,0,0,0.06)', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'space-between' }}>
                         <span>{col.label}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
