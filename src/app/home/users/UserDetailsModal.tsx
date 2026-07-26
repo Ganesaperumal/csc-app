@@ -202,15 +202,6 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
             />
           </div>
 
-          {/* 2. Jobs Tracking Access */}
-          <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#3b82f6', marginBottom: '0.4rem' }}>📱 2. Jobs Tracking Portal Access</label>
-            <CustomSelect
-              value={trackingRole}
-              onChange={(val) => setTrackingRole(val)}
-              options={ROLE_OPTIONS}
-            />
-          </div>
 
           {/* 3. Unbilled Management Access */}
           <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>

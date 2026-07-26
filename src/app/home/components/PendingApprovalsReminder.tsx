@@ -157,7 +157,6 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
                     <strong>Requested Modules:</strong>
                     <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
                       <span style={{ padding: '0.15rem 0.4rem', borderRadius: '4px', background: 'rgba(79,70,229,0.1)', color: '#4f46e5', fontWeight: 700 }}>CSC: {pu.csc_role || 'Executive'}</span>
-                      <span style={{ padding: '0.15rem 0.4rem', borderRadius: '4px', background: 'rgba(59,130,246,0.1)', color: '#3b82f6', fontWeight: 700 }}>Tracking: {pu.tracking_role || 'Executive'}</span>
                       <span style={{ padding: '0.15rem 0.4rem', borderRadius: '4px', background: 'rgba(16,185,129,0.1)', color: '#10b981', fontWeight: 700 }}>Unbilled: {pu.unbilled_role || 'Executive'}</span>
                     </div>
                   </div>

@@ -226,7 +226,7 @@ export default function UsersPage() {
           👥 Categorized User Management & Access Control
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.35rem' }}>
-          Manage user accounts, assign category permissions (CSC, Tracking, Unbilled), approve pending sign-ups, and control branch access.
+          Manage user accounts, assign category permissions (CSC, Unbilled), approve pending sign-ups, and control branch access.
         </p>
       </div>
 
@@ -325,11 +325,7 @@ export default function UsersPage() {
                                   CSC: {getRoleIcon(cRole)}
                                 </span>
                               )}
-                              {tRole !== 'None' && (
-                                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '6px', background: 'rgba(59,130,246,0.12)', color: '#3b82f6', fontWeight: 700 }}>
-                                  Track: {getRoleIcon(tRole)}
-                                </span>
-                              )}
+
                               {uRole !== 'None' && (
                                 <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '6px', background: 'rgba(16,185,129,0.12)', color: '#10b981', fontWeight: 700 }}>
                                   Unbilled: {getRoleIcon(uRole)}

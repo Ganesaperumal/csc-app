@@ -26,7 +26,7 @@ function DashboardNav({ profile }: { profile: any }) {
   return (
     <nav className={styles.nav}>
       
-      {(cscRole !== 'None' || trackingRole !== 'None') && (
+      {cscRole !== 'None' && (
         <>
           <Link href="/home/active-jobs" className={`${styles.navItem} ${pathname.startsWith('/home/active-jobs') ? styles.active : ''}`}>
             <span>📋</span> Active Jobs
@@ -46,12 +46,6 @@ function DashboardNav({ profile }: { profile: any }) {
             <span>📊</span> Reports &amp; Analytics
           </Link>
         </>
-      )}
-
-      {(trackingRole !== 'None') && (
-        <Link href="/home/tracking" className={`${styles.navItem} ${pathname.startsWith('/home/tracking') ? styles.active : ''}`}>
-          <span>🎯</span> Jobs Tracking
-        </Link>
       )}
 
       {unbilledRole !== 'None' && (
@@ -146,8 +140,7 @@ export default function DashboardLayout({
             </div>
             
             {/* Group Chat - visible to Executive/Manager/Admin; hidden for Viewer */}
-            {(profile?.csc_role === 'Admin' || profile?.csc_role === 'Manager' || profile?.csc_role === 'Executive' ||
-              profile?.tracking_role === 'Admin' || profile?.tracking_role === 'Manager' || profile?.tracking_role === 'Executive') && (
+            {(profile?.csc_role === 'Admin' || profile?.csc_role === 'Manager' || profile?.csc_role === 'Executive') && (
               <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                  <GroupChat user={user} profile={profile} />
               </div>

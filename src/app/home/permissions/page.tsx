@@ -5,14 +5,12 @@ import { supabase } from '@/lib/supabase';
 import { showToast } from '@/components/GlobalDialogs';
 
 const ROLES = ['Admin', 'Manager', 'Executive', 'Viewer'];
-const CATEGORIES = ['CSC', 'Tracking', 'Unbilled', 'Admin'];
+const CATEGORIES = ['CSC', 'Unbilled', 'Admin'];
 const CATEGORY_SECTIONS: Record<string, string[]> = {
   'CSC': [
     'Active Jobs', 'Closed Jobs', 'All Jobs', 'Follow-ups',
     'Reports & Analysis', 'Group Chat', 'Sync ERP Button'
   ],
-
-  'Tracking': ['Jobs Tracking'],
   'Unbilled': ['Unbilled Management'],
   'Admin': ['Legacy Jobs', 'User Management', 'Activity Log', 'Role Permissions']
 };
@@ -20,7 +18,6 @@ const ACCESS_LEVELS = ['None', 'View', 'Read', 'Edit'];
 
 const CATEGORY_ICONS: Record<string, string> = {
   CSC: '📋',
-  Tracking: '🎯',
   Unbilled: '💰',
   Admin: '🛡️',
 };
