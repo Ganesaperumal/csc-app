@@ -1,58 +1,57 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
-    const { email, password, name, role = 'Executive' } = await request.json();
+    const { email, password, name, role, csc_role, tracking_role, unbilled_role, branches, phone, photo, is_approved } = await request.json();
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
-    // Must use service role key to use admin API
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    
-    if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-    }
+    const username = email.split('@')[0].toLowerCase();
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
+    // 1. Create Auth User in Supabase Auth via Admin API
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { name, username }
     });
 
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
-      email: email,
-      password: password,
-      email_confirm: true // automatically confirms the email so they can log in instantly
-    });
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+    if (authError) {
+      return NextResponse.json({ error: authError.message }, { status: 400 });
     }
 
-    // Insert into profiles table
-    const username = email.split('@')[0];
-    const { error: profileError } = await supabaseAdmin.from('profiles').insert([
-      { 
-        id: data.user.id, 
-        username: username, 
-        name: name || username, 
-        role: role, 
-        chat_access: role !== 'Viewer' 
-      }
-    ]);
+    const userId = authData.user.id;
+
+    // 2. Insert Profile into public.profiles
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert([
+        {
+          id: userId,
+          name: name || username,
+          username,
+          role: role || (unbilled_role === 'Branch Manager' ? 'Branch Manager' : 'Executive'),
+          csc_role: csc_role || 'None',
+          tracking_role: tracking_role || 'None',
+          unbilled_role: unbilled_role || 'None',
+          branch_user_role: (unbilled_role === 'Branch Manager') ? unbilled_role : null,
+          branches: branches || [],
+          phone: phone || null,
+          photo: photo || null,
+          is_approved: is_approved !== undefined ? is_approved : true,
+          chat_access: true
+        }
+      ]);
 
     if (profileError) {
-      // In a real app we might want to rollback the user creation here, but we will return the error for now
-      return NextResponse.json({ error: 'User created but profile failed: ' + profileError.message }, { status: 500 });
+      return NextResponse.json({ error: profileError.message }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, user: data.user });
+    return NextResponse.json({ success: true, user: authData.user });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Unknown error' }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

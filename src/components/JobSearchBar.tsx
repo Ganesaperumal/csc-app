@@ -69,7 +69,7 @@ export default function JobSearchBar() {
               onClick={() => {
                 setQuery('');
                 setResults([]);
-                window.location.href = `/dashboard/job/${encodeURIComponent(job.job_number)}`;
+                window.location.href = `/home/job/${encodeURIComponent(job.job_number)}`;
               }}
               style={{
                 padding: '0.75rem 1.15rem', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)',

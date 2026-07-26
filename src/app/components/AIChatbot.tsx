@@ -25,13 +25,13 @@ export default function AIChatbot() {
 
     try {
       const isTrackPage = window.location.pathname.startsWith('/track/');
-      const isDashboardJobPage = window.location.pathname.startsWith('/dashboard/job/');
+      const isDashboardJobPage = window.location.pathname.startsWith('/home/job/');
       
       let jobNumber = null;
       if (isTrackPage) {
         jobNumber = decodeURIComponent(window.location.pathname.replace('/track/', ''));
       } else if (isDashboardJobPage) {
-        jobNumber = decodeURIComponent(window.location.pathname.replace('/dashboard/job/', ''));
+        jobNumber = decodeURIComponent(window.location.pathname.replace('/home/job/', ''));
       }
 
       const res = await fetch('/api/ai', {
@@ -40,7 +40,7 @@ export default function AIChatbot() {
         body: JSON.stringify({ 
           prompt: userMsg,
           context: `Conversation History:\n${messages.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n')}`,
-          provider: window.location.pathname.startsWith('/dashboard') ? 'groq' : 'gemini',
+          provider: window.location.pathname.startsWith('/home') ? 'groq' : 'gemini',
           trackingJobNumber: jobNumber
         })
       });

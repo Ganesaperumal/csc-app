@@ -23,9 +23,9 @@ export default function LoginPage() {
           .single();
 
         if (profile?.role === 'SPOC') {
-          router.push('/spoc-portal');
+          router.push('/home/tracking');
         } else {
-          router.push('/dashboard');
+          router.push('/home');
         }
       }
     };
@@ -34,49 +34,66 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
+
     const cleanInput = username.trim().toLowerCase();
     const cleanPassword = password.trim();
-    const primaryEmail = `${cleanInput}@transworldintl.com`;
 
-    let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: primaryEmail,
-      password: cleanPassword,
-    });
+    let authData = null;
+    let authError = null;
 
-    // Fallback 1: Try phone number email format if input was username (e.g. spoc / 9876543210)
-    if (authError && cleanPassword) {
-      const phoneEmail = `${cleanPassword}@transworldintl.com`.toLowerCase();
-      const fallback1 = await supabase.auth.signInWithPassword({
-        email: phoneEmail,
+    // 1. Direct attempt: If user entered full email (e.g. user@domain.com)
+    if (cleanInput.includes('@')) {
+      const result = await supabase.auth.signInWithPassword({
+        email: cleanInput,
         password: cleanPassword,
       });
-      if (!fallback1.error) {
-        authError = null;
-        authData = fallback1.data;
-      }
+      authData = result.data;
+      authError = result.error;
+    } else {
+      // 2. Direct attempt: If user entered username, append default domain
+      const primaryEmail = `${cleanInput}@transworldintl.com`;
+      const result = await supabase.auth.signInWithPassword({
+        email: primaryEmail,
+        password: cleanPassword,
+      });
+      authData = result.data;
+      authError = result.error;
     }
 
-    // Fallback 2: Look up profile by username or name in profiles table to find matching auth email
+    // 3. Fallback: Search profiles table by username, phone, or name to find associated email
     if (authError) {
+      const candidateEmails: string[] = [];
+      if (cleanInput === 'admin' || cleanInput === 'ganesh' || cleanInput === 'ganesaperumal') {
+        candidateEmails.push('gp@transworldintl.com');
+      }
+
       const { data: matchedProfiles } = await supabase
         .from('profiles')
-        .select('username, id')
-        .or(`username.ilike.${cleanInput},name.ilike.${cleanInput}`);
+        .select('username, phone, id')
+        .or(`username.ilike.${cleanInput},phone.ilike.${cleanInput},name.ilike.${cleanInput}`);
 
       if (matchedProfiles && matchedProfiles.length > 0) {
         for (const p of matchedProfiles) {
           if (p.username) {
-            const profileEmail = `${p.username}@transworldintl.com`.toLowerCase();
-            const fallback2 = await supabase.auth.signInWithPassword({
-              email: profileEmail,
-              password: cleanPassword,
-            });
-            if (!fallback2.error) {
-              authError = null;
-              authData = fallback2.data;
-              break;
+            candidateEmails.push(`${p.username}@transworldintl.com`.toLowerCase());
+            if (p.username === 'admin') {
+              candidateEmails.push('gp@transworldintl.com');
             }
           }
+        }
+      }
+
+      for (const email of Array.from(new Set(candidateEmails))) {
+        const fallback = await supabase.auth.signInWithPassword({
+          email,
+          password: cleanPassword,
+        });
+        if (!fallback.error) {
+          authError = null;
+          authData = fallback.data;
+          break;
         }
       }
     }
@@ -89,16 +106,23 @@ export default function LoginPage() {
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, is_approved')
           .eq('id', user.id)
           .single();
 
+        if (profile && profile.is_approved === false) {
+          await supabase.auth.signOut();
+          setError('⏳ Account Pending Admin Approval. Please contact Super Admin Ganesaperumal.');
+          setLoading(false);
+          return;
+        }
+
         if (profile?.role === 'SPOC') {
-          router.push('/spoc-portal');
+          router.push('/home/tracking');
           return;
         }
       }
-      router.push('/dashboard');
+      router.push('/home');
     }
   };
 
@@ -106,22 +130,21 @@ export default function LoginPage() {
     <div className={styles.loginContainer}>
       <div className={`glass ${styles.loginCard}`}>
         <div className={styles.loginHeader}>
-          <h1>Welcome to CSC</h1>
-          <p className="text-muted">Customer Service Center</p>
+          <h1>Welcome to TI Jobs Portal</h1>
         </div>
         
         {error && <div className={styles.errorMessage}>{error}</div>}
         
         <form onSubmit={handleLogin} className={styles.loginForm}>
           <div className={styles.inputGroup}>
-            <label htmlFor="username">Username</label>
+            <label htmlFor="username">Username or Email Address</label>
             <input 
               id="username" 
               type="text" 
               required
               value={username}
-              onChange={(e) => setUsername(e.target.value.toLowerCase())}
-              placeholder="e.g. spoc"
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="john or john@transworldintl.com"
             />
           </div>
           
@@ -140,6 +163,10 @@ export default function LoginPage() {
           <button type="submit" className={`btn ${styles.loginButton}`} disabled={loading}>
             {loading ? 'Authenticating...' : 'Sign In'}
           </button>
+
+          <div style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            Need an account? <a href="/signup" style={{ color: '#4f46e5', fontWeight: 700, textDecoration: 'none' }}>Self-Register / Sign Up</a>
+          </div>
         </form>
       </div>
     </div>

@@ -23,9 +23,9 @@ export default function Home() {
         .single();
 
       if (profile?.role === 'SPOC') {
-        router.push('/spoc-portal');
+        router.push('/home/tracking');
       } else {
-        router.push('/dashboard');
+        router.push('/home');
       }
     };
 

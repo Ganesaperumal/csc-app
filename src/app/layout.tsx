@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Ti CSC Portal",
+  title: "Ti Jobs Portal",
   description: "Transworld International - Customer Service Center Portal",
 };
 
@@ -33,10 +33,13 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                if (localStorage.getItem('csc_theme') !== 'light') {
+                // Default is LIGHT theme for new users.
+                // Only switch to dark if the user has explicitly chosen it.
+                if (localStorage.getItem('csc_theme') === 'dark') {
                   document.documentElement.classList.add('dark-theme');
                 }
               } catch (e) {}
+
             `,
           }}
         />

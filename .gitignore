@@ -39,3 +39,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# scratch & logs
+sync_logs*
+logs*
+erp-reports*
+*.zip
+*.sh
+debug_erp.js
+parse_report*.js
+test_*.js
+scripts/node_modules
+
+

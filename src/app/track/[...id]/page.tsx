@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from 'react';
 import { supabase } from '@/lib/supabase';
-import JobMap from '../../dashboard/components/JobMap';
+import JobMap from '../../home/components/JobMap';
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
