@@ -69,19 +69,16 @@ export default function UsersPage() {
         setCurrentUser(data.user);
         supabase.from('profiles').select('*').eq('id', data.user.id).single()
           .then(({ data: profile }) => {
-            if (profile) {
-              const role = profile.role || profile.csc_role;
-              setUserRole(role);
+            if (profile && profile.role === 'Admin') {
+              setUserRole(profile.role);
               setCheckingAuth(false);
               fetchUsers();
             } else {
-              setCheckingAuth(false);
-              fetchUsers();
+              router.push('/home');
             }
           });
       } else {
-        setCheckingAuth(false);
-        fetchUsers();
+        router.push('/home');
       }
     });
   }, [router]);

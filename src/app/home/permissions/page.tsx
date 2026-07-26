@@ -73,7 +73,22 @@ export default function PermissionsPage() {
   const [saving, setSaving] = useState(false);
   const [activeCategory, setActiveCategory] = useState('CSC');
 
-  useEffect(() => { fetchPermissions(); }, []);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        supabase.from('profiles').select('role').eq('id', data.user.id).single()
+          .then(({ data: profile }) => {
+            if (profile && profile.role === 'Admin') {
+              fetchPermissions();
+            } else {
+              window.location.href = '/home';
+            }
+          });
+      } else {
+        window.location.href = '/home';
+      }
+    });
+  }, []);
 
   const fetchPermissions = async () => {
     setLoading(true);

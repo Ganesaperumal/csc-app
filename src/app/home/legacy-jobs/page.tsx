@@ -35,8 +35,21 @@ export default function LegacyJobsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    fetchLegacyJobs();
-  }, []);
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        supabase.from('profiles').select('role').eq('id', data.user.id).single()
+          .then(({ data: profile }) => {
+            if (profile && profile.role === 'Admin') {
+              fetchLegacyJobs();
+            } else {
+              router.push('/home');
+            }
+          });
+      } else {
+        router.push('/home');
+      }
+    });
+  }, [router]);
 
   const fetchLegacyJobs = async () => {
     setLoading(true);

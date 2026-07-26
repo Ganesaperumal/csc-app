@@ -263,7 +263,7 @@ export default function ProfilePopup({ user }: { user: any }) {
 
               <div style={{ width: '100%', borderTop: '1px solid var(--border-color)', marginBottom: '1rem' }}></div>
 
-              {(profile?.role === 'Admin' || profile?.csc_role === 'Admin') && (
+              {profile?.role === 'Admin' && (
                 <div style={{ width: '100%', marginBottom: '1rem' }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.5rem', paddingLeft: '0.5rem' }}>
                     Control Center
