@@ -565,6 +565,43 @@ export default function UnbilledManagementPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', flex: 1, justifyContent: 'flex-end' }}>
+          {/* Quick Filters Bar (Left of Toggle Column Filter) */}
+          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'nowrap', background: 'var(--surface-color)', padding: '0.35rem 0.75rem', borderRadius: '99px', border: '1px solid var(--border-color)' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', marginRight: '0.2rem', whiteSpace: 'nowrap' }}>Filters:</span>
+            
+            <CustomSelect
+              value={selectedBranch}
+              onChange={(val) => setSelectedBranch(val)}
+              options={[{ value: 'All', label: 'All Branches' }, ...Array.from(new Set(jobs.map(j => j.branch).filter(Boolean))).map(b => ({ value: b, label: b }))]}
+              style={{ width: '125px' }}
+            />
+
+            <CustomSelect
+              value={selectedGoodsStatus}
+              onChange={(val) => setSelectedGoodsStatus(val)}
+              options={[
+                { value: 'All', label: 'All Jobs Status' },
+                { value: 'No Status', label: 'No Status' },
+                ...BRANCH_GOODS_STATUS_OPTIONS.map(s => ({ value: s, label: s }))
+              ]}
+              style={{ width: '145px' }}
+            />
+
+            <CustomSelect
+              value={selectedPoStatus}
+              onChange={(val) => setSelectedPoStatus(val)}
+              options={[{ value: 'All', label: 'All PO Status' }, ...PO_STATUS_OPTIONS.map(p => ({ value: p, label: p }))]}
+              style={{ width: '135px' }}
+            />
+
+            <CustomSelect
+              value={selectedSalesBy}
+              onChange={(val) => setSelectedSalesBy(val)}
+              options={[{ value: 'All', label: 'All Sales By' }, ...SALES_BY_OPTIONS.map(s => ({ value: s, label: s }))]}
+              style={{ width: '125px' }}
+            />
+          </div>
+
           <button 
             title="Toggle column filters"
             onClick={() => {
@@ -667,44 +704,7 @@ export default function UnbilledManagementPage() {
       {/* Unbilled Data Table and Controls */}
       <div className={styles.tableCard} style={{ minWidth: '100%', width: 'max-content', overflowX: 'visible', overflowY: 'visible', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         
-        {/* Line 1: Dropdown Filters Bar */}
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'nowrap', background: 'rgba(255,255,255,0.05)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', width: 'max-content' }}>
-          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', marginRight: '0.5rem' }}>Quick Filters:</span>
-          
-          <CustomSelect
-            value={selectedBranch}
-            onChange={(val) => setSelectedBranch(val)}
-            options={[{ value: 'All', label: 'All Branches' }, ...Array.from(new Set(jobs.map(j => j.branch).filter(Boolean))).map(b => ({ value: b, label: b }))]}
-            style={{ width: '130px' }}
-          />
-
-          <CustomSelect
-            value={selectedGoodsStatus}
-            onChange={(val) => setSelectedGoodsStatus(val)}
-            options={[
-              { value: 'All', label: 'All Jobs Status' },
-              { value: 'No Status', label: 'No Status' },
-              ...BRANCH_GOODS_STATUS_OPTIONS.map(s => ({ value: s, label: s }))
-            ]}
-            style={{ width: '170px' }}
-          />
-
-          <CustomSelect
-            value={selectedPoStatus}
-            onChange={(val) => setSelectedPoStatus(val)}
-            options={[{ value: 'All', label: 'All PO Status' }, ...PO_STATUS_OPTIONS.map(p => ({ value: p, label: p }))]}
-            style={{ width: '140px' }}
-          />
-
-          <CustomSelect
-            value={selectedSalesBy}
-            onChange={(val) => setSelectedSalesBy(val)}
-            options={[{ value: 'All', label: 'All Sales By' }, ...SALES_BY_OPTIONS.map(s => ({ value: s, label: s }))]}
-            style={{ width: '130px' }}
-          />
-        </div>
-
-        {/* Line 2: KPI Metric Cards (Single Line, don't stretch) */}
+        {/* Line 1: KPI Metric Cards (Single Line, don't stretch) */}
         <div 
           style={{ 
             display: 'flex', 
