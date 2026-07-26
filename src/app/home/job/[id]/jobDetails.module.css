@@ -637,8 +637,26 @@
   .layout { grid-template-columns: 1fr; }
   .sidePanel { position: static; }
   .verticalTrackContainer { position: static; height: 350px; overflow-y: auto; }
-  .logsSection { height: 500px; }
 }
+
+.logsList {
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.logsList::-webkit-scrollbar {
+  width: 5px;
+}
+
+.logsList::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 99px;
+}
+
 
 @media (max-width: 900px) {
   .grid { grid-template-columns: repeat(2, 1fr); }
