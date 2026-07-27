@@ -579,7 +579,7 @@ export default function UnbilledManagementPage() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'nowrap', flex: 1, justifyContent: 'flex-end', overflowX: 'auto' }}>
           {/* Quick Filters Bar (Left of Toggle Column Filter) */}
-          <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'nowrap', background: 'var(--surface-color)', padding: '0.3rem 0.6rem', borderRadius: '99px', border: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'nowrap' }}>
             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', marginRight: '0.15rem', whiteSpace: 'nowrap' }}>Filters:</span>
             
             <CustomSelect
