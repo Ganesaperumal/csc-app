@@ -573,7 +573,7 @@ export default function UnbilledManagementPage() {
           </button>
         )}
           <div style={{ flexShrink: 1, minWidth: 0 }}>
-            <h1 className={styles.title} style={{ fontSize: '1.5rem', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.2', margin: 0 }}>🧾 Unbilled Management</h1>
+            <h1 className={styles.title} style={{ fontSize: '1.5rem', whiteSpace: 'nowrap', margin: 0 }}>🧾 Unbilled<span className={styles.hideOnMobile}> Management</span></h1>
           </div>
         </div>
 
@@ -652,7 +652,7 @@ export default function UnbilledManagementPage() {
           </button>
 
           {/* Search Bar */}
-          <div className={styles.searchBox} style={{ maxWidth: '210px', minWidth: '150px' }}>
+          <div className={styles.searchBox} style={{ maxWidth: '350px', minWidth: '150px', width: '100%' }}>
             <input
               type="text"
               placeholder="Search job, enquiry, client..."
@@ -678,6 +678,7 @@ export default function UnbilledManagementPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '0.4rem',
+              whiteSpace: 'nowrap',
               boxShadow: '0 2px 8px rgba(16,185,129,0.3)'
             }}
           >
