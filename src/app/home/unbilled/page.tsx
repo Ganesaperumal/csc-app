@@ -585,7 +585,7 @@ export default function UnbilledManagementPage() {
             <CustomSelect
               value={selectedBranch}
               onChange={(val) => setSelectedBranch(val)}
-              options={[{ value: 'All', label: 'All Branches' }, ...Array.from(new Set(jobs.map(j => j.branch).filter(Boolean))).map(b => ({ value: b, label: b }))]}
+              options={[{ value: 'All', label: 'Branches' }, ...Array.from(new Set(jobs.map(j => j.branch).filter(Boolean))).map(b => ({ value: b, label: b }))]}
               style={{ width: '115px' }}
             />
 
@@ -593,7 +593,7 @@ export default function UnbilledManagementPage() {
               value={selectedGoodsStatus}
               onChange={(val) => setSelectedGoodsStatus(val)}
               options={[
-                { value: 'All', label: 'All Jobs Status' },
+                { value: 'All', label: 'All Status' },
                 { value: 'No Status', label: 'No Status' },
                 ...BRANCH_GOODS_STATUS_OPTIONS.map(s => ({ value: s, label: s }))
               ]}
@@ -603,14 +603,14 @@ export default function UnbilledManagementPage() {
             <CustomSelect
               value={selectedPoStatus}
               onChange={(val) => setSelectedPoStatus(val)}
-              options={[{ value: 'All', label: 'All PO Status' }, ...PO_STATUS_OPTIONS.map(p => ({ value: p, label: p }))]}
+              options={[{ value: 'All', label: 'PO Status' }, ...PO_STATUS_OPTIONS.map(p => ({ value: p, label: p }))]}
               style={{ width: '125px' }}
             />
 
             <CustomSelect
               value={selectedSalesBy}
               onChange={(val) => setSelectedSalesBy(val)}
-              options={[{ value: 'All', label: 'All Sales By' }, ...SALES_BY_OPTIONS.map(s => ({ value: s, label: s }))]}
+              options={[{ value: 'All', label: 'Sales By' }, ...SALES_BY_OPTIONS.map(s => ({ value: s, label: s }))]}
               style={{ width: '115px' }}
             />
           </div>
