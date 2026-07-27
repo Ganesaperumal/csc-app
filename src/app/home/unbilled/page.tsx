@@ -569,7 +569,7 @@ export default function UnbilledManagementPage() {
               fontSize: '0.85rem'
             }}
           >
-            ← Back
+            Back
           </button>
         )}
           <div style={{ flexShrink: 1, minWidth: 0 }}>
