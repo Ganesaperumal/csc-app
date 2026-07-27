@@ -1931,7 +1931,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                     sentInfo={sentInfo}
                     customerPhone={job.customer_phone}
                     isLast={idx === arr.length - 1}
-                    disabled={isViewer || userRole === 'RestrictedUser'}
+                    disabled={isViewer}
                     onSend={async () => {
                       const cleanPhone = (job.customer_phone || '').replace(/[^0-9]/g, '');
                       if (!cleanPhone) {
