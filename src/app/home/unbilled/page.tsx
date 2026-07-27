@@ -550,7 +550,7 @@ export default function UnbilledManagementPage() {
     <div className={styles.container} onClick={() => setActiveFilterColumn(null)}>
       
       {/* Line 1: Header Bar with Back Button, Title, Search, Clear Funnels, Export XLSX, Reminders */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'nowrap', overflowX: 'auto', marginBottom: '1.5rem', paddingBottom: '0.2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 1, minWidth: 0, maxWidth: '100%' }}>
           {((userProfile?.role === 'Admin' || userProfile?.csc_role === 'Admin') || (userProfile?.csc_role && userProfile.csc_role !== 'None') || (userProfile?.tracking_role && userProfile.tracking_role !== 'None')) && (
           <button
@@ -577,7 +577,7 @@ export default function UnbilledManagementPage() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'nowrap', justifyContent: 'flex-end' }}>
           {/* Quick Filters Bar (Left of Toggle Column Filter) */}
           <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'nowrap' }}>
             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', marginRight: '0.15rem', whiteSpace: 'nowrap' }}>Filters:</span>
@@ -652,7 +652,7 @@ export default function UnbilledManagementPage() {
           </button>
 
           {/* Search Bar */}
-          <div className={styles.searchBox} style={{ maxWidth: '280px' }}>
+          <div className={styles.searchBox} style={{ maxWidth: '210px', minWidth: '150px' }}>
             <input
               type="text"
               placeholder="Search job, enquiry, client..."
@@ -681,7 +681,7 @@ export default function UnbilledManagementPage() {
               boxShadow: '0 2px 8px rgba(16,185,129,0.3)'
             }}
           >
-            📥 Download
+            📥 XL
           </button>
 
           {/* Reminders Bell Notification Icon */}
@@ -702,7 +702,7 @@ export default function UnbilledManagementPage() {
                 fontSize: '0.85rem'
               }}
             >
-              🔔 Reminders
+              🔔
               {upcomingReminders.length > 0 && (
                 <span style={{ padding: '0.1rem 0.45rem', borderRadius: '12px', background: '#ef4444', color: 'white', fontSize: '0.7rem', fontWeight: 800 }}>
                   {upcomingReminders.length}
