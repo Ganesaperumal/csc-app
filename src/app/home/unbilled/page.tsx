@@ -729,50 +729,50 @@ export default function UnbilledManagementPage() {
         >
           <div className={styles.kpiCard} style={{ padding: '0.75rem 0.85rem', flex: '0 0 auto', minWidth: '140px', background: 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05))', border: '1px solid rgba(239,68,68,0.3)' }}>
             <div className={styles.kpiLabel} style={{ fontSize: '0.68rem', marginBottom: '0.25rem', whiteSpace: 'nowrap', color: '#ef4444' }}>No Details</div>
-            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{noDetailsKpi.count} Jobs</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#ef4444', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>₹{noDetailsKpi.value.toLocaleString('en-IN')}</div>
+            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>₹{noDetailsKpi.value.toLocaleString('en-IN')}</div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#ef4444', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>{noDetailsKpi.count} Jobs</div>
           </div>
 
           <div className={styles.kpiCard} style={{ padding: '0.75rem 0.85rem', flex: '0 0 auto', minWidth: '140px', background: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05))', border: '1px solid rgba(245,158,11,0.3)' }}>
             <div className={styles.kpiLabel} style={{ fontSize: '0.68rem', marginBottom: '0.25rem', whiteSpace: 'nowrap', color: '#f59e0b' }}>PO&PI Pending</div>
-            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{poPiPendingKpi.count} Jobs</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f59e0b', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>₹{poPiPendingKpi.value.toLocaleString('en-IN')}</div>
+            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>₹{poPiPendingKpi.value.toLocaleString('en-IN')}</div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f59e0b', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>{poPiPendingKpi.count} Jobs</div>
           </div>
 
           <div className={styles.kpiCard} style={{ padding: '0.75rem 0.85rem', flex: '0 0 auto', minWidth: '140px', background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.05))', border: '1px solid rgba(59,130,246,0.3)' }}>
             <div className={styles.kpiLabel} style={{ fontSize: '0.68rem', marginBottom: '0.25rem', whiteSpace: 'nowrap', color: '#3b82f6' }}>Job Completed</div>
-            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{jobCompletedKpi.count} Jobs</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#3b82f6', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>₹{jobCompletedKpi.value.toLocaleString('en-IN')}</div>
+            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>₹{jobCompletedKpi.value.toLocaleString('en-IN')}</div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#3b82f6', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>{jobCompletedKpi.count} Jobs</div>
           </div>
 
           <div className={styles.kpiCard} style={{ padding: '0.75rem 0.85rem', flex: '0 0 auto', minWidth: '140px', background: 'linear-gradient(135deg, rgba(220,38,38,0.15), rgba(220,38,38,0.05))', border: '1px solid rgba(220,38,38,0.3)' }}>
             <div className={styles.kpiLabel} style={{ fontSize: '0.68rem', marginBottom: '0.25rem', whiteSpace: 'nowrap', color: '#dc2626' }}>Damages</div>
-            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{damagesKpi.count} Jobs</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#dc2626', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>₹{damagesKpi.value.toLocaleString('en-IN')}</div>
+            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>₹{damagesKpi.value.toLocaleString('en-IN')}</div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#dc2626', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>{damagesKpi.count} Jobs</div>
           </div>
 
           <div className={styles.kpiCard} style={{ padding: '0.75rem 0.85rem', flex: '0 0 auto', minWidth: '140px', background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))', border: '1px solid rgba(139,92,246,0.3)' }}>
             <div className={styles.kpiLabel} style={{ fontSize: '0.68rem', marginBottom: '0.25rem', whiteSpace: 'nowrap', color: '#8b5cf6' }}>Storage</div>
-            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{storageKpi.count} Jobs</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#8b5cf6', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>₹{storageKpi.value.toLocaleString('en-IN')}</div>
+            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>₹{storageKpi.value.toLocaleString('en-IN')}</div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#8b5cf6', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>{storageKpi.count} Jobs</div>
           </div>
 
           <div className={styles.kpiCard} style={{ padding: '0.75rem 0.85rem', flex: '0 0 auto', minWidth: '140px', background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05))', border: '1px solid rgba(16,185,129,0.3)' }}>
             <div className={styles.kpiLabel} style={{ fontSize: '0.68rem', marginBottom: '0.25rem', whiteSpace: 'nowrap', color: '#10b981' }}>Ready for Billing</div>
-            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{readyForBillingKpi.count} Jobs</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#10b981', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>₹{readyForBillingKpi.value.toLocaleString('en-IN')}</div>
+            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>₹{readyForBillingKpi.value.toLocaleString('en-IN')}</div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#10b981', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>{readyForBillingKpi.count} Jobs</div>
           </div>
 
           <div className={styles.kpiCard} style={{ padding: '0.75rem 0.85rem', flex: '0 0 auto', minWidth: '140px', background: 'linear-gradient(135deg, rgba(153,27,27,0.15), rgba(153,27,27,0.05))', border: '1px solid rgba(153,27,27,0.3)' }}>
             <div className={styles.kpiLabel} style={{ fontSize: '0.68rem', marginBottom: '0.25rem', whiteSpace: 'nowrap', color: '#991b1b' }}>To Be Cancelled</div>
-            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{toBeCancelledKpi.count} Jobs</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#991b1b', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>₹{toBeCancelledKpi.value.toLocaleString('en-IN')}</div>
+            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>₹{toBeCancelledKpi.value.toLocaleString('en-IN')}</div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#991b1b', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>{toBeCancelledKpi.count} Jobs</div>
           </div>
 
           <div className={styles.kpiCard} style={{ padding: '0.75rem 0.85rem', flex: '0 0 auto', minWidth: '140px', background: 'linear-gradient(135deg, rgba(100,116,139,0.15), rgba(100,116,139,0.05))', border: '1px solid rgba(100,116,139,0.3)' }}>
             <div className={styles.kpiLabel} style={{ fontSize: '0.68rem', marginBottom: '0.25rem', whiteSpace: 'nowrap', color: '#64748b' }}>Execution Pending</div>
-            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{executionPendingKpi.count} Jobs</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#64748b', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>₹{executionPendingKpi.value.toLocaleString('en-IN')}</div>
+            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>₹{executionPendingKpi.value.toLocaleString('en-IN')}</div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#64748b', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>{executionPendingKpi.count} Jobs</div>
           </div>
         </div>
 
