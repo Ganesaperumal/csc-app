@@ -573,7 +573,7 @@ export default function UnbilledManagementPage() {
           </button>
         )}
           <div>
-            <h1 className={styles.title} style={{ fontSize: '1.5rem' }}>🧾 Unbilled Management</h1>
+            <h1 className={styles.title} style={{ fontSize: '1.5rem', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.2' }}>🧾 Unbilled Management</h1>
           </div>
         </div>
 
@@ -681,7 +681,7 @@ export default function UnbilledManagementPage() {
               boxShadow: '0 2px 8px rgba(16,185,129,0.3)'
             }}
           >
-            📥 Download XLSX
+            📥 Download
           </button>
 
           {/* Reminders Bell Notification Icon */}
