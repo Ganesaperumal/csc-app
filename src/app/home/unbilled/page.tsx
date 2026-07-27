@@ -35,6 +35,19 @@ const SALES_BY_OPTIONS = [
   "PIKKOL"
 ];
 
+const getDisplayGoodsStatus = (status: string | null) => {
+  if (!status) return status;
+  if (BRANCH_GOODS_STATUS_OPTIONS.includes(status) && status !== "00. Execution Pending") return status;
+  const match = status.match(/^(\d{2})\./);
+  if (match) {
+    const num = parseInt(match[1], 10);
+    if (num >= 1 && num <= 21) {
+      return '00. Execution Pending';
+    }
+  }
+  return status;
+};
+
 const ALL_UNBILLED_COLUMNS = [
   { id: 'remarks', label: 'Remarks' },
   { id: 'branch', label: 'BRN' },
@@ -93,7 +106,7 @@ function ColumnFilterDropdown({
       case 'quote_value': return String(enquiryValues[enqKey] || job.quote_value || 0);
       case 'packing_date': return formatDate(job.packing_date);
       case 'actual_delivery': return formatDate(job.actual_delivery);
-      case 'goods_track_status': return job.goods_track_status || '—';
+      case 'goods_track_status': return getDisplayGoodsStatus(job.goods_track_status) || '—';
       case 'bill_closure_date': return formatDate(job.bill_closure_date);
       case 'po_status': return job.po_status || '—';
       case 'po_date': return formatDate(job.po_date);
@@ -114,7 +127,7 @@ function ColumnFilterDropdown({
       case 'quote_value': return String(enquiryValues[enqKey] || job.quote_value || 0);
       case 'packing_date': return job.packing_date || '';
       case 'actual_delivery': return job.actual_delivery || '';
-      case 'goods_track_status': return job.goods_track_status || '';
+      case 'goods_track_status': return getDisplayGoodsStatus(job.goods_track_status) || '';
       case 'bill_closure_date': return job.bill_closure_date || '';
       case 'po_status': return job.po_status || '';
       case 'po_date': return job.po_date || '';
@@ -414,7 +427,7 @@ export default function UnbilledManagementPage() {
 
     const matchBranch = selectedBranch === 'All' || j.branch === selectedBranch;
     const matchGoods = selectedGoodsStatus === 'All' || 
-                       (selectedGoodsStatus === 'No Status' ? (!j.goods_track_status || j.goods_track_status.trim() === '') : j.goods_track_status === selectedGoodsStatus);
+                       (selectedGoodsStatus === 'No Status' ? (!j.goods_track_status || j.goods_track_status.trim() === '') : getDisplayGoodsStatus(j.goods_track_status) === selectedGoodsStatus);
     const matchPo = selectedPoStatus === 'All' || j.po_status === selectedPoStatus;
     const matchSales = selectedSalesBy === 'All' || j.sales_by === selectedSalesBy;
 
@@ -430,7 +443,7 @@ export default function UnbilledManagementPage() {
         else if (colId === 'quote_value') val = String(enquiryValues[j.enq_number || j.enquiry_number || ''] || j.quote_value || 0);
         else if (colId === 'packing_date') val = j.packing_date || '';
         else if (colId === 'actual_delivery') val = j.actual_delivery || '';
-        else if (colId === 'goods_track_status') val = j.goods_track_status || '';
+        else if (colId === 'goods_track_status') val = getDisplayGoodsStatus(j.goods_track_status) || '';
         else if (colId === 'bill_closure_date') val = j.bill_closure_date || '';
         else if (colId === 'po_status') val = j.po_status || '';
         else if (colId === 'po_date') val = j.po_date || '';
@@ -490,7 +503,7 @@ export default function UnbilledManagementPage() {
         'Value (₹)': val,
         'Packing Date': formatDate(j.packing_date),
         'Delivery Date': formatDate(j.actual_delivery),
-        'Goods Status': j.goods_track_status || '',
+        'Goods Status': getDisplayGoodsStatus(j.goods_track_status) || '',
         'PO Status': j.po_status || '',
         'PO Date': formatDate(j.po_date),
         'Inv Request Date': formatDate(j.inv_request_date),
@@ -518,14 +531,14 @@ export default function UnbilledManagementPage() {
   };
 
   const totalKpi = { count: filteredJobs.length, value: filteredJobs.reduce((sum, j) => sum + Number(enquiryValues[j.enq_number || j.enquiry_number || ''] || j.quote_value || 0), 0) };
-  const noDetailsKpi = calcKpi(j => !j.goods_track_status || j.goods_track_status === '00. Execution Pending');
+  const noDetailsKpi = calcKpi(j => !j.goods_track_status || getDisplayGoodsStatus(j.goods_track_status) === '00. Execution Pending');
   const poPiPendingKpi = calcKpi(j => j.po_status === 'PO Pending' || j.po_status === 'PI Pending');
-  const jobCompletedKpi = calcKpi(j => j.goods_track_status === '22. Job Completed');
-  const damagesKpi = calcKpi(j => j.goods_track_status === '17. Damages');
-  const storageKpi = calcKpi(j => j.goods_track_status === '21. Storage');
-  const readyForBillingKpi = calcKpi(j => j.goods_track_status === '27. Billing Pending');
-  const toBeCancelledKpi = calcKpi(j => j.goods_track_status === '25. Job # to be Cancelled');
-  const executionPendingKpi = calcKpi(j => j.goods_track_status === '00. Execution Pending');
+  const jobCompletedKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '22. Job Completed');
+  const damagesKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '17. Damages');
+  const storageKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '21. Storage');
+  const readyForBillingKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '27. Billing Pending');
+  const toBeCancelledKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '25. Job # to be Cancelled');
+  const executionPendingKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '00. Execution Pending');
 
   const hasAppliedFilters = Object.keys(columnFilters).length > 0 || search.trim() !== '' || selectedBranch !== 'All' || selectedGoodsStatus !== 'All' || selectedPoStatus !== 'All' || selectedSalesBy !== 'All';
 
@@ -891,7 +904,7 @@ export default function UnbilledManagementPage() {
                     {/* 10. Goods Status */}
                     <td>
                       <CustomSelect
-                        value={j.goods_track_status || ''}
+                        value={getDisplayGoodsStatus(j.goods_track_status) || ''}
                         placeholder="- Select -"
                         onChange={(val) => handleUpdateJobField(j, 'goods_track_status', val)}
                         options={BRANCH_GOODS_STATUS_OPTIONS.map(s => ({ value: s, label: s }))}
