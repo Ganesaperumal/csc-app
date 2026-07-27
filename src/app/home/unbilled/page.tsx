@@ -551,7 +551,7 @@ export default function UnbilledManagementPage() {
       
       {/* Line 1: Header Bar with Back Button, Title, Search, Clear Funnels, Export XLSX, Reminders */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 1, minWidth: 0, maxWidth: '100%' }}>
           {((userProfile?.role === 'Admin' || userProfile?.csc_role === 'Admin') || (userProfile?.csc_role && userProfile.csc_role !== 'None') || (userProfile?.tracking_role && userProfile.tracking_role !== 'None')) && (
           <button
             onClick={() => router.push('/home')}
@@ -572,8 +572,8 @@ export default function UnbilledManagementPage() {
             ← Back
           </button>
         )}
-          <div>
-            <h1 className={styles.title} style={{ fontSize: '1.5rem', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.2' }}>🧾 Unbilled Management</h1>
+          <div style={{ flexShrink: 1, minWidth: 0 }}>
+            <h1 className={styles.title} style={{ fontSize: '1.5rem', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.2', margin: 0 }}>🧾 Unbilled Management</h1>
           </div>
         </div>
 
