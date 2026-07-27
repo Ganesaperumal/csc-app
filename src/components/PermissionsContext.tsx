@@ -49,8 +49,8 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
   ): AccessLevel => {
     if (!userRoles) return 'None';
     
-    // Admins implicitly have Edit access everywhere
-    if (userRoles.role === 'Admin' || userRoles.csc_role === 'Admin') return 'Edit';
+    // No hardcoded admin bypass - let the database dictate access
+    // if (userRoles.role === 'Admin' || userRoles.csc_role === 'Admin') return 'Edit';
 
     // Find all matching permissions for this user's roles
     const activeRoles = [userRoles.role, userRoles.csc_role, userRoles.tracking_role, userRoles.unbilled_role].filter(Boolean);

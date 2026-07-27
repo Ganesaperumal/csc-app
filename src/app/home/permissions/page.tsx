@@ -9,10 +9,10 @@ const CATEGORIES = ['CSC', 'Unbilled', 'Admin'];
 const CATEGORY_SECTIONS: Record<string, string[]> = {
   'CSC': [
     'Active Jobs', 'Closed Jobs', 'All Jobs', 'Follow-ups',
-    'Reports & Analysis', 'Group Chat', 'Sync ERP Button'
+    'Reports', 'Group Chat', 'Sync ERP'
   ],
-  'Unbilled': ['Unbilled Management'],
-  'Admin': ['Legacy Jobs', 'User Management', 'Activity Log', 'Role Permissions']
+  'Unbilled': ['Unbilled'],
+  'Admin': ['User Management', 'Role Permissions', 'Admin Center']
 };
 const ACCESS_LEVELS = ['None', 'View', 'Read', 'Edit'];
 
@@ -68,6 +68,7 @@ export default function PermissionsPage() {
   const [matrix, setMatrix] = useState<Matrix>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
   const [activeCategory, setActiveCategory] = useState('CSC');
 
   useEffect(() => {
@@ -102,18 +103,21 @@ export default function PermissionsPage() {
     setMatrix(prev => {
       const current = prev[category]?.[section]?.[role]?.access || 'None';
       const idx = ACCESS_LEVELS.indexOf(current);
-      const next = ACCESS_LEVELS[(idx + 1) % ACCESS_LEVELS.length];
+      // Fallback to None if not found
+      const nextIdx = idx === -1 ? 1 : (idx + 1) % ACCESS_LEVELS.length;
+      const nextAccess = ACCESS_LEVELS[nextIdx];
       return {
         ...prev,
         [category]: {
           ...prev[category],
           [section]: {
             ...prev[category][section],
-            [role]: { ...prev[category][section][role], access: next }
+            [role]: { ...prev[category][section][role], access: nextAccess }
           }
         }
       };
     });
+    setHasChanges(true);
   };
 
   const setAccess = (category: string, section: string, role: string, value: string) => {
@@ -127,34 +131,46 @@ export default function PermissionsPage() {
         }
       }
     }));
+    setHasChanges(true);
   };
 
   const handleSave = async () => {
     setSaving(true);
-    const payload: any[] = [];
+    
+    const toUpdate: any[] = [];
+    const toInsert: any[] = [];
+
     for (const cat of CATEGORIES) {
       for (const sec of CATEGORY_SECTIONS[cat]) {
         for (const role of ROLES) {
           const cell = matrix[cat]?.[sec]?.[role];
-          payload.push({
-            category: cat,
-            section: sec,
-            role,
-            access: cell?.access || 'None',
-          });
+          if (cell?.id) {
+            toUpdate.push({ id: cell.id, category: cat, section: sec, role, access: cell.access });
+          } else if (cell?.access && cell.access !== 'None') {
+            toInsert.push({ category: cat, section: sec, role, access: cell.access });
+          }
         }
       }
     }
 
-    const { error } = await supabase
-      .from('role_permissions')
-      .upsert(payload, { onConflict: 'category,role,section' });
+    let saveError = null;
 
-    if (error) {
-      showToast(error.message || 'Error saving permissions', 'error');
-      console.error('Supabase Upsert Error:', error);
+    if (toUpdate.length > 0) {
+      const { error } = await supabase.from('role_permissions').upsert(toUpdate);
+      if (error) saveError = error;
+    }
+    
+    if (toInsert.length > 0 && !saveError) {
+      const { error } = await supabase.from('role_permissions').insert(toInsert);
+      if (error) saveError = error;
+    }
+
+    if (saveError) {
+      showToast('Error saving permissions: ' + (saveError.message || JSON.stringify(saveError)), 'error');
+      console.error('Supabase Bulk Save Error:', saveError);
     } else {
       showToast('Permissions saved successfully!', 'success');
+      setHasChanges(false);
       fetchPermissions();
     }
     setSaving(false);
@@ -174,59 +190,40 @@ export default function PermissionsPage() {
   return (
     <div style={{ padding: '2rem', maxWidth: '1100px', margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
-        <div>
-          <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            🛡️ Role Permissions
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
-            Click any badge to cycle through access levels — <span style={{ color: '#60a5fa' }}>View</span>, <span style={{ color: '#c084fc' }}>Read</span>, <span style={{ color: '#34d399' }}>Edit</span>, or None.
-          </p>
-        </div>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          style={{
-            padding: '0.7rem 1.8rem',
-            background: saving ? 'var(--surface-color)' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '10px',
-            fontWeight: 700,
-            fontSize: '0.9rem',
-            cursor: saving ? 'not-allowed' : 'pointer',
-            boxShadow: saving ? 'none' : '0 4px 15px rgba(99,102,241,0.4)',
-            transition: 'all 0.2s',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}
-        >
-          {saving ? (
-            <>
-              <div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid white', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          🛡️ Role Permissions
+        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {saving && (
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ width: 14, height: 14, border: '2px solid var(--border-color)', borderTop: '2px solid #6366f1', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
               Saving...
-            </>
-          ) : (
-            <>💾 Save Changes</>
+            </span>
           )}
-        </button>
+          {hasChanges && !saving && (
+            <button
+              onClick={handleSave}
+              style={{
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                color: 'white',
+                border: 'none',
+                padding: '0.6rem 1.2rem',
+                borderRadius: '8px',
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(99,102,241,0.2)',
+                transition: 'all 0.2s',
+              }}
+            >
+              Save Changes
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Legend */}
-      <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        {ACCESS_LEVELS.map(lvl => {
-          const cfg = ACCESS_CONFIG[lvl];
-          return (
-            <span key={lvl} style={{ padding: '0.3rem 0.9rem', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600, background: cfg.bg, color: cfg.color, border: cfg.border }}>
-              {lvl}
-            </span>
-          );
-        })}
-        <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', alignSelf: 'center', marginLeft: '0.5rem' }}>
-          — Click any badge to toggle
-        </span>
-      </div>
+
 
       {/* Category Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '2px solid var(--border-color)', paddingBottom: '0' }}>

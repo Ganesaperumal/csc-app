@@ -437,7 +437,7 @@ export default function AdminPage() {
 
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
-          ⚙️ Control Center
+          ⚙️ Admin Center
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.35rem' }}>
           Manage team members, roles, and bulk data operations.

@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { usePermissions } from '@/components/PermissionsContext';
 
 export default function ProfilePopup({ user }: { user: any }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -21,7 +22,9 @@ export default function ProfilePopup({ user }: { user: any }) {
   
   const [popupStyle, setPopupStyle] = useState<React.CSSProperties>({});
 
+
   const [profile, setProfile] = useState<any>(null);
+  const { getAccessLevel } = usePermissions();
 
   useEffect(() => {
     if (isOpen && popupRef.current) {
@@ -263,23 +266,29 @@ export default function ProfilePopup({ user }: { user: any }) {
 
               <div style={{ width: '100%', borderTop: '1px solid var(--border-color)', marginBottom: '1rem' }}></div>
 
-              {profile?.role === 'Admin' && (
+              {(getAccessLevel('User Management', profile) !== 'None' || getAccessLevel('Role Permissions', profile) !== 'None' || getAccessLevel('Admin Center', profile) !== 'None') && (
                 <div style={{ width: '100%', marginBottom: '1rem' }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.5rem', paddingLeft: '0.5rem' }}>
                     Control Center
                   </div>
-                  <Link href="/home/users" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.5rem', borderRadius: '8px', color: 'var(--text-primary)', textDecoration: 'none', fontSize: '0.9rem' }}>
-                    <span style={{ fontSize: '1.2rem' }}>👥</span> User Management
-                  </Link>
-                  <Link href="/home/legacy-jobs" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.5rem', borderRadius: '8px', color: 'var(--text-primary)', textDecoration: 'none', fontSize: '0.9rem' }}>
-                    <span style={{ fontSize: '1.2rem' }}>📦</span> Legacy Jobs
-                  </Link>
-                  <Link href="/home/activity-log" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.5rem', borderRadius: '8px', color: 'var(--text-primary)', textDecoration: 'none', fontSize: '0.9rem' }}>
-                    <span style={{ fontSize: '1.2rem' }}>📝</span> Activity Log
-                  </Link>
-                  <Link href="/home/permissions" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.5rem', borderRadius: '8px', color: 'var(--text-primary)', textDecoration: 'none', fontSize: '0.9rem' }}>
-                    <span style={{ fontSize: '1.2rem' }}>🛡️</span> Role Permissions
-                  </Link>
+                  
+                  {getAccessLevel('User Management', profile) !== 'None' && (
+                    <Link href="/home/users" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.5rem', borderRadius: '8px', color: 'var(--text-primary)', textDecoration: 'none', fontSize: '0.9rem' }}>
+                      <span style={{ fontSize: '1.2rem' }}>👥</span> User Management
+                    </Link>
+                  )}
+                  
+                  {getAccessLevel('Admin Center', profile) !== 'None' && (
+                    <Link href="/home/admin" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.5rem', borderRadius: '8px', color: 'var(--text-primary)', textDecoration: 'none', fontSize: '0.9rem' }}>
+                      <span style={{ fontSize: '1.2rem' }}>⚙️</span> Admin Center
+                    </Link>
+                  )}
+                  
+                  {getAccessLevel('Role Permissions', profile) !== 'None' && (
+                    <Link href="/home/permissions" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.5rem', borderRadius: '8px', color: 'var(--text-primary)', textDecoration: 'none', fontSize: '0.9rem' }}>
+                      <span style={{ fontSize: '1.2rem' }}>🛡️</span> Role Permissions
+                    </Link>
+                  )}
                 </div>
               )}
 
