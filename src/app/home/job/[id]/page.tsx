@@ -1,5 +1,6 @@
 'use client';
 import { showToast } from '@/components/GlobalDialogs';
+import { usePermissions } from '@/components/PermissionsContext';
 
 import { useEffect, useState, use, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -375,9 +376,21 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const [newShipmentDate, setNewShipmentDate] = useState('');
   const [newShipmentLocation, setNewShipmentLocation] = useState('');
   const [agentName, setAgentName] = useState('Agent');
-  const [userRole, setUserRole] = useState<string>('');
-  // isReadOnly: Admin and Viewer can see everything but not edit.
-  const isReadOnly = userRole === 'RestrictedUser';
+  const { getAccessLevel } = usePermissions();
+  const [profileRoles, setProfileRoles] = useState<{ role?: string; csc_role?: string; tracking_role?: string; unbilled_role?: string } | null>(null);
+
+  const hasEditAccess = profileRoles ? (
+    getAccessLevel('Active Jobs', profileRoles) === 'Edit' ||
+    getAccessLevel('All Jobs', profileRoles) === 'Edit' ||
+    getAccessLevel('Closed Jobs', profileRoles) === 'Edit' ||
+    getAccessLevel('Unbilled', profileRoles) === 'Edit' ||
+    ['Executive', 'Manager'].includes(profileRoles.csc_role || '') ||
+    ['Executive', 'Manager'].includes(profileRoles.tracking_role || '') ||
+    ['Executive', 'Manager'].includes(profileRoles.unbilled_role || '')
+  ) : false;
+
+  // isReadOnly: Admin and Viewer can see everything but not edit, unless granted edit access in Permissions Matrix.
+  const isReadOnly = profileRoles ? !hasEditAccess : true;
   const isViewer = isReadOnly; // alias for backward compat with all existing isViewer references
   const isSPOC = false; // SPOC role removed — kept as false so old guards still compile
   const [supervisors, setSupervisors] = useState<string[]>([]);
@@ -511,19 +524,16 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
         const fetchProfile = async () => {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('username, name, role, csc_role')
+            .select('username, name, role, csc_role, tracking_role, unbilled_role')
             .eq('id', data.user.id)
             .single();
             
           if (profile) {
             setAgentName(profile.name || profile.username || data.user.email?.split('@')[0] || 'Agent');
-            // Determine role for edit permissions
-            // Executive and Manager = full edit; Admin and Viewer = read-only
-            const cscRole = profile.csc_role || 'Executive';
-            const isEditRole = cscRole === 'Executive' || cscRole === 'Manager';
-            setUserRole(isEditRole ? 'CSCStaff' : 'RestrictedUser');
+            setProfileRoles(profile);
           } else {
             setAgentName(data.user.email?.split('@')[0] || 'Agent');
+            setProfileRoles({});
           }
         };
         fetchProfile();
