@@ -70,13 +70,68 @@ const ALL_UNBILLED_COLUMNS = [
 ];
 
 const formatDate = (dateStr: string | null) => {
-  if (!dateStr) return '—';
+  if (!dateStr || dateStr.trim() === '' || dateStr === '—') return '';
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return dateStr;
   const day = date.getDate().toString().padStart(2, '0');
   const month = date.toLocaleString('en-US', { month: 'short' });
   return `${day}-${month}`;
 };
+
+function DateCellInput({ value, onChange, disabled }: { value: string | null; onChange: (val: string) => void; disabled?: boolean }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const formatted = formatDate(value);
+
+  if (isEditing && !disabled) {
+    return (
+      <input
+        type="date"
+        autoFocus
+        value={value || ''}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setIsEditing(false);
+        }}
+        onBlur={() => setIsEditing(false)}
+        style={{
+          padding: '0.15rem 0.3rem',
+          width: '110px',
+          borderRadius: '4px',
+          border: '1px solid #4f46e5',
+          background: 'var(--bg-color)',
+          color: 'var(--text-primary)',
+          fontSize: '0.72rem',
+          fontFamily: 'inherit'
+        }}
+      />
+    );
+  }
+
+  return (
+    <div
+      onClick={() => { if (!disabled) setIsEditing(true); }}
+      style={{
+        padding: '0.2rem 0.4rem',
+        borderRadius: '4px',
+        border: '1px solid transparent',
+        cursor: disabled ? 'default' : 'pointer',
+        fontSize: '0.78rem',
+        fontWeight: 600,
+        color: 'var(--text-primary)',
+        minHeight: '26px',
+        minWidth: '70px',
+        display: 'flex',
+        alignItems: 'center',
+        background: 'transparent',
+        transition: 'all 0.15s ease'
+      }}
+      onMouseOver={(e) => { if (!disabled) e.currentTarget.style.border = '1px solid var(--border-color)'; }}
+      onMouseOut={(e) => { if (!disabled) e.currentTarget.style.border = '1px solid transparent'; }}
+    >
+      {formatted}
+    </div>
+  );
+}
 
 function ColumnFilterDropdown({
   colId,
@@ -975,23 +1030,19 @@ export default function UnbilledManagementPage() {
 
                     {/* 8. Packing Dt */}
                     <td>
-                      <input
-                        type="date"
-                        value={j.packing_date || ''}
-                        onChange={(e) => handleUpdateJobField(j, 'packing_date', e.target.value)}
+                      <DateCellInput
+                        value={j.packing_date}
+                        onChange={(val) => handleUpdateJobField(j, 'packing_date', val)}
                         disabled={isViewer}
-                        style={{ padding: '0.1rem 0.2rem', width: '100px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.7rem' }}
                       />
                     </td>
 
                     {/* 9. Delivery Dt */}
                     <td>
-                      <input
-                        type="date"
-                        value={j.actual_delivery || ''}
-                        onChange={(e) => handleUpdateJobField(j, 'actual_delivery', e.target.value)}
+                      <DateCellInput
+                        value={j.actual_delivery}
+                        onChange={(val) => handleUpdateJobField(j, 'actual_delivery', val)}
                         disabled={isViewer}
-                        style={{ padding: '0.1rem 0.2rem', width: '100px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.7rem' }}
                       />
                     </td>
 
@@ -1009,12 +1060,10 @@ export default function UnbilledManagementPage() {
 
                     {/* 11. Bill Closure Dt */}
                     <td>
-                      <input
-                        type="date"
-                        value={j.bill_closure_date || ''}
-                        onChange={(e) => handleUpdateJobField(j, 'bill_closure_date', e.target.value)}
+                      <DateCellInput
+                        value={j.bill_closure_date}
+                        onChange={(val) => handleUpdateJobField(j, 'bill_closure_date', val)}
                         disabled={isViewer}
-                        style={{ padding: '0.1rem 0.2rem', width: '100px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.7rem' }}
                       />
                     </td>
 
@@ -1032,23 +1081,19 @@ export default function UnbilledManagementPage() {
 
                     {/* 13. PO Rcvd Dt (po_date) */}
                     <td>
-                      <input
-                        type="date"
-                        value={j.po_date || ''}
-                        onChange={(e) => handleUpdateJobField(j, 'po_date', e.target.value)}
+                      <DateCellInput
+                        value={j.po_date}
+                        onChange={(val) => handleUpdateJobField(j, 'po_date', val)}
                         disabled={isViewer}
-                        style={{ padding: '0.1rem 0.2rem', width: '100px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.7rem' }}
                       />
                     </td>
 
                     {/* 14. Inv Request Dt */}
                     <td>
-                      <input
-                        type="date"
-                        value={j.inv_request_date || ''}
-                        onChange={(e) => handleUpdateJobField(j, 'inv_request_date', e.target.value)}
+                      <DateCellInput
+                        value={j.inv_request_date}
+                        onChange={(val) => handleUpdateJobField(j, 'inv_request_date', val)}
                         disabled={isViewer}
-                        style={{ padding: '0.1rem 0.2rem', width: '100px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.7rem' }}
                       />
                     </td>
 
