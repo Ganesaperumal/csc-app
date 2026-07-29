@@ -83,7 +83,7 @@
 }
 
 .kpiLabel {
-  font-size: 0.55rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -99,7 +99,7 @@
 }
 
 .kpiCount {
-  font-size: 0.65rem;
+  font-size: 0.85rem;
   font-weight: 700;
 }
 
