@@ -59,8 +59,8 @@ const ALL_UNBILLED_COLUMNS = [
   { id: 'enquiry_number', label: 'Enquiry #' },
   { id: 'customer_company', label: 'Client & Company' },
   { id: 'quote_value', label: '₹' },
-  { id: 'packing_date', label: 'Packing' },
-  { id: 'actual_delivery', label: 'Delivery' },
+  { id: 'packing_date', label: '📦 Packing' },
+  { id: 'actual_delivery', label: '🚚 Delivery' },
   { id: 'goods_track_status', label: 'Goods Status' },
   { id: 'bill_closure_date', label: 'Bill Closure Dt' },
   { id: 'po_status', label: 'PO Status' },
@@ -638,6 +638,19 @@ export default function UnbilledManagementPage() {
     showToast('XLSX exported successfully!', 'success');
   };
 
+  // Helper for status colors
+  const getGoodsStatusColor = (status: string | null) => {
+    if (!status) return undefined;
+    const s = getDisplayGoodsStatus(status) || '';
+    if (s.includes('Execution Pending')) return '#64748b';
+    if (s.includes('Damages')) return '#dc2626';
+    if (s.includes('Storage')) return '#8b5cf6';
+    if (s.includes('Job Completed')) return '#3b82f6';
+    if (s.includes('Billing') || s.includes('taken for Billing')) return '#10b981';
+    if (s.includes('Cancelled') || s.includes('Free Job')) return '#991b1b';
+    return undefined;
+  };
+
   // Helper for computing category metrics (Job Count & Total Value)
   const calcKpi = (predicate: (j: any) => boolean) => {
     const list = filteredJobs.filter(predicate);
@@ -718,7 +731,9 @@ export default function UnbilledManagementPage() {
           </button>
         )}
           <div style={{ flexShrink: 1, minWidth: 0 }}>
-            <h1 className={styles.title} style={{ fontSize: '1.5rem', whiteSpace: 'nowrap', margin: 0 }}>🧾 Unbilled<span className={styles.hideOnMobile}> Management</span></h1>
+            <h1 className={styles.title} style={{ fontSize: '1.5rem', whiteSpace: 'nowrap', margin: 0 }}>
+              🧾 <span className={styles.titleText}>Unbilled<span className={styles.hideOnMobile}> Management</span></span>
+            </h1>
           </div>
         </div>
 
@@ -865,76 +880,69 @@ export default function UnbilledManagementPage() {
 
 
       {/* Unbilled Data Table and Controls */}
-      <div className={styles.tableCard} style={{ minWidth: '100%', width: 'max-content', overflowX: 'visible', overflowY: 'visible', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <div className={styles.tableCard}>
         
-        {/* Line 1: KPI Metric Cards (Single Line, don't stretch) */}
-        <div 
-          style={{ 
-            display: 'flex', 
-            flexWrap: 'nowrap', 
-            gap: '0.75rem', 
-            width: 'max-content'
-          }}
-        >
-          <div className={styles.kpiCard} style={{ padding: '0.75rem 0.85rem', flex: '0 0 auto', minWidth: '140px', background: 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05))', border: '1px solid rgba(239,68,68,0.3)' }}>
-            <div className={styles.kpiLabel} style={{ fontSize: '0.68rem', marginBottom: '0.25rem', whiteSpace: 'nowrap', color: '#ef4444' }}>No Details</div>
-            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>₹{noDetailsKpi.value.toLocaleString('en-IN')}</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#ef4444', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>{noDetailsKpi.count} Jobs</div>
+        <div className={styles.tableContainer}>
+          {/* KPI Metric Cards */}
+          <div className={styles.kpiGrid}>
+          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.02))', borderColor: 'rgba(239,68,68,0.3)' }}>
+            <div className={styles.kpiLabel} style={{ color: '#ef4444' }}>No Details</div>
+            <div className={styles.kpiValue}>₹{noDetailsKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+            <div className={styles.kpiCount} style={{ color: '#ef4444' }}>{noDetailsKpi.count} Jobs</div>
           </div>
 
-          <div className={styles.kpiCard} style={{ padding: '0.75rem 0.85rem', flex: '0 0 auto', minWidth: '140px', background: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05))', border: '1px solid rgba(245,158,11,0.3)' }}>
-            <div className={styles.kpiLabel} style={{ fontSize: '0.68rem', marginBottom: '0.25rem', whiteSpace: 'nowrap', color: '#f59e0b' }}>PO&PI Pending</div>
-            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>₹{poPiPendingKpi.value.toLocaleString('en-IN')}</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f59e0b', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>{poPiPendingKpi.count} Jobs</div>
+          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.02))', borderColor: 'rgba(245,158,11,0.3)' }}>
+            <div className={styles.kpiLabel} style={{ color: '#f59e0b' }}>PO&PI Pending</div>
+            <div className={styles.kpiValue}>₹{poPiPendingKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+            <div className={styles.kpiCount} style={{ color: '#f59e0b' }}>{poPiPendingKpi.count} Jobs</div>
           </div>
 
-          <div className={styles.kpiCard} style={{ padding: '0.75rem 0.85rem', flex: '0 0 auto', minWidth: '140px', background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.05))', border: '1px solid rgba(59,130,246,0.3)' }}>
-            <div className={styles.kpiLabel} style={{ fontSize: '0.68rem', marginBottom: '0.25rem', whiteSpace: 'nowrap', color: '#3b82f6' }}>Job Completed</div>
-            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>₹{jobCompletedKpi.value.toLocaleString('en-IN')}</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#3b82f6', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>{jobCompletedKpi.count} Jobs</div>
+          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.02))', borderColor: 'rgba(59,130,246,0.3)' }}>
+            <div className={styles.kpiLabel} style={{ color: '#3b82f6' }}>Job Completed</div>
+            <div className={styles.kpiValue}>₹{jobCompletedKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+            <div className={styles.kpiCount} style={{ color: '#3b82f6' }}>{jobCompletedKpi.count} Jobs</div>
           </div>
 
-          <div className={styles.kpiCard} style={{ padding: '0.75rem 0.85rem', flex: '0 0 auto', minWidth: '140px', background: 'linear-gradient(135deg, rgba(220,38,38,0.15), rgba(220,38,38,0.05))', border: '1px solid rgba(220,38,38,0.3)' }}>
-            <div className={styles.kpiLabel} style={{ fontSize: '0.68rem', marginBottom: '0.25rem', whiteSpace: 'nowrap', color: '#dc2626' }}>Damages</div>
-            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>₹{damagesKpi.value.toLocaleString('en-IN')}</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#dc2626', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>{damagesKpi.count} Jobs</div>
+          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(220,38,38,0.15), rgba(220,38,38,0.02))', borderColor: 'rgba(220,38,38,0.3)' }}>
+            <div className={styles.kpiLabel} style={{ color: '#dc2626' }}>Damages</div>
+            <div className={styles.kpiValue}>₹{damagesKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+            <div className={styles.kpiCount} style={{ color: '#dc2626' }}>{damagesKpi.count} Jobs</div>
           </div>
 
-          <div className={styles.kpiCard} style={{ padding: '0.75rem 0.85rem', flex: '0 0 auto', minWidth: '140px', background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))', border: '1px solid rgba(139,92,246,0.3)' }}>
-            <div className={styles.kpiLabel} style={{ fontSize: '0.68rem', marginBottom: '0.25rem', whiteSpace: 'nowrap', color: '#8b5cf6' }}>Storage</div>
-            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>₹{storageKpi.value.toLocaleString('en-IN')}</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#8b5cf6', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>{storageKpi.count} Jobs</div>
+          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.02))', borderColor: 'rgba(139,92,246,0.3)' }}>
+            <div className={styles.kpiLabel} style={{ color: '#8b5cf6' }}>Storage</div>
+            <div className={styles.kpiValue}>₹{storageKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+            <div className={styles.kpiCount} style={{ color: '#8b5cf6' }}>{storageKpi.count} Jobs</div>
           </div>
 
-          <div className={styles.kpiCard} style={{ padding: '0.75rem 0.85rem', flex: '0 0 auto', minWidth: '140px', background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05))', border: '1px solid rgba(16,185,129,0.3)' }}>
-            <div className={styles.kpiLabel} style={{ fontSize: '0.68rem', marginBottom: '0.25rem', whiteSpace: 'nowrap', color: '#10b981' }}>Ready for Billing</div>
-            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>₹{readyForBillingKpi.value.toLocaleString('en-IN')}</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#10b981', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>{readyForBillingKpi.count} Jobs</div>
+          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.02))', borderColor: 'rgba(16,185,129,0.3)' }}>
+            <div className={styles.kpiLabel} style={{ color: '#10b981' }}>Ready for Billing</div>
+            <div className={styles.kpiValue}>₹{readyForBillingKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+            <div className={styles.kpiCount} style={{ color: '#10b981' }}>{readyForBillingKpi.count} Jobs</div>
           </div>
 
-          <div className={styles.kpiCard} style={{ padding: '0.75rem 0.85rem', flex: '0 0 auto', minWidth: '140px', background: 'linear-gradient(135deg, rgba(153,27,27,0.15), rgba(153,27,27,0.05))', border: '1px solid rgba(153,27,27,0.3)' }}>
-            <div className={styles.kpiLabel} style={{ fontSize: '0.68rem', marginBottom: '0.25rem', whiteSpace: 'nowrap', color: '#991b1b' }}>To Be Cancelled</div>
-            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>₹{toBeCancelledKpi.value.toLocaleString('en-IN')}</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#991b1b', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>{toBeCancelledKpi.count} Jobs</div>
+          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(153,27,27,0.15), rgba(153,27,27,0.02))', borderColor: 'rgba(153,27,27,0.3)' }}>
+            <div className={styles.kpiLabel} style={{ color: '#991b1b' }}>To Be Cancelled</div>
+            <div className={styles.kpiValue}>₹{toBeCancelledKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+            <div className={styles.kpiCount} style={{ color: '#991b1b' }}>{toBeCancelledKpi.count} Jobs</div>
           </div>
 
-          <div className={styles.kpiCard} style={{ padding: '0.75rem 0.85rem', flex: '0 0 auto', minWidth: '140px', background: 'linear-gradient(135deg, rgba(100,116,139,0.15), rgba(100,116,139,0.05))', border: '1px solid rgba(100,116,139,0.3)' }}>
-            <div className={styles.kpiLabel} style={{ fontSize: '0.68rem', marginBottom: '0.25rem', whiteSpace: 'nowrap', color: '#64748b' }}>Execution Pending</div>
-            <div className={styles.kpiValue} style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>₹{executionPendingKpi.value.toLocaleString('en-IN')}</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#64748b', marginTop: '0.15rem', whiteSpace: 'nowrap' }}>{executionPendingKpi.count} Jobs</div>
+          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(100,116,139,0.15), rgba(100,116,139,0.02))', borderColor: 'rgba(100,116,139,0.3)' }}>
+            <div className={styles.kpiLabel} style={{ color: '#64748b' }}>Execution Pending</div>
+            <div className={styles.kpiValue}>₹{executionPendingKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+            <div className={styles.kpiCount} style={{ color: '#64748b' }}>{executionPendingKpi.count} Jobs</div>
           </div>
         </div>
 
-        <div style={{ overflowX: 'auto', overflowY: 'auto', height: 'calc(100vh - 260px)', marginTop: '0.5rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-          <table className={styles.table} style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+          <table className={styles.table}>
             <thead>
               <tr>
                 {ALL_UNBILLED_COLUMNS.map(col => {
                   const isFiltered = (columnFilters[col.id] && columnFilters[col.id].length > 0);
                   const isSorted = columnSorts[col.id];
                   return (
-                    <th key={col.id} style={{ position: 'sticky', top: 0, zIndex: 100, padding: '1rem 0.85rem', boxShadow: '0 2px 4px rgba(0,0,0,0.06)', whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'space-between' }}>
+                    <th key={col.id} style={{ textAlign: col.id === 'quote_value' ? 'right' : 'left' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: col.id === 'quote_value' ? 'flex-end' : 'space-between' }}>
                         <span>{col.label}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
                           {isSorted && (
@@ -991,15 +999,18 @@ export default function UnbilledManagementPage() {
                       <button
                         onClick={() => handleOpenFollowupDrawer(j)}
                         style={{
-                          padding: '0.35rem 0.75rem',
+                          padding: '0.35rem 0.6rem',
                           borderRadius: '6px',
-                          border: 'none',
-                          background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-                          color: 'white',
+                          border: '1px solid var(--border-color)',
+                          background: 'rgba(79,70,229,0.1)',
+                          color: '#4f46e5',
                           fontWeight: 700,
                           fontSize: '0.78rem',
                           cursor: 'pointer',
-                          whiteSpace: 'nowrap'
+                          whiteSpace: 'nowrap',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem'
                         }}
                       >
                         Follow-up
@@ -1013,7 +1024,7 @@ export default function UnbilledManagementPage() {
                     <td>{formatDate(j.job_date)}</td>
 
                     {/* 4. Job Number (Plain text display, no navigation) */}
-                    <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <td style={{ fontWeight: 800, color: '#6d28d9' }}>
                       {j.job_number}
                     </td>
 
@@ -1022,13 +1033,13 @@ export default function UnbilledManagementPage() {
 
                     {/* 6. Client & Company */}
                     <td style={{ maxWidth: '10rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.customer_name || '—'}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.company || '—'}</div>
+                      <div style={{ fontWeight: 700, color: '#10b981', overflow: 'hidden', textOverflow: 'ellipsis' }}>👤 {j.customer_name || '—'}</div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#9f1239', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '0.15rem' }}>🏢 {j.company || '—'}</div>
                     </td>
 
                     {/* 7. Value */}
-                    <td style={{ fontWeight: 700, color: '#3b82f6' }}>
-                      ₹{Number(quoteVal).toLocaleString('en-IN')}
+                    <td style={{ fontWeight: 700, color: '#3b82f6', textAlign: 'right' }}>
+                      ₹{Number(quoteVal).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                     </td>
 
                     {/* 8. Packing Dt */}
@@ -1058,6 +1069,7 @@ export default function UnbilledManagementPage() {
                         options={BRANCH_GOODS_STATUS_OPTIONS.map(s => ({ value: s, label: s }))}
                         style={{ minWidth: '160px' }}
                         disabled={isViewer}
+                        textColor={getGoodsStatusColor(j.goods_track_status)}
                       />
                     </td>
 

@@ -10,6 +10,7 @@ interface CustomSelectProps {
   placeholder?: string;
   style?: React.CSSProperties;
   disabled?: boolean;
+  textColor?: string;
 }
 
 export default function CustomSelect({
@@ -18,7 +19,8 @@ export default function CustomSelect({
   onChange,
   placeholder = 'None',
   style,
-  disabled = false
+  disabled = false,
+  textColor
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -92,9 +94,10 @@ export default function CustomSelect({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          background: disabled ? 'var(--surface-color)' : 'var(--bg-color)',
-          border: '1px solid var(--border-color)',
-          color: value ? 'var(--text-primary)' : 'var(--text-secondary)',
+          background: disabled ? 'var(--surface-color)' : (textColor ? `${textColor}15` : 'var(--bg-color)'),
+          border: textColor ? `1px solid ${textColor}40` : '1px solid var(--border-color)',
+          color: textColor || (value ? 'var(--text-primary)' : 'var(--text-secondary)'),
+          fontWeight: textColor ? 700 : 'inherit',
           borderRadius: '10px',
           padding: '0.55rem 0.85rem',
           fontSize: '0.875rem',
