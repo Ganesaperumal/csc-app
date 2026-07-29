@@ -174,8 +174,9 @@ export default function AdminPage() {
             const updateData: any = {};
             let hasUpdates = false;
 
+            const jobRecord = existingJob as Record<string, any>;
             for (const col of updateColumns) {
-              const currentValue = existingJob[col];
+              const currentValue = jobRecord ? jobRecord[col] : null;
               let newValue = row[col];
 
               // If the CSV cell is empty, skip updating this column
