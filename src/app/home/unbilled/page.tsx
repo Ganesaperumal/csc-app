@@ -592,15 +592,41 @@ export default function UnbilledManagementPage() {
     return { count, value };
   };
 
+  // Helper checks for empty status
+  const isPoEmpty = (j: any) => !j.po_status || j.po_status.trim() === '';
+  const isGoodsEmpty = (j: any) => !j.goods_track_status || j.goods_track_status.trim() === '';
+
   const totalKpi = { count: filteredJobs.length, value: filteredJobs.reduce((sum, j) => sum + Number(enquiryValues[j.enq_number || j.enquiry_number || ''] || j.quote_value || 0), 0) };
-  const noDetailsKpi = calcKpi(j => !j.goods_track_status || getDisplayGoodsStatus(j.goods_track_status) === '00. Execution Pending');
+
+  // 1. No Details: goods_track_status is empty/null AND po_status is empty/null
+  const noDetailsKpi = calcKpi(j => isGoodsEmpty(j) && isPoEmpty(j));
+
+  // 2. PO&PI Pending: Jobs where po_status is PO Pending OR PI Pending
   const poPiPendingKpi = calcKpi(j => j.po_status === 'PO Pending' || j.po_status === 'PI Pending');
-  const jobCompletedKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '22. Job Completed');
+
+  // 3. Job Completed: goods_track_status is 22. Job Completed AND po_status is empty/null
+  const jobCompletedKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '22. Job Completed' && isPoEmpty(j));
+
+  // 4. Damages: Jobs where goods_track_status is 17. Damages
   const damagesKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '17. Damages');
-  const storageKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '21. Storage');
-  const readyForBillingKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '27. Billing Pending');
-  const toBeCancelledKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '25. Job # to be Cancelled');
-  const executionPendingKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '00. Execution Pending');
+
+  // 5. Storage: goods_track_status is 21. Storage AND po_status is empty/null
+  const storageKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '21. Storage' && isPoEmpty(j));
+
+  // 6. Ready for Billing: goods_track_status is 27. Billing Pending or 23. Job # taken for Billing (includes 26. Billing Pending & 27. Month End Billing)
+  const readyForBillingKpi = calcKpi(j => {
+    const s = getDisplayGoodsStatus(j.goods_track_status) || '';
+    return s === '27. Billing Pending' || s === '26. Billing Pending' || s === '27. Month End Billing' || s === '23. Job # taken for Billing';
+  });
+
+  // 7. To Be Cancelled: 28. Free Job or 25. Job # to be Cancelled
+  const toBeCancelledKpi = calcKpi(j => {
+    const s = getDisplayGoodsStatus(j.goods_track_status) || '';
+    return s === '28. Free Job' || s === '25. Job # to be Cancelled';
+  });
+
+  // 8. Execution Pending: goods_track_status is 00. Execution Pending AND po_status is empty/null
+  const executionPendingKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '00. Execution Pending' && !isGoodsEmpty(j) && isPoEmpty(j));
 
   const hasAppliedFilters = Object.keys(columnFilters).length > 0 || search.trim() !== '' || selectedBranch !== 'All' || selectedGoodsStatus !== 'All' || selectedPoStatus !== 'All' || selectedSalesBy !== 'All';
 
