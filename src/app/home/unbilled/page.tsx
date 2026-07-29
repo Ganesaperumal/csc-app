@@ -94,14 +94,16 @@ function DateCellInput({ value, onChange, disabled }: { value: string | null; on
         }}
         onBlur={() => setIsEditing(false)}
         style={{
-          padding: '0.15rem 0.3rem',
-          width: '110px',
-          borderRadius: '4px',
+          padding: '0.2rem 0.4rem',
+          width: '95px',
+          height: '28px',
+          borderRadius: '6px',
           border: '1px solid #4f46e5',
           background: 'var(--bg-color)',
           color: 'var(--text-primary)',
-          fontSize: '0.72rem',
-          fontFamily: 'inherit'
+          fontSize: '0.75rem',
+          fontFamily: 'inherit',
+          boxSizing: 'border-box'
         }}
       />
     );
@@ -112,21 +114,22 @@ function DateCellInput({ value, onChange, disabled }: { value: string | null; on
       onClick={() => { if (!disabled) setIsEditing(true); }}
       style={{
         padding: '0.2rem 0.4rem',
-        borderRadius: '4px',
-        border: '1px solid transparent',
+        width: '95px',
+        height: '28px',
+        borderRadius: '6px',
+        border: '1px solid var(--border-color)',
+        background: 'var(--bg-color)',
         cursor: disabled ? 'default' : 'pointer',
         fontSize: '0.78rem',
         fontWeight: 600,
         color: 'var(--text-primary)',
-        minHeight: '26px',
-        minWidth: '70px',
         display: 'flex',
         alignItems: 'center',
-        background: 'transparent',
+        boxSizing: 'border-box',
         transition: 'all 0.15s ease'
       }}
-      onMouseOver={(e) => { if (!disabled) e.currentTarget.style.border = '1px solid var(--border-color)'; }}
-      onMouseOut={(e) => { if (!disabled) e.currentTarget.style.border = '1px solid transparent'; }}
+      onMouseOver={(e) => { if (!disabled) e.currentTarget.style.borderColor = '#4f46e5'; }}
+      onMouseOut={(e) => { if (!disabled) e.currentTarget.style.borderColor = 'var(--border-color)'; }}
     >
       {formatted}
     </div>
