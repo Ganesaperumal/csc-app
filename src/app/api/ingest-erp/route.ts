@@ -19,6 +19,11 @@ interface ErpJobData {
   invoice_date?: string;   // Overridden on every sync
 }
 
+interface ErpPayload {
+  jobs: ErpJobData[];
+  is_last_batch?: boolean; // Only unlock sync_lock on the final batch
+}
+
 export async function POST(request: Request) {
   try {
     // 1. Basic API Key Authentication
@@ -29,9 +34,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Parse payload
-    const body: ErpJobData[] = await request.json();
-    
+    // 2. Parse payload — support both old flat array and new { jobs, is_last_batch } envelope
+    const rawBody = await request.json();
+    let body: ErpJobData[];
+    let is_last_batch = false;
+
+    if (Array.isArray(rawBody)) {
+      // Legacy: flat array — treat every call as the last batch (old github_sync.js behaviour)
+      body = rawBody;
+      is_last_batch = true;
+    } else {
+      body = rawBody.jobs;
+      is_last_batch = rawBody.is_last_batch ?? false;
+    }
     if (!Array.isArray(body) || body.length === 0) {
       return NextResponse.json({ error: 'Invalid payload: Expected a non-empty array of jobs.' }, { status: 400 });
     }
@@ -73,12 +88,10 @@ export async function POST(request: Request) {
 
     for (const job of body) {
       if (existingJobNumbers.has(job.job_number)) {
-        // Update erp_status, enq_number and erp_job_id for existing jobs
+        // Update ONLY erp_status, invoice_number, invoice_date for existing jobs
         existingJobsToUpdate.push({
           job_number: job.job_number,
-          erp_job_id: job.erp_job_id,
           erp_status: job.erp_status,
-          enq_number: job.enq_number,
           invoice_number: job.invoice_number ?? null,
           invoice_date: job.invoice_date ?? null,
           updated_at: new Date().toISOString()
@@ -117,8 +130,10 @@ export async function POST(request: Request) {
       }
     }
 
-    // 6. Unlock the sync button!
-    await supabase.from('sync_lock').update({ is_syncing: false }).eq('id', 1);
+    // 6. Only unlock the sync button on the LAST batch
+    if (is_last_batch) {
+      await supabase.from('sync_lock').update({ is_syncing: false }).eq('id', 1);
+    }
 
     return NextResponse.json({ 
       success: true, 
@@ -127,7 +142,7 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error('Error processing ERP ingestion:', error);
-    // Ensure we unlock on error too
+    // Always unlock on error to prevent permanent lock
     await supabase.from('sync_lock').update({ is_syncing: false }).eq('id', 1);
     return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
   }

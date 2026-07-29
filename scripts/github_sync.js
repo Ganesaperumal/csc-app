@@ -79,6 +79,11 @@ async function downloadActiveJobs() {
   const page = await context.newPage();
 
   try {
+    page.on('dialog', async dialog => {
+      console.log(`⚠️ Alert appeared: ${dialog.message()}`);
+      await dialog.accept();
+    });
+
     console.log(`🔐 Logging into ERP: ${ERP_SITE}`);
     await page.goto(ERP_SITE);
     await page.fill('#tcusr', ERP_USERNAME);
@@ -90,6 +95,12 @@ async function downloadActiveJobs() {
     await page.click('#r3c1'); // Queries
     await page.click('#r6c2'); // Job
     await page.click('#r6c3'); // Job Register
+
+    // Short wait to see if it redirects to error page
+    await page.waitForTimeout(2000);
+    if (page.url().includes('tnerr=')) {
+      throw new Error(`ERP returned error in URL: ${page.url()}`);
+    }
     
     await page.waitForSelector('#tccap', { state: 'visible' });
     await page.selectOption('#tccap', 'S');
@@ -119,10 +130,23 @@ async function downloadActiveJobs() {
   }
 }
 
+async function downloadActiveJobsWithRetry(retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await downloadActiveJobs();
+    } catch (err) {
+      console.error(`❌ Attempt ${attempt} failed: ${err.message}`);
+      if (attempt === retries) throw err;
+      console.log('🔄 Retrying in 10 seconds...');
+      await new Promise(res => setTimeout(res, 10000));
+    }
+  }
+}
+
 async function syncERP() {
   let excelFilePath = null;
   try {
-    excelFilePath = await downloadActiveJobs();
+    excelFilePath = await downloadActiveJobsWithRetry();
 
     console.log('1. Reading Excel file...');
     if (!fs.existsSync(excelFilePath)) {
@@ -203,14 +227,20 @@ async function syncERP() {
     console.log(`Sending ${formattedData.length} valid jobs to the API in batches...`);
 
     const BATCH_SIZE = 500;
+    const totalBatches = Math.ceil(formattedData.length / BATCH_SIZE);
     for (let i = 0; i < formattedData.length; i += BATCH_SIZE) {
       const batch = formattedData.slice(i, i + BATCH_SIZE);
-      const jsonBody = JSON.stringify(batch);
+      const batchIndex = Math.floor(i / BATCH_SIZE) + 1;
+      const isLastBatch = batchIndex === totalBatches;
 
-      console.log(`Sending batch ${Math.floor(i / BATCH_SIZE) + 1} of ${Math.ceil(formattedData.length / BATCH_SIZE)} (${batch.length} jobs)...`);
+      // Wrap in envelope so the API knows when to unlock sync_lock
+      const payload = { jobs: batch, is_last_batch: isLastBatch };
+      const jsonBody = JSON.stringify(payload);
+
+      console.log(`Sending batch ${batchIndex} of ${totalBatches} (${batch.length} jobs)${isLastBatch ? ' [LAST BATCH]' : ''}...`);
 
       const result = await sendPostRequest(API_URL, jsonBody, CRON_SECRET_KEY);
-      console.log(`✅ Batch ${Math.floor(i / BATCH_SIZE) + 1} Sync Successful:`, result.message || 'OK');
+      console.log(`✅ Batch ${batchIndex} Sync Successful:`, result.message || 'OK');
     }
   } catch (err) {
     console.error('❌ Fatal Error during Sync:', err);
@@ -225,5 +255,10 @@ async function syncERP() {
     }
   }
 }
-
-syncERP();
+syncERP().then(() => {
+  console.log('🏁 Script finished. Exiting process.');
+  process.exit(0);
+}).catch(err => {
+  console.error('❌ Script failed. Exiting process.', err);
+  process.exit(1);
+});

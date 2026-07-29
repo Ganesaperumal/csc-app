@@ -7,6 +7,7 @@ import Papa from 'papaparse';
 import CustomSelect from '../components/CustomSelect';
 import { useRouter } from 'next/navigation';
 import BulkPodUploadModal from '../components/BulkPodUploadModal';
+import { usePermissions } from '@/components/PermissionsContext';
 
 const cardStyle: React.CSSProperties = {
   background: 'var(--surface-color)',
@@ -55,6 +56,7 @@ const selectStyle: React.CSSProperties = {
 };
 
 export default function AdminPage() {
+  const { getAccessLevel } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'error' | 'success', text: string } | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -63,6 +65,7 @@ export default function AdminPage() {
   const [aiPrompt, setAiPrompt] = useState('');
   const [savingAi, setSavingAi] = useState(false);
   const [loadingBulkUpdate, setLoadingBulkUpdate] = useState(false);
+  const [bulkUpdateProgress, setBulkUpdateProgress] = useState<{ current: number, total: number } | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
@@ -71,24 +74,23 @@ export default function AdminPage() {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setCurrentUser(data.user);
-        supabase.from('profiles').select('role').eq('id', data.user.id).single()
-          .then(({ data: profile }) => {
-            if (profile) {
-              const role = profile.role;
-              setUserRole(role);
-              if (role !== 'Admin') {
-                router.push('/home');
-              } else {
-                setCheckingAuth(false);
-                fetchAiSettings();
-              }
-            }
-          });
+      if (!data.user) {
+        router.push('/login');
+        return;
       }
+      setCurrentUser(data.user);
+      supabase.from('profiles').select('*').eq('id', data.user.id).single()
+        .then(({ data: profile }) => {
+          if (profile) {
+            const level = getAccessLevel('Admin Center', profile);
+            if (level === 'None') { router.push('/home'); return; }
+            setUserRole(profile.role);
+            setCheckingAuth(false);
+            fetchAiSettings();
+          }
+        });
     });
-  }, [router]);
+  }, [router, getAccessLevel]);
 
   const downloadCSV = async (table: 'jobs' | 'job_logs') => {
     try {
@@ -127,7 +129,7 @@ export default function AdminPage() {
 
           const headers = Object.keys(data[0]);
           if (headers.length < 2) {
-             throw new Error("CSV must have at least 2 columns: Job_number and the column to update.");
+             throw new Error("CSV must have at least 2 columns: Job_number and the columns to update.");
           }
 
           const jobNumberKey = headers.find(h => h.toLowerCase() === 'job_number' || h.toLowerCase() === 'job number' || h.toLowerCase() === 'jobnumber');
@@ -135,25 +137,67 @@ export default function AdminPage() {
             throw new Error("Could not find a 'Job_number' column in the CSV.");
           }
 
-          const updateColumnKey = headers.find(h => h !== jobNumberKey);
-          if (!updateColumnKey) {
-            throw new Error("Could not find a column to update in the CSV.");
+          const updateColumns = headers.filter(h => h !== jobNumberKey);
+          if (updateColumns.length === 0) {
+            throw new Error("Could not find any columns to update in the CSV.");
           }
 
           let successCount = 0;
           let failCount = 0;
+          let skipCount = 0;
+          const totalRows = data.filter(r => r[jobNumberKey]).length;
+          let currentRowIndex = 0;
+
+          setBulkUpdateProgress({ current: 0, total: totalRows });
 
           // Process sequentially to avoid rate limits
           for (const row of data) {
             const jobNumber = row[jobNumberKey];
-            let updateValue = row[updateColumnKey];
-            
             if (!jobNumber) continue;
-            if (updateValue === '') updateValue = null;
+            
+            currentRowIndex++;
+            setBulkUpdateProgress({ current: currentRowIndex, total: totalRows });
+
+            // Fetch current job
+            const { data: existingJob, error: fetchError } = await supabase
+              .from('jobs')
+              .select(updateColumns.join(','))
+              .eq('job_number', jobNumber)
+              .single();
+
+            if (fetchError) {
+              console.error(`Failed to fetch ${jobNumber}:`, fetchError);
+              failCount++;
+              continue;
+            }
+
+            const updateData: any = {};
+            let hasUpdates = false;
+
+            for (const col of updateColumns) {
+              const currentValue = existingJob[col];
+              let newValue = row[col];
+
+              // If the CSV cell is empty, skip updating this column
+              if (newValue === null || newValue === undefined || newValue === '') {
+                continue;
+              }
+
+              // Only update if current DB value is null or empty
+              if (currentValue === null || currentValue === undefined || currentValue === '') {
+                updateData[col] = newValue;
+                hasUpdates = true;
+              }
+            }
+
+            if (!hasUpdates) {
+              skipCount++;
+              continue;
+            }
 
             const { error } = await supabase
               .from('jobs')
-              .update({ [updateColumnKey]: updateValue })
+              .update(updateData)
               .eq('job_number', jobNumber);
               
             if (error) {
@@ -164,92 +208,12 @@ export default function AdminPage() {
             }
           }
           
-          setMessage({ type: 'success', text: `Successfully updated ${successCount} jobs! ${failCount > 0 ? `Failed to update ${failCount} jobs.` : ''}` });
+          setMessage({ type: 'success', text: `Successfully updated ${successCount} jobs! Skipped ${skipCount} jobs entirely (all provided columns already had data). ${failCount > 0 ? `Failed on ${failCount} jobs.` : ''}` });
+          setBulkUpdateProgress(null);
 
         } catch (err: any) {
-          setMessage({ type: 'error', text: `Failed to bulk update: ${err.message}` });
-        } finally {
-          setLoadingBulkUpdate(false);
-          e.target.value = '';
-        }
-      },
-      error: (error) => {
-        setMessage({ type: 'error', text: `CSV Parse Error: ${error.message}` });
-        setLoadingBulkUpdate(false);
-        e.target.value = '';
-      }
-    });
-  };
-
-  const uploadLegacyJobsCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setLoadingBulkUpdate(true);
-    setMessage(null);
-
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: async (results) => {
-        try {
-          const rows = results.data as any[];
-          if (!rows || rows.length === 0) throw new Error("CSV file is empty");
-
-          const legacyRecords: any[] = [];
-          const enquiryRecords: any[] = [];
-
-          rows.forEach(row => {
-            const jobNo = row['Job Number'] || row['job_number'] || row['Job No'] || row['Job#'];
-            const br = row['Branch'] || row['branch'] || 'BANGALORE';
-            const enqNo = row['Enquiry Number'] || row['enquiry_number'] || row['Enquiry No'] || row['Enquiry#'];
-            const val = row['Quote Value'] || row['quote_value'] || row['Value'] || row['Enquiry Value'] || 0;
-
-            if (jobNo) {
-              legacyRecords.push({
-                enquiry_number: enqNo ? String(enqNo).trim() : null,
-                job_number: String(jobNo).trim(),
-                customer_name: row['Customer Name'] || row['customer_name'] || row['Client Name'] || null,
-                company: row['Company'] || row['company'] || null,
-                spoc_name: row['SPOC'] || row['spoc_name'] || null,
-                branch: String(br).trim().toUpperCase(),
-                packing_date: row['Packing Date'] || row['packing_date'] || null,
-                delivery_date: row['Delivery Date'] || row['delivery_date'] || null,
-                goods_track_status: row['Goods Status'] || '22. Job Completed',
-                po_status: row['PO Status'] || 'PO Pending',
-                sales_by: row['Sales By'] || 'TI'
-              });
-
-              if (enqNo && val) {
-                enquiryRecords.push({
-                  enquiry_number: String(enqNo).trim(),
-                  quote_value: Number(val),
-                  source: 'Manual_CSV'
-                });
-              }
-            }
-          });
-
-          if (legacyRecords.length === 0) {
-            throw new Error('No valid job rows found in CSV. Required column: "Job Number"');
-          }
-
-          const chunkSize = 100;
-          for (let i = 0; i < legacyRecords.length; i += chunkSize) {
-            const chunk = legacyRecords.slice(i, i + chunkSize);
-            await supabase.from('legacy_jobs').insert(chunk);
-          }
-
-          if (enquiryRecords.length > 0) {
-            for (let i = 0; i < enquiryRecords.length; i += chunkSize) {
-              const chunk = enquiryRecords.slice(i, i + chunkSize);
-              await supabase.from('enquiry_values').upsert(chunk, { onConflict: 'enquiry_number' });
-            }
-          }
-
-          setMessage({ type: 'success', text: `🎉 Successfully bulk imported ${legacyRecords.length} legacy jobs!` });
-        } catch (err: any) {
-          setMessage({ type: 'error', text: `Failed to import legacy jobs: ${err.message}` });
+           setMessage({ type: 'error', text: `Failed to bulk update: ${err.message}` });
+           setBulkUpdateProgress(null);
         } finally {
           setLoadingBulkUpdate(false);
           e.target.value = '';
@@ -521,9 +485,9 @@ export default function AdminPage() {
 
         {/* Bulk Update Section */}
         <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Bulk Update Jobs (Single Column)</h3>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Bulk Update Jobs (Multi-Column)</h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-            Upload a CSV with exactly 2 columns: <strong>Job_number</strong> and the <strong>Exact Column Title</strong> to update. This will ONLY update existing jobs, it will NOT create new ones.
+            Upload a CSV with <strong>Job_number</strong> and one or more columns to update. This will ONLY update existing jobs, and will ONLY fill in empty (null) values in the database, preserving any existing data.
           </p>
           
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -539,34 +503,9 @@ export default function AdminPage() {
                 disabled={loadingBulkUpdate}
                 style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: loadingBulkUpdate ? 'var(--border-color)' : 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white', border: 'none', pointerEvents: 'none', fontWeight: 600, boxShadow: '0 4px 12px rgba(245,158,11,0.3)' }}
               >
-                {loadingBulkUpdate ? 'Updating...' : 'Upload Bulk Update CSV'}
+                {loadingBulkUpdate ? (bulkUpdateProgress ? `Updating ${bulkUpdateProgress.current} of ${bulkUpdateProgress.total}...` : 'Updating...') : 'Upload Bulk Update CSV'}
               </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Bulk Upload Legacy Jobs Section */}
-        <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Bulk Upload Legacy Jobs (Pre-01-Apr-2026)</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-            Upload CSV to bulk import legacy unbilled jobs prior to April 1, 2026. Required header: <strong>Job Number</strong>.
-          </p>
-          
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <div style={{ position: 'relative' }}>
-              <input 
-                type="file" 
-                accept=".csv"
-                onChange={uploadLegacyJobsCSV}
-                style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
-                disabled={loadingBulkUpdate}
-              />
-              <button 
-                disabled={loadingBulkUpdate}
-                style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: loadingBulkUpdate ? 'var(--border-color)' : 'linear-gradient(135deg, #10b981, #059669)', color: 'white', border: 'none', pointerEvents: 'none', fontWeight: 600, boxShadow: '0 4px 12px rgba(16,185,129,0.3)' }}
-              >
-                {loadingBulkUpdate ? 'Uploading...' : '📦 Upload Legacy Jobs CSV'}
-              </button>
+         
             </div>
           </div>
         </div>

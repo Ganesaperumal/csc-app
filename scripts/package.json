@@ -2,7 +2,10 @@
   "name": "erp-sync",
   "version": "1.0.0",
   "dependencies": {
+    "@supabase/supabase-js": "^2.109.0",
+    "dotenv": "^17.4.2",
     "playwright": "^1.49.0",
+    "ws": "^8.21.1",
     "xlsx": "^0.18.5"
   }
 }

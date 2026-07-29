@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import Image from 'next/image';
 import styles from './login.module.css';
+import logo from '@/assets/logo.jpg';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -128,47 +130,105 @@ export default function LoginPage() {
 
   return (
     <div className={styles.loginContainer}>
-      <div className={`glass ${styles.loginCard}`}>
-        <div className={styles.loginHeader}>
-          <h1>Welcome to TI Jobs Portal</h1>
-        </div>
-        
-        {error && <div className={styles.errorMessage}>{error}</div>}
-        
-        <form onSubmit={handleLogin} className={styles.loginForm}>
-          <div className={styles.inputGroup}>
-            <label htmlFor="username">Username or Email Address</label>
-            <input 
-              id="username" 
-              type="text" 
-              required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="john or john@transworldintl.com"
-            />
-          </div>
-          
-          <div className={styles.inputGroup}>
-            <label htmlFor="password">Password</label>
-            <input 
-              id="password" 
-              type="password" 
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-            />
-          </div>
-          
-          <button type="submit" className={`btn ${styles.loginButton}`} disabled={loading}>
-            {loading ? 'Authenticating...' : 'Sign In'}
-          </button>
 
-          <div style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Need an account? <a href="/signup" style={{ color: '#4f46e5', fontWeight: 700, textDecoration: 'none' }}>Self-Register / Sign Up</a>
+      {/* ── Left: Brand Panel ── */}
+      <div className={styles.brandPanel}>
+        <div className={styles.orb + ' ' + styles.orb1} />
+        <div className={styles.orb + ' ' + styles.orb2} />
+        <div className={styles.orb + ' ' + styles.orb3} />
+
+        <div className={styles.brandContent}>
+          <div className={styles.logoWrapper}>
+            <Image
+              src={logo}
+              alt="TransWorld International Logo"
+              className={styles.logoImage}
+              priority
+            />
           </div>
-        </form>
+
+          <div className={styles.brandTagline}>
+            <h2>Internal Jobs Portal</h2>
+            <p>
+              Manage logistics jobs, track shipments, and coordinate your team — all in one place.
+            </p>
+          </div>
+
+          <div className={styles.brandStats}>
+            <div className={styles.statItem}>
+              <span className={styles.statValue}>360°</span>
+              <span className={styles.statLabel}>Job Tracking</span>
+            </div>
+            <div className={styles.statItem}>
+              <span className={styles.statValue}>Live</span>
+              <span className={styles.statLabel}>Updates</span>
+            </div>
+            <div className={styles.statItem}>
+              <span className={styles.statValue}>AI</span>
+              <span className={styles.statLabel}>Powered</span>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* ── Right: Form Panel ── */}
+      <div className={styles.formPanel}>
+        <div className={styles.formCard}>
+          <div className={styles.formHeader}>
+            <h1>Welcome back 👋</h1>
+            <p>Sign in to your account to continue</p>
+          </div>
+
+          {error && <div className={styles.errorMessage}>{error}</div>}
+
+          <form onSubmit={handleLogin} className={styles.loginForm}>
+            <div className={styles.inputGroup}>
+              <label htmlFor="username">Username or Email</label>
+              <input
+                id="username"
+                type="text"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="john or john@transworldintl.com"
+              />
+            </div>
+
+            <div className={styles.inputGroup}>
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+
+            <button type="submit" className={styles.loginButton} disabled={loading}>
+              {loading ? 'Authenticating...' : '→ Sign In'}
+            </button>
+
+            <div className={styles.divider}>
+              <span>New to TI Portal?</span>
+            </div>
+
+            <button
+              type="button"
+              className={styles.signupButton}
+              onClick={() => router.push('/signup')}
+            >
+              Create a New Account
+            </button>
+
+            <p className={styles.signupHint}>
+              Your account will require admin approval before access is granted.
+            </p>
+          </form>
+        </div>
+      </div>
+
     </div>
   );
 }

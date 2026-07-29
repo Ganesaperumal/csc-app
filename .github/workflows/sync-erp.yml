@@ -8,6 +8,7 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -43,7 +44,7 @@ jobs:
           cd scripts
           npx playwright install-deps chromium
 
-      - name: Run Playwright Sync Script
+      - name: "Step 1 — Sync ERP Jobs to Supabase"
         env:
           ERP_USERNAME: ${{ secrets.ERP_USERNAME }}
           ERP_PASSWORD: ${{ secrets.ERP_PASSWORD }}
@@ -53,9 +54,20 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          echo "GitHub Action successfully triggered!"
+          echo "=== Syncing ERP Job records to Supabase jobs table ==="
           cd scripts
           node github_sync.js
+
+      - name: "Step 2 — Fill Missing Quote Values (Per-Enquiry Scraper)"
+        env:
+          ERP_USERNAME: ${{ secrets.ERP_USERNAME }}
+          ERP_PASSWORD: ${{ secrets.ERP_PASSWORD }}
+          ERP_SITE: ${{ secrets.ERP_SITE }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "=== Filling null quote_values via per-enquiry ERP scraper ==="
+          cd scripts
           node update_erp_values.js
 
       - name: Upload ERP Reports for debugging
