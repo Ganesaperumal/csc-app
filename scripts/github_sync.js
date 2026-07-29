@@ -233,13 +233,13 @@ async function syncERP() {
       const batchIndex = Math.floor(i / BATCH_SIZE) + 1;
       const isLastBatch = batchIndex === totalBatches;
 
-      // Wrap in envelope so the API knows when to unlock sync_lock
-      const payload = { jobs: batch, is_last_batch: isLastBatch };
-      const jsonBody = JSON.stringify(payload);
+      // Send flat array as body (backward compatible) + pass is_last_batch as query param
+      const jsonBody = JSON.stringify(batch);
+      const targetUrl = API_URL + (API_URL.includes('?') ? '&' : '?') + `is_last_batch=${isLastBatch}`;
 
       console.log(`Sending batch ${batchIndex} of ${totalBatches} (${batch.length} jobs)${isLastBatch ? ' [LAST BATCH]' : ''}...`);
 
-      const result = await sendPostRequest(API_URL, jsonBody, CRON_SECRET_KEY);
+      const result = await sendPostRequest(targetUrl, jsonBody, CRON_SECRET_KEY);
       console.log(`✅ Batch ${batchIndex} Sync Successful:`, result.message || 'OK');
     }
   } catch (err) {

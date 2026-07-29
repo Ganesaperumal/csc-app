@@ -34,19 +34,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Parse payload — support both old flat array and new { jobs, is_last_batch } envelope
+    // 2. Parse payload — expects a non-empty array of jobs
     const rawBody = await request.json();
-    let body: ErpJobData[];
-    let is_last_batch = false;
+    const url = new URL(request.url);
+    const is_last_batch = url.searchParams.get('is_last_batch') === 'true' || 
+                         request.headers.get('x-is-last-batch') === 'true' ||
+                         (rawBody && !Array.isArray(rawBody) && rawBody.is_last_batch);
 
-    if (Array.isArray(rawBody)) {
-      // Legacy: flat array — treat every call as the last batch (old github_sync.js behaviour)
-      body = rawBody;
-      is_last_batch = true;
-    } else {
-      body = rawBody.jobs;
-      is_last_batch = rawBody.is_last_batch ?? false;
-    }
+    const body: ErpJobData[] = Array.isArray(rawBody) ? rawBody : (rawBody?.jobs || []);
+    
     if (!Array.isArray(body) || body.length === 0) {
       return NextResponse.json({ error: 'Invalid payload: Expected a non-empty array of jobs.' }, { status: 400 });
     }
