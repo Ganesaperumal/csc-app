@@ -54,8 +54,6 @@ export default function CustomSelect({
         display: 'flex',
         flexDirection: 'column',
         gap: '2px',
-        maxHeight: `${maxDropdownHeight}px`,
-        overflowY: 'auto'
       });
     }
   }, [isOpen]);

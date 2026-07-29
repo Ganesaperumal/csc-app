@@ -58,6 +58,12 @@ function DashboardNav({ profile }: { profile: any }) {
         </Link>
       )}
 
+      {getAccessLevel('Activity Log', profile) !== 'None' && (
+        <Link href="/home/activity-log" className={`${styles.navItem} ${pathname === '/home/activity-log' ? styles.active : ''}`}>
+          <span>📜</span> Activity Log
+        </Link>
+      )}
+
     </nav>
   );
 }
@@ -144,13 +150,13 @@ export default function DashboardLayout({
                 </Suspense>
               </div>
               
-              <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <div style={{ flex: 1 }}></div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                  <GroupChatWrapper user={user} profile={profile} />
               </div>
 
-              <div style={{ flex: 1 }}></div>
-
-              <div style={{ marginTop: '1rem' }}>
+              <div>
                 <SyncERPWrapper user={user} profile={profile} />
               </div>
             </div>

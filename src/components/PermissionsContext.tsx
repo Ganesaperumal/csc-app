@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
-type AccessLevel = 'None' | 'View' | 'Read' | 'Edit';
+type AccessLevel = 'None' | 'View' | 'Edit';
 
 type Permission = {
   category: string;
@@ -15,7 +15,7 @@ type Permission = {
 type PermissionsContextType = {
   permissions: Permission[];
   loading: boolean;
-  getAccessLevel: (pageName: string, userRoles: { role?: string; csc_role?: string; tracking_role?: string; unbilled_role?: string }) => AccessLevel;
+  getAccessLevel: (pageName: string, userRoles: { role?: string; csc_role?: string; unbilled_role?: string }) => AccessLevel;
 };
 
 const PermissionsContext = createContext<PermissionsContextType>({
@@ -35,7 +35,11 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
         .select('*');
       
       if (!error && data) {
-        setPermissions(data as Permission[]);
+        const mappedData = data.map((p: any) => ({
+          ...p,
+          access: p.access === 'Read' ? 'View' : p.access
+        }));
+        setPermissions(mappedData as Permission[]);
       }
       setLoading(false);
     };
@@ -45,26 +49,33 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
 
   const getAccessLevel = (
     pageName: string, 
-    userRoles: { role?: string; csc_role?: string; tracking_role?: string; unbilled_role?: string }
+    userRoles: { role?: string; csc_role?: string; unbilled_role?: string }
   ): AccessLevel => {
     if (!userRoles) return 'None';
-    
-    // No hardcoded admin bypass - let the database dictate access
-    // if (userRoles.role === 'Admin' || userRoles.csc_role === 'Admin') return 'Edit';
 
-    // Find all matching permissions for this user's roles
-    const activeRoles = [userRoles.role, userRoles.csc_role, userRoles.tracking_role, userRoles.unbilled_role].filter(Boolean);
-    
     let maxAccess: AccessLevel = 'None';
 
     permissions.forEach(perm => {
-      if (perm.section === pageName && activeRoles.includes(perm.role)) {
-        if (perm.access === 'Edit') {
-          maxAccess = 'Edit';
-        } else if (perm.access === 'Read' && (maxAccess === 'None' || maxAccess === 'View')) {
-          maxAccess = 'Read';
-        } else if (perm.access === 'View' && maxAccess === 'None') {
-          maxAccess = 'View';
+      if (perm.section === pageName) {
+        // Prevent orphaned Unbilled category permissions from overriding Activity Log
+        if (pageName === 'Activity Log' && perm.category === 'Unbilled') return;
+
+        // Determine the applicable role for this permission's category
+        let applicableRole = userRoles.role; // Default/legacy role
+        
+        if (perm.category === 'CSC') {
+          applicableRole = userRoles.csc_role ? userRoles.csc_role : applicableRole;
+        } else if (perm.category === 'Unbilled') {
+          applicableRole = userRoles.unbilled_role ? userRoles.unbilled_role : applicableRole;
+        }
+
+        // Only grant access if the applicable role matches the permission's role
+        if (applicableRole === perm.role && applicableRole !== 'None') {
+          if (perm.access === 'Edit') {
+            maxAccess = 'Edit';
+          } else if (perm.access === 'View' && maxAccess === 'None') {
+            maxAccess = 'View';
+          }
         }
       }
     });

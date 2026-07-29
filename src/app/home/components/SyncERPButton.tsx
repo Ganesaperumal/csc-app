@@ -2,33 +2,30 @@
 import { showToast } from '@/components/GlobalDialogs';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { usePermissions } from '@/components/PermissionsContext';
 
 export default function SyncERPButton({ user: initialUser, profile: initialProfile }: { user?: any; profile?: any }) {
   const [user, setUser] = useState(initialUser);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncingBy, setSyncingBy] = useState('');
   const [isViewer, setIsViewer] = useState(false);
-  
+  const { getAccessLevel } = usePermissions();
+
   useEffect(() => {
-    // Derive viewer status from profile prop if available
+    // Derive viewer status from permission matrix
+    const resolveAccess = (profile: any) => {
+      const level = getAccessLevel('Sync ERP', profile);
+      setIsViewer(level !== 'Edit');
+    };
+
     if (initialProfile) {
-      const cscRole = initialProfile.csc_role || 'Executive';
-      const trackingRole = initialProfile.tracking_role || 'Executive';
-      const canEdit = ['Admin', 'Manager', 'Executive'].includes(cscRole) ||
-                      ['Admin', 'Manager', 'Executive'].includes(trackingRole);
-      setIsViewer(!canEdit);
+      resolveAccess(initialProfile);
       return;
     }
     // Fallback: fetch profile from Supabase
     const fetchRole = async (userId: string) => {
-      const { data } = await supabase.from('profiles').select('csc_role, tracking_role').eq('id', userId).single();
-      if (data) {
-        const cscRole = data.csc_role || 'Executive';
-        const trackingRole = data.tracking_role || 'Executive';
-        const canEdit = ['Admin', 'Manager', 'Executive'].includes(cscRole) ||
-                        ['Admin', 'Manager', 'Executive'].includes(trackingRole);
-        setIsViewer(!canEdit);
-      }
+      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      if (data) resolveAccess(data);
     };
 
     if (!user) {
@@ -144,7 +141,7 @@ export default function SyncERPButton({ user: initialUser, profile: initialProfi
   };
 
   return (
-    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+    <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
       <button 
         onClick={isViewer ? undefined : triggerSync}
         disabled={isSyncing || isViewer}

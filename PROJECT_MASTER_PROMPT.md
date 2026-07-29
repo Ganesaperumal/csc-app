@@ -77,7 +77,7 @@ src/
 ### Core Tables
 | Table | Key Columns | Notes |
 |-------|------------|-------|
-| `profiles` | `id` (UUID, FK auth.users), `name`, `username`, `role`, `csc_role`, `tracking_role`, `unbilled_role`, `branches` (TEXT[]), `is_approved`, `is_reviewed`, `phone`, `photo`, `csc_coordinator` | Role-based access |
+| `profiles` | `id` (UUID, FK auth.users), `name`, `username`, `role`, `csc_role`, `unbilled_role`, `branches` (TEXT[]), `is_approved`, `is_reviewed`, `phone`, `photo`, `csc_coordinator` | Role-based access |
 | `jobs` | `job_number`, `enquiry_number`, `branch`, `customer_name`, `company`, `goods_description`, `origin`, `destination`, `packing_date`, `delivery_date`, `goods_track_status`, `car_track_status`, `po_status`, `po_date`, `inv_request_date`, `bill_closure_date`, `sales_by`, `spoc_name`, `documents` (JSONB), `whatsapp_sent_stages` (JSONB), `insurance_required`, `quote_value` | Main job record |
 | `legacy_jobs` | `job_number`, `enquiry_number`, `branch`, `customer_name`, `packing_date`, `delivery_date`, `goods_track_status`, `po_status`, `po_date`, `inv_request_date`, `bill_closure_date`, `sales_by`, `spoc_name` | Old/archived jobs |
 | `job_logs` | `job_id`, `action`, `changed_by`, `changes` (JSONB), `created_at` | Audit log per job |
@@ -95,17 +95,15 @@ src/
 ## 4. ROLES & ACCESS MODEL
 
 ### Role System
-Users have **one primary role** + **three category roles**:
+Users have **one primary role** + **two category roles**:
 - `role`: `Admin` | (legacy field — SPOC removed)
 - `csc_role`: `Admin` | `Manager` | `Executive` | `Viewer` | `None`
-- `tracking_role`: `Admin` | `Manager` | `Executive` | `Viewer` | `None`
 - `unbilled_role`: `Admin` | `Manager` | `Executive` | `Viewer` | `None`
 
 ### Key Access Rules
-- **Executive / Manager** (csc_role or tracking_role) → Full edit access to job detail, communications, WhatsApp, docs
+- **Executive / Manager** (csc_role) → Full edit access to job detail, communications, WhatsApp, docs
 - **Admin** (csc_role) → Read-only on job pages (same as Viewer). Full access to Admin panel.
-- **Viewer** (csc_role or tracking_role) → Read-only everywhere. Can filter/search lists. Cannot edit fields, add logs, send WhatsApp, trigger Sync ERP, or use Group Chat.
-- **Tracking Executive** → Replaces old SPOC role. Has access to `/home/tracking` via `tracking_role`.
+- **Viewer** (csc_role) → Read-only everywhere. Can filter/search lists. Can see all fields whether empty or not. Cannot edit fields, add logs, send WhatsApp, trigger Sync ERP, or use Group Chat.
 - `branches` (TEXT[]) → `['ALL']` = super admin, else branch-filtered queries
 - `is_approved` must be `true` to access the dashboard
 - Sidebar hidden on: `/home/job/[id]`, `/home/all-jobs`, `/home/unbilled`
@@ -124,7 +122,7 @@ Users have **one primary role** + **three category roles**:
 - **Communications Log**: Call notes (Customer/Internal), follow-ups with dates
 - **WhatsApp Notifications**: Per-stage send buttons, logs in `whatsapp_logs`
 - **AI Summary**: Calls `/api/ai` with job context → Gemini generates summary
-- **Viewer Mode**: `isViewer` hides empty fields; `isSPOC` locks all edits
+- **Viewer Mode**: `isViewer` can see all fields whether it has empty value; `isSPOC` locks all edits
 - **Real-time presence**: Multiple agents see `viewingAgents` list (Supabase realtime)
 - **Job logs**: Every save records a diff in `job_logs`
 
@@ -177,7 +175,6 @@ Users have **one primary role** + **three category roles**:
 /home/all-jobs        → Full-width jobs table (csc_role ≠ None)
 /home/follow-ups      → Follow-ups (csc_role ≠ Viewer/None)
 /home/reports         → Charts & analytics (csc_role ≠ None)
-/home/tracking        → Tracking dashboard (tracking_role ≠ None; replaces old SPOC view)
 /home/unbilled        → Unbilled jobs (unbilled_role ≠ None)
 /home/legacy-jobs     → Legacy jobs (unbilled_role ≠ None)
 /home/job/[id]        → Job detail (edit or read-only based on role)

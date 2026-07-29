@@ -3,23 +3,26 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import UserDetailsModal from '@/app/home/users/UserDetailsModal';
+import { usePermissions } from '@/components/PermissionsContext';
 
 export default function PendingApprovalsReminder({ profile }: { profile: any }) {
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [activeModalUser, setActiveModalUser] = useState<any | null>(null);
+  const { getAccessLevel } = usePermissions();
 
-  const isSuperAdmin = profile?.role === 'Admin' || profile?.csc_role === 'Admin' || profile?.username === 'ganesh' || profile?.name?.includes('Ganesaperumal');
+  const alertAccess = profile ? getAccessLevel('CSC Call Alerts', profile) : 'None';
+  const canManageUsers = profile ? getAccessLevel('User Management', profile) : 'None';
 
   useEffect(() => {
-    if (!isSuperAdmin) return;
+    if (alertAccess === 'None') return;
 
     fetchPendingUsers();
 
     // Check periodically every 30 seconds for new signups
     const interval = setInterval(fetchPendingUsers, 30000);
     return () => clearInterval(interval);
-  }, [isSuperAdmin]);
+  }, [alertAccess]);
 
   const fetchPendingUsers = async () => {
     try {
@@ -49,7 +52,7 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
     }
   };
 
-  if (!isSuperAdmin || pendingUsers.length === 0) return null;
+  if (alertAccess === 'None' || pendingUsers.length === 0) return null;
 
   return (
     <>
@@ -161,7 +164,8 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
                     </div>
                   </div>
 
-                  {/* Actions */}
+                  {/* Actions — only shown if user can manage users */}
+                  {canManageUsers !== 'None' && (
                   <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.4rem', justifyContent: 'flex-end' }}>
                     <button
                       onClick={() => setActiveModalUser(pu)}
@@ -170,6 +174,7 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
                       ⚙️ Review
                     </button>
                   </div>
+                  )}
                 </div>
               ))}
             </div>

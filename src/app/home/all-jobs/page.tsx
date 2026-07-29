@@ -4,6 +4,7 @@ import { showToast } from '@/components/GlobalDialogs';
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { usePermissions } from '@/components/PermissionsContext';
 import styles from '../jobs.module.css';
 
 const ALL_COLUMNS = [
@@ -168,6 +169,8 @@ function ColumnFilterDropdown({
 }
 
 function AllJobsContent() {
+  const { getAccessLevel } = usePermissions();
+  const [isViewer, setIsViewer] = useState(false);
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(DEFAULT_VISIBLE_COLUMNS);
@@ -207,6 +210,7 @@ function AllJobsContent() {
   const dragOverItem = useRef<number | null>(null);
 
   const [isExportingSheets, setIsExportingSheets] = useState(false);
+  const [canExportJobs, setCanExportJobs] = useState(false);
 
   const exportToSheets = async () => {
     setIsExportingSheets(true);
@@ -246,6 +250,21 @@ function AllJobsContent() {
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('mouseup', onMouseUp);
   };
+
+  useEffect(() => {
+    const checkAccess = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { router.push('/login'); return; }
+      const { data: profileData } = await supabase
+        .from('profiles').select('*').eq('id', session.user.id).single();
+      if (!profileData) { router.push('/home'); return; }
+      const level = getAccessLevel('All Jobs', profileData);
+      if (level === 'None') { router.push('/home'); return; }
+      if (level === 'View') setIsViewer(true);
+      setCanExportJobs(getAccessLevel('Export Jobs', profileData) !== 'None');
+    };
+    checkAccess();
+  }, []);
 
   useEffect(() => {
     try {
@@ -541,6 +560,7 @@ function AllJobsContent() {
               <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
             </svg>
           </button>
+          {canExportJobs && (
           <button
             onClick={exportToSheets}
             disabled={isExportingSheets}
@@ -567,6 +587,7 @@ function AllJobsContent() {
             )}
             {isExportingSheets ? 'Exporting...' : 'Export to Sheets'}
           </button>
+          )}
 
           <div className={styles.columnSelectorContainer}>
             <button className={styles.columnsBtn} onClick={() => setShowColumnSelector(!showColumnSelector)} style={{ padding: '0.6rem 1.2rem', borderRadius: '99px' }}>

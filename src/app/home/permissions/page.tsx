@@ -5,27 +5,39 @@ import { supabase } from '@/lib/supabase';
 import { showToast } from '@/components/GlobalDialogs';
 
 const ROLES = ['Admin', 'Manager', 'Executive', 'Viewer'];
-const CATEGORIES = ['CSC', 'Unbilled', 'Admin'];
-const CATEGORY_SECTIONS: Record<string, string[]> = {
-  'CSC': [
-    'Active Jobs', 'Closed Jobs', 'All Jobs', 'Follow-ups',
-    'Reports', 'Group Chat', 'Sync ERP'
+const UI_TABS = ['Pages', 'Features'];
+const UI_TAB_SECTIONS: Record<string, { section: string; category: string }[]> = {
+  'Pages': [
+    { section: 'Active Jobs', category: 'CSC' },
+    { section: 'Closed Jobs', category: 'CSC' },
+    { section: 'All Jobs', category: 'CSC' },
+    { section: 'Follow-ups', category: 'CSC' },
+    { section: 'Reports', category: 'CSC' },
+    { section: 'Unbilled', category: 'Unbilled' },
+    { section: 'Activity Log', category: 'CSC' }
   ],
-  'Unbilled': ['Unbilled'],
-  'Admin': ['User Management', 'Role Permissions', 'Admin Center']
+  'Features': [
+    { section: 'Group Chat', category: 'CSC' },
+    { section: 'Sync ERP', category: 'CSC' },
+    { section: 'CSC Call Alerts', category: 'CSC' },
+    { section: 'Export Jobs', category: 'CSC' },
+    { section: 'Unbilled Followup', category: 'Unbilled' },
+    { section: 'Export Unbilled', category: 'Unbilled' }
+  ]
 };
-const ACCESS_LEVELS = ['None', 'View', 'Read', 'Edit'];
 
-const CATEGORY_ICONS: Record<string, string> = {
-  CSC: '📋',
-  Unbilled: '💰',
-  Admin: '🛡️',
+const ALL_SECTIONS = [...UI_TAB_SECTIONS['Pages'], ...UI_TAB_SECTIONS['Features']];
+
+const ACCESS_LEVELS = ['None', 'View', 'Edit'];
+
+const TAB_ICONS: Record<string, string> = {
+  Pages: '📄',
+  Features: '✨',
 };
 
 const ACCESS_CONFIG: Record<string, { label: string; bg: string; color: string; border: string }> = {
   None:  { label: 'None',  bg: 'transparent',            color: 'var(--text-secondary)', border: '1px solid var(--border-color)' },
   View:  { label: 'View',  bg: 'rgba(59,130,246,0.15)',  color: '#60a5fa',               border: '1px solid rgba(59,130,246,0.4)' },
-  Read:  { label: 'Read',  bg: 'rgba(168,85,247,0.15)',  color: '#c084fc',               border: '1px solid rgba(168,85,247,0.4)' },
   Edit:  { label: 'Edit',  bg: 'rgba(16,185,129,0.15)',  color: '#34d399',               border: '1px solid rgba(16,185,129,0.4)' },
 };
 
@@ -46,17 +58,16 @@ type Matrix = Record<string, Record<string, Record<string, MatrixCell>>>;
 
 function buildMatrix(rows: any[]): Matrix {
   const matrix: Matrix = {};
-  for (const cat of CATEGORIES) {
-    matrix[cat] = {};
-    for (const sec of CATEGORY_SECTIONS[cat]) {
-      matrix[cat][sec] = {};
-      for (const role of ROLES) {
-        matrix[cat][sec][role] = { access: 'None' };
-      }
+  for (const { category, section } of ALL_SECTIONS) {
+    if (!matrix[category]) matrix[category] = {};
+    if (!matrix[category][section]) matrix[category][section] = {};
+    for (const role of ROLES) {
+      matrix[category][section][role] = { access: 'None' };
     }
   }
   for (const row of rows) {
-    const { category, section, role, access, id } = row;
+    let { category, section, role, access, id } = row;
+    if (access === 'Read') access = 'View';
     if (matrix[category]?.[section]?.[role] !== undefined) {
       matrix[category][section][role] = { id, access: access || 'None' };
     }
@@ -69,7 +80,7 @@ export default function PermissionsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
-  const [activeCategory, setActiveCategory] = useState('CSC');
+  const [activeTab, setActiveTab] = useState('Pages');
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -140,15 +151,13 @@ export default function PermissionsPage() {
     const toUpdate: any[] = [];
     const toInsert: any[] = [];
 
-    for (const cat of CATEGORIES) {
-      for (const sec of CATEGORY_SECTIONS[cat]) {
-        for (const role of ROLES) {
-          const cell = matrix[cat]?.[sec]?.[role];
-          if (cell?.id) {
-            toUpdate.push({ id: cell.id, category: cat, section: sec, role, access: cell.access });
-          } else if (cell?.access && cell.access !== 'None') {
-            toInsert.push({ category: cat, section: sec, role, access: cell.access });
-          }
+    for (const { section: sec, category: cat } of ALL_SECTIONS) {
+      for (const role of ROLES) {
+        const cell = matrix[cat]?.[sec]?.[role];
+        if (cell?.id) {
+          toUpdate.push({ id: cell.id, category: cat, section: sec, role, access: cell.access });
+        } else if (cell?.access && cell.access !== 'None') {
+          toInsert.push({ category: cat, section: sec, role, access: cell.access });
         }
       }
     }
@@ -185,7 +194,7 @@ export default function PermissionsPage() {
     );
   }
 
-  const sections = CATEGORY_SECTIONS[activeCategory] || [];
+  const sections = UI_TAB_SECTIONS[activeTab] || [];
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1100px', margin: '0 auto' }}>
@@ -227,12 +236,12 @@ export default function PermissionsPage() {
 
       {/* Category Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '2px solid var(--border-color)', paddingBottom: '0' }}>
-        {CATEGORIES.map(cat => {
-          const isActive = cat === activeCategory;
+        {UI_TABS.map(tab => {
+          const isActive = tab === activeTab;
           return (
             <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
+              key={tab}
+              onClick={() => setActiveTab(tab)}
               style={{
                 padding: '0.65rem 1.4rem',
                 border: 'none',
@@ -251,7 +260,7 @@ export default function PermissionsPage() {
                 boxShadow: isActive ? '0 -3px 10px rgba(99,102,241,0.2)' : 'none',
               }}
             >
-              {CATEGORY_ICONS[cat]} {cat}
+              {TAB_ICONS[tab]} {tab}
             </button>
           );
         })}
@@ -290,9 +299,9 @@ export default function PermissionsPage() {
         </div>
 
         {/* Matrix Body */}
-        {sections.map((section, sIdx) => (
+        {sections.map(({ section, category }, sIdx) => (
           <div
-            key={section}
+            key={`${section}-${category}`}
             style={{
               display: 'grid',
               gridTemplateColumns: '220px repeat(4, 1fr)',
@@ -317,7 +326,7 @@ export default function PermissionsPage() {
 
             {/* Role Cells */}
             {ROLES.map(role => {
-              const cell = matrix[activeCategory]?.[section]?.[role];
+              const cell = matrix[category]?.[section]?.[role];
               const access = cell?.access || 'None';
               const cfg = ACCESS_CONFIG[access];
 
@@ -329,7 +338,7 @@ export default function PermissionsPage() {
                   {/* Access pill — click cycles; right-click opens a quick picker */}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
                     <button
-                      onClick={() => cycleAccess(activeCategory, section, role)}
+                      onClick={() => cycleAccess(category, section, role)}
                       title="Click to cycle access level"
                       style={{
                         padding: '0.35rem 1rem',
@@ -354,7 +363,7 @@ export default function PermissionsPage() {
                         return (
                           <button
                             key={lvl}
-                            onClick={() => setAccess(activeCategory, section, role, lvl)}
+                            onClick={() => setAccess(category, section, role, lvl)}
                             title={lvl}
                             style={{
                               width: 10,

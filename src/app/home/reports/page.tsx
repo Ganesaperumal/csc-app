@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { getUserColor } from '@/lib/colorUtils';
 import CustomSelect from '../components/CustomSelect';
+import { usePermissions } from '@/components/PermissionsContext';
 
 // HSL-based beautiful color palette for charts
 const CHART_COLORS = [
@@ -497,10 +498,11 @@ function TimelineChart({
 
 // --- MAIN REPORTS PAGE COMPONENT ---
 export default function ReportsPage() {
+  const { getAccessLevel } = usePermissions();
   const router = useRouter();
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<'jobs' | 'agents'>('jobs');
+  const [activeTab, setActiveTab] = useState<'jobs' | 'agents' | 'unbilled' | 'branch_users'>('jobs');
   
   // Loading and Raw Data States
   const [loading, setLoading] = useState(true);
@@ -535,6 +537,14 @@ export default function ReportsPage() {
         router.push('/login');
         return;
       }
+      
+      const { data: profileData } = await supabase
+        .from('profiles').select('*').eq('id', session.user.id).single();
+      if (!profileData) { router.push('/home'); return; }
+      const level = getAccessLevel('Reports', profileData);
+      if (level === 'None') { router.push('/home'); return; }
+      // Note: Reports is view-only by nature (analytics), so View = Edit for reports
+
       await loadAllAnalyticsData();
     };
 
@@ -750,6 +760,37 @@ export default function ReportsPage() {
       goodsTypeChart
     };
   }, [filteredActiveJobs]);
+
+  // Compute Unbilled Jobs Raw
+  const unbilledJobsRaw = useMemo(() => {
+    return jobs.filter(job => {
+      if (job.erp_status?.toLowerCase().includes('cancel')) return false;
+      const isBilled = job.erp_status?.toLowerCase() === 'billed';
+      if (isBilled) return false;
+
+      const goodsCompleted = job.goods_track_status === '22. Job Completed';
+      const carIncluded = job.car_included === true || job.car_included === 'Yes' || job.car_included === 'yes';
+
+      if (!carIncluded) {
+        return goodsCompleted;
+      } else {
+        const carCompleted = job.car_track_status === '16. Job Completed';
+        return goodsCompleted && carCompleted;
+      }
+    });
+  }, [jobs]);
+
+  const unbilledMetrics = useMemo(() => {
+    const branchCounts: Record<string, number> = {};
+    unbilledJobsRaw.forEach(j => {
+      const br = j.branch || 'Unknown';
+      branchCounts[br] = (branchCounts[br] || 0) + 1;
+    });
+    return {
+      total: unbilledJobsRaw.length,
+      branchChart: Object.entries(branchCounts).map(([label, value]) => ({ label, value }))
+    };
+  }, [unbilledJobsRaw]);
 
   // --- 2. AGENTS DATA PROCESSING ---
 
@@ -1063,40 +1104,82 @@ export default function ReportsPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)', paddingBottom: '0.25rem' }}>
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)', paddingBottom: '0.25rem' }}>
         <button
           onClick={() => setActiveTab('jobs')}
           style={{
-            padding: '0.6rem 1.5rem',
-            fontSize: '0.95rem',
-            fontWeight: 700,
             background: 'transparent',
             border: 'none',
+            padding: '0.75rem 1rem',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
             borderBottom: activeTab === 'jobs' ? '3px solid #4f46e5' : '3px solid transparent',
             color: activeTab === 'jobs' ? '#4f46e5' : 'var(--text-secondary)',
-            cursor: 'pointer',
             transition: 'all 0.2s',
-            fontFamily: "'Outfit', sans-serif"
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
           }}
         >
-          📦 Active Jobs Report
+          📋 Active Jobs Report
+        </button>
+        <button
+          onClick={() => setActiveTab('unbilled')}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            padding: '0.75rem 1rem',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            borderBottom: activeTab === 'unbilled' ? '3px solid #10b981' : '3px solid transparent',
+            color: activeTab === 'unbilled' ? '#10b981' : 'var(--text-secondary)',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}
+        >
+          💰 Unbilled Report
         </button>
         <button
           onClick={() => setActiveTab('agents')}
           style={{
-            padding: '0.6rem 1.5rem',
-            fontSize: '0.95rem',
-            fontWeight: 700,
             background: 'transparent',
             border: 'none',
-            borderBottom: activeTab === 'agents' ? '3px solid #4f46e5' : '3px solid transparent',
-            color: activeTab === 'agents' ? '#4f46e5' : 'var(--text-secondary)',
+            padding: '0.75rem 1rem',
+            fontWeight: 700,
+            fontSize: '0.9rem',
             cursor: 'pointer',
+            borderBottom: activeTab === 'agents' ? '3px solid #f43f5e' : '3px solid transparent',
+            color: activeTab === 'agents' ? '#f43f5e' : 'var(--text-secondary)',
             transition: 'all 0.2s',
-            fontFamily: "'Outfit', sans-serif"
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
           }}
         >
           👥 Agent Activity Oversight
+        </button>
+        <button
+          onClick={() => setActiveTab('branch_users')}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            padding: '0.75rem 1rem',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            borderBottom: activeTab === 'branch_users' ? '3px solid #f59e0b' : '3px solid transparent',
+            color: activeTab === 'branch_users' ? '#f59e0b' : 'var(--text-secondary)',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}
+        >
+          🏢 Branch Users Reports
         </button>
       </div>
 
@@ -1508,6 +1591,29 @@ export default function ReportsPage() {
             )}
           </div>
 
+        </div>
+      )}
+
+      {/* --- UNBILLED REPORT TAB --- */}
+      {activeTab === 'unbilled' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+            <div className="glass" style={{ padding: '1.5rem', flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Total Unbilled Jobs</span>
+              <span style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--text-primary)' }}>{unbilledMetrics.total}</span>
+            </div>
+            <DonutChart data={unbilledMetrics.branchChart} title="Unbilled Jobs by Branch" />
+          </div>
+        </div>
+      )}
+
+      {/* --- BRANCH USERS REPORTS TAB --- */}
+      {activeTab === 'branch_users' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div className="glass" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+            <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-primary)' }}>Branch Users Reports</h3>
+            <p>Detailed branch-level user performance metrics will be displayed here.</p>
+          </div>
         </div>
       )}
 

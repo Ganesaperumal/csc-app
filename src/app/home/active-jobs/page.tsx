@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { usePermissions } from '@/components/PermissionsContext';
 import styles from '../jobs.module.css';
 
 const ALL_COLUMNS = [
@@ -187,6 +188,9 @@ function JobsTable() {
   const [visibleColumns, setVisibleColumns] = useState<string[]>(['erp_job_id', 'job_number', 'job_date', 'customer_name', 'company', 'goods_type', 'goods_track_status', 'spoc_name']);
   const [orderedColumns, setOrderedColumns] = useState<string[]>(ALL_COLUMNS.map(c => c.id));
   const [showColumnSelector, setShowColumnSelector] = useState(false);
+  const { getAccessLevel } = usePermissions();
+  const [isViewer, setIsViewer] = useState(false);
+  const [accessChecked, setAccessChecked] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [agentName, setAgentName] = useState<string>('');
   const [filters, setFilters] = useState<Record<string, string[]>>(() => {
@@ -307,22 +311,26 @@ function JobsTable() {
     // Check if user is admin and get their name
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
-        supabase.from('profiles').select('role, name, username, csc_role, tracking_role').eq('id', data.user.id).single().then(({ data: profileData }) => {
+        supabase.from('profiles').select('*').eq('id', data.user.id).single().then(({ data: profileData }) => {
           if (profileData) {
-            const cscRole = profileData.csc_role || 'Executive';
-            const trackingRole = profileData.tracking_role || 'Executive';
-            if (cscRole === 'None' && trackingRole === 'None') {
+            const level = getAccessLevel('Active Jobs', profileData);
+            if (level === 'None') {
               router.push('/home');
               return;
+            }
+            if (level === 'View') {
+              setIsViewer(true);
             }
             if (profileData.role === 'Admin') {
               setIsAdmin(true);
             }
             const name = profileData.name || profileData.username || data.user.email?.split('@')[0] || 'Agent';
             setAgentName(name);
+            setAccessChecked(true);
           } else {
             const name = data.user.email?.split('@')[0] || 'Agent';
             setAgentName(name);
+            setAccessChecked(true);
           }
         });
       }

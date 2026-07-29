@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { getUserColor } from '@/lib/colorUtils';
 import CustomSelect from '../components/CustomSelect';
+import { usePermissions } from '@/components/PermissionsContext';
 
 const cardStyle: React.CSSProperties = {
   background: 'var(--surface-color)',
@@ -52,6 +53,8 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 export default function ActivityLogPage() {
+  const { getAccessLevel, loading: permissionsLoading } = usePermissions();
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -65,8 +68,15 @@ export default function ActivityLogPage() {
 
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  // Enforce access once permissions have loaded from DB
   useEffect(() => {
-    const checkAdmin = async () => {
+    if (permissionsLoading || !userProfile) return;
+    const level = getAccessLevel('Activity Log', userProfile);
+    if (level === 'None') router.push('/home');
+  }, [permissionsLoading, userProfile]);
+
+  useEffect(() => {
+    const checkAndFetch = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.push('/login');
@@ -74,17 +84,22 @@ export default function ActivityLogPage() {
       }
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('*')
         .eq('id', session.user.id)
         .single();
-      if (!profile || profile.role !== 'Admin') {
+        
+      if (!profile) {
         router.push('/home');
         return;
       }
+
+      setUserProfile(profile);
+      // Access enforcement is handled reactively in the permissionsLoading useEffect above
+      
       fetchLogs();
     };
-    checkAdmin();
-  }, []);
+    checkAndFetch();
+  }, [router]);
 
   const fetchLogs = async () => {
     setLoading(true);

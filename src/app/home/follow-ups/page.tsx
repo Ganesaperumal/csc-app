@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getUserColor } from '@/lib/colorUtils';
 import CustomSelect from '../components/CustomSelect';
+import { usePermissions } from '@/components/PermissionsContext';
 
 interface Task {
   id: number;
@@ -35,6 +36,7 @@ const formatDate = (dateStr: string | null) => {
 };
 
 export default function FollowUpsPage() {
+  const { getAccessLevel } = usePermissions();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [agentName, setAgentName] = useState('');
@@ -70,7 +72,11 @@ export default function FollowUpsPage() {
         activeName = profile.name || profile.username || user.email?.split('@')[0] || 'Agent';
         adminRole = profile.role === 'Admin';
         setIsAdmin(adminRole);
-        setIsViewer(profile.role === 'Viewer');
+        
+        const level = getAccessLevel('Follow-ups', profile);
+        if (level === 'None') { router.push('/home'); return; }
+        setIsViewer(level !== 'Edit');
+        
         setAgentName(activeName);
       } else {
         activeName = user.email?.split('@')[0] || 'Agent';

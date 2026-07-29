@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { usePermissions } from '@/components/PermissionsContext';
 import styles from '../jobs.module.css';
 
 const ALL_COLUMNS = [
@@ -101,6 +102,8 @@ function ColumnFilterDropdown({ colId, jobs, currentFilters, onApply, onSort, cu
 }
 
 export default function ClosedJobsPage() {
+  const { getAccessLevel } = usePermissions();
+  const [isViewer, setIsViewer] = useState(false);
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [globalSearch, setGlobalSearch] = useState('');
@@ -157,6 +160,20 @@ export default function ClosedJobsPage() {
   const dragOverItem = useRef<number | null>(null);
   const filterRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const checkAccess = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { router.push('/login'); return; }
+      const { data: profileData } = await supabase
+        .from('profiles').select('*').eq('id', session.user.id).single();
+      if (!profileData) { router.push('/home'); return; }
+      const level = getAccessLevel('Closed Jobs', profileData);
+      if (level === 'None') { router.push('/home'); return; }
+      if (level === 'View') setIsViewer(true);
+    };
+    checkAccess();
+  }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => { if (filterRef.current && !filterRef.current.contains(e.target as Node)) setActiveFilterColumn(null); };

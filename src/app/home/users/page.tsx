@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import CustomSelect from '../components/CustomSelect';
 import UserDetailsModal from './UserDetailsModal';
 import { useRouter } from 'next/navigation';
+import { usePermissions } from '@/components/PermissionsContext';
 
 const cardStyle: React.CSSProperties = {
   background: 'var(--surface-color)',
@@ -41,6 +42,7 @@ const inputStyle: React.CSSProperties = {
 };
 
 export default function UsersPage() {
+  const { getAccessLevel } = usePermissions();
   const [users, setUsers] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -60,6 +62,7 @@ export default function UsersPage() {
   const [filterRole, setFilterRole] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeModalUser, setActiveModalUser] = useState<any | null>(null);
+  const [isViewerMode, setIsViewerMode] = useState(false);
 
   const router = useRouter();
 
@@ -69,8 +72,12 @@ export default function UsersPage() {
         setCurrentUser(data.user);
         supabase.from('profiles').select('*').eq('id', data.user.id).single()
           .then(({ data: profile }) => {
-            if (profile && profile.role === 'Admin') {
+            if (profile) {
+              const level = getAccessLevel('User Management', profile);
+              if (level === 'None') { router.push('/home'); return; }
+              const canEdit = level === 'Edit';
               setUserRole(profile.role);
+              setIsViewerMode(!canEdit);
               setCheckingAuth(false);
               fetchUsers();
             } else {
@@ -81,7 +88,7 @@ export default function UsersPage() {
         router.push('/home');
       }
     });
-  }, [router]);
+  }, [router, getAccessLevel]);
 
   const fetchUsers = async () => {
     try {
@@ -250,12 +257,14 @@ export default function UsersPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{ ...inputStyle, width: '220px' }}
             />
+            {!isViewerMode && (
             <button
               onClick={() => setActiveModalUser({})}
               style={{ padding: '0.65rem 1.25rem', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: 'white', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               ➕ Add New User
             </button>
+            )}
           </div>
         </div>
 
@@ -283,7 +292,7 @@ export default function UsersPage() {
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
                     {/* Profile & Photo */}
-                    <td style={{ padding: '0.85rem 1rem' }} onClick={() => setActiveModalUser(u)}>
+                    <td style={{ padding: '0.85rem 1rem' }} onClick={() => !isViewerMode && setActiveModalUser(u)}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(79,70,229,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '1px solid #4f46e5', fontWeight: 700, color: '#4f46e5', flexShrink: 0 }}>
                           {u.photo ? <img src={u.photo} alt={u.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (u.name?.[0] || u.username?.[0] || 'U').toUpperCase()}
@@ -297,13 +306,13 @@ export default function UsersPage() {
                     </td>
 
                     {/* Username & Email */}
-                    <td style={{ padding: '0.85rem 1rem' }} onClick={() => setActiveModalUser(u)}>
+                    <td style={{ padding: '0.85rem 1rem' }} onClick={() => !isViewerMode && setActiveModalUser(u)}>
                       <div style={{ fontWeight: 600 }}>{u.username}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{u.email || `${u.username}@transworldintl.com`}</div>
                     </td>
 
                     {/* Module Access Matrix Badges with Emojis */}
-                    <td style={{ padding: '0.85rem 1rem' }} onClick={() => setActiveModalUser(u)}>
+                    <td style={{ padding: '0.85rem 1rem' }} onClick={() => !isViewerMode && setActiveModalUser(u)}>
                       <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
                         {(() => {
                           const getRoleIcon = (role: string) => {
@@ -342,13 +351,13 @@ export default function UsersPage() {
                       <div
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (!isSuperAdmin) handleToggleApproval(u);
+                          if (!isSuperAdmin && !isViewerMode) handleToggleApproval(u);
                         }}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
-                          cursor: isSuperAdmin ? 'not-allowed' : 'pointer',
-                          opacity: isSuperAdmin ? 0.6 : 1
+                          cursor: isSuperAdmin || isViewerMode ? 'not-allowed' : 'pointer',
+                          opacity: isSuperAdmin || isViewerMode ? 0.6 : 1
                         }}
                       >
                         <div
@@ -383,6 +392,7 @@ export default function UsersPage() {
                     {/* Actions */}
                     <td style={{ padding: '0.85rem 1rem' }}>
                       <div style={{ display: 'flex', gap: '0.4rem' }}>
+                        {!isViewerMode && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleCopyCredentials(u); }}
                           title="Reset Password & Copy WhatsApp Credentials"
@@ -390,6 +400,7 @@ export default function UsersPage() {
                         >
                           🔑
                         </button>
+                        )}
                       </div>
                     </td>
                   </tr>

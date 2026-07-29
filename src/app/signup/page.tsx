@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import CustomSelect from '@/app/home/components/CustomSelect';
 
 const BRANCH_CODES = ['ALL', 'BLR', 'DEL', 'BOM', 'MAA', 'PNQ', 'HYD', 'AMD', 'COK', 'KOL', 'OSS'];
 
@@ -13,9 +12,8 @@ export default function SignupPage() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   
-  // Category Multi-Selection
-  const [requestCsc, setRequestCsc] = useState(true);
-  const [requestTracking, setRequestTracking] = useState(false);
+  // Category Multi-Selection — both false by default
+  const [requestCsc, setRequestCsc] = useState(false);
   const [requestUnbilled, setRequestUnbilled] = useState(false);
   const [selectedBranches, setSelectedBranches] = useState<string[]>(['ALL']);
   const [photo, setPhoto] = useState<string | null>(null);
@@ -23,6 +21,12 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Only allow numbers and limit to max 10 digits
+    const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 10);
+    setPhone(digitsOnly);
+  };
 
   const toggleBranch = (code: string) => {
     if (code === 'ALL') {
@@ -57,6 +61,10 @@ export default function SignupPage() {
     setErrorMsg('');
 
     try {
+      if (phone.length !== 10) {
+        throw new Error('Mobile number must be exactly 10 digits.');
+      }
+
       const formattedEmail = email ? email.toLowerCase() : `${username.toLowerCase()}@transworldintl.com`;
       const res = await fetch('/api/admin/create-user', {
         method: 'POST',
@@ -67,12 +75,12 @@ export default function SignupPage() {
           name,
           username: username.toLowerCase(),
           csc_role: requestCsc ? 'Executive' : 'None',
-          tracking_role: requestTracking ? 'Executive' : 'None',
+          tracking_role: 'None',
           unbilled_role: requestUnbilled ? 'Executive' : 'None',
           branches: requestUnbilled ? selectedBranches : [],
           phone,
           photo,
-          is_approved: false // Requires Super Admin Ganesaperumal approval!
+          is_approved: false // Requires Super Admin approval!
         })
       });
 
@@ -88,14 +96,30 @@ export default function SignupPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-color)', padding: '2rem', fontFamily: "'Outfit', sans-serif" }}>
-      <div style={{ width: '100%', maxWidth: '520px', background: 'var(--surface-color)', borderRadius: '20px', border: '1px solid var(--border-color)', boxShadow: 'var(--glass-shadow)', padding: '2.5rem' }}>
+    <div style={{
+      height: '100vh',
+      width: '100%',
+      overflowY: 'auto',
+      background: 'var(--bg-color)',
+      padding: '2.5rem 1rem',
+      boxSizing: 'border-box',
+      fontFamily: "'Outfit', sans-serif"
+    }}>
+      <div style={{
+        width: '100%',
+        maxWidth: '540px',
+        margin: '2rem auto',
+        background: 'var(--surface-color)',
+        borderRadius: '20px',
+        border: '1px solid var(--border-color)',
+        boxShadow: 'var(--glass-shadow)',
+        padding: '2.5rem'
+      }}>
         
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)' }}>🚀 Staff Self-Registration</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.4rem' }}>
-            Request account access to the Transworld Jobs Portal modules.
-          </p>
+        <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
+          <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+            🚀 Staff Self-Registration
+          </h1>
         </div>
 
         {submitted ? (
@@ -129,7 +153,16 @@ export default function SignupPage() {
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Mobile Number *</label>
-                <input required type="text" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 9876543210" style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)' }} />
+                <input
+                  required
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={10}
+                  value={phone}
+                  onChange={handlePhoneChange}
+                  placeholder="10 digit mobile number"
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)' }}
+                />
               </div>
             </div>
 
@@ -148,18 +181,55 @@ export default function SignupPage() {
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
                 🔐 Request Access Modules (Select all that apply):
               </label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'var(--bg-color)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={requestCsc} onChange={(e) => setRequestCsc(e.target.checked)} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.6rem',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  cursor: 'pointer',
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: '8px',
+                  border: `1px solid ${requestCsc ? '#4f46e5' : 'var(--border-color)'}`,
+                  background: requestCsc ? 'rgba(79, 70, 229, 0.08)' : 'var(--bg-color)',
+                  color: 'var(--text-primary)',
+                  transition: 'all 0.2s ease'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={requestCsc}
+                    onChange={(e) => setRequestCsc(e.target.checked)}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#4f46e5', flexShrink: 0 }}
+                  />
                   <span>📋 Jobs Portal Access</span>
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={requestTracking} onChange={(e) => setRequestTracking(e.target.checked)} />
-                  <span>📱 Jobs Tracking Portal Access</span>
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={requestUnbilled} onChange={(e) => setRequestUnbilled(e.target.checked)} />
-                  <span>💰 Unbilled Management Access</span>
+
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.6rem',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  cursor: 'pointer',
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: '8px',
+                  border: `1px solid ${requestUnbilled ? '#10b981' : 'var(--border-color)'}`,
+                  background: requestUnbilled ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-color)',
+                  color: 'var(--text-primary)',
+                  transition: 'all 0.2s ease'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={requestUnbilled}
+                    onChange={(e) => setRequestUnbilled(e.target.checked)}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#10b981', flexShrink: 0 }}
+                  />
+                  <span>🧾 Unbilled Management Access</span>
                 </label>
               </div>
             </div>
@@ -198,7 +268,9 @@ export default function SignupPage() {
 
             {/* Optional Photo Upload */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Profile Photo (Optional)</label>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.3rem' }}>
+                Profile Photo (Optional - Not Compulsory)
+              </label>
               <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }} />
             </div>
 

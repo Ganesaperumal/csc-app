@@ -2,22 +2,26 @@
 import { showToast, customConfirm } from '@/components/GlobalDialogs';
 
 import { useState, useEffect, useRef } from 'react';
+import { formatDistanceToNow } from 'date-fns';
+import { fetchLegacyJobsBypassingRLS } from './actions';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import CustomSelect from '../components/CustomSelect';
 import * as XLSX from 'xlsx';
 import styles from './unbilled.module.css';
+import { usePermissions } from '@/components/PermissionsContext';
 
 // Master Goods Track Options for Branch Users
 const BRANCH_GOODS_STATUS_OPTIONS = [
   "00. Execution Pending",
-  "22. Job Completed",
-  "21. Storage",
   "17. Damages",
+  "21. Storage",
+  "22. Job Completed",
+  "23. Job # taken for Billing",
   "25. Job # to be Cancelled",
-  "26. Free Job",
-  "27. Billing Pending",
-  "28. Month End Billing"
+  "26. Billing Pending",
+  "27. Month End Billing",
+  "28. Free Job"
 ];
 
 const PO_STATUS_OPTIONS = [
@@ -31,8 +35,7 @@ const PO_STATUS_OPTIONS = [
 
 const SALES_BY_OPTIONS = [
   "TI",
-  "HYBRID",
-  "PIKKOL"
+  "HYBRID"
 ];
 
 const getDisplayGoodsStatus = (status: string | null) => {
@@ -196,6 +199,8 @@ function ColumnFilterDropdown({
 }
 
 export default function UnbilledManagementPage() {
+  const { getAccessLevel, loading: permissionsLoading } = usePermissions();
+  const [isViewer, setIsViewer] = useState(false);
   const [jobs, setJobs] = useState<any[]>([]);
   const [enquiryValues, setEnquiryValues] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -223,12 +228,28 @@ export default function UnbilledManagementPage() {
   // Reminders Popup Modal State
   const [upcomingReminders, setUpcomingReminders] = useState<any[]>([]);
   const [showRemindersPopup, setShowRemindersPopup] = useState(false);
+  // Feature-level permission flags
+  const [canExportUnbilled, setCanExportUnbilled] = useState(false);
+  const [canSeeReminders, setCanSeeReminders] = useState(false);
 
   const router = useRouter();
 
   useEffect(() => {
     fetchInitialData();
   }, []);
+
+  // Enforce access control once permissions have fully loaded from DB
+  useEffect(() => {
+    if (permissionsLoading || !userProfile) return;
+    const level = getAccessLevel('Unbilled', userProfile);
+    if (level === 'None') {
+      router.push('/home');
+      return;
+    }
+    setIsViewer(level === 'View');
+    setCanExportUnbilled(getAccessLevel('Export Unbilled', userProfile) !== 'None');
+    setCanSeeReminders(getAccessLevel('Unbilled Followup', userProfile) !== 'None');
+  }, [permissionsLoading, userProfile]);
 
   // Handle ESC key to close drawer
   useEffect(() => {
@@ -260,6 +281,7 @@ export default function UnbilledManagementPage() {
 
     if (profile) {
       setUserProfile(profile);
+      // Access enforcement is handled reactively in the permissionsLoading useEffect above
     }
 
     // 1. Fetch Enquiry Values mapping from public.enquiry_values
@@ -277,11 +299,15 @@ export default function UnbilledManagementPage() {
     }
     setEnquiryValues(enqMap);
 
-    // 2. Fetch Unbilled Jobs strictly from public.jobs (where erp_status = 'New Order')
+    // 2. Fetch Unbilled Jobs from public.jobs (where erp_status = 'New Order') & public.legacy_jobs
     let jobsQuery = supabase
       .from('jobs')
       .select('*')
-      .eq('erp_status', 'New Order');
+      .eq('erp_status', 'New Order')
+      .order('job_date', { ascending: true })
+      .order('job_number', { ascending: true });
+
+    let legacyBranchesToFetch = null;
 
     // Enforce Branch Isolation for specific roles
     const restrictedRoles = ['Viewer', 'Executive', 'Manager'];
@@ -294,20 +320,45 @@ export default function UnbilledManagementPage() {
     if (requiresSlicing) {
       if (profile.branches && profile.branches.includes('ALL')) {
         // Has 'ALL' branches permission, no filtering needed
+        legacyBranchesToFetch = ['ALL'];
       } else if (profile.branches && profile.branches.length > 0) {
         jobsQuery = jobsQuery.in('branch', profile.branches);
+        legacyBranchesToFetch = profile.branches;
       } else {
         jobsQuery = jobsQuery.eq('branch', 'NONE');
+        legacyBranchesToFetch = ['NONE'];
       }
+    } else {
+      legacyBranchesToFetch = ['ALL'];
     }
 
-    const { data: jobsData, error } = await jobsQuery;
-    if (error) {
-      console.error('Error fetching unbilled jobs:', error);
+    const [jobsRes, legacyResData] = await Promise.all([
+      jobsQuery, 
+      fetchLegacyJobsBypassingRLS(legacyBranchesToFetch).catch(err => {
+        console.error('Error fetching legacy jobs:', err);
+        showToast('Error fetching legacy jobs: ' + err.message, 'error');
+        return [];
+      })
+    ]);
+
+    if (jobsRes.error) {
+      console.error('Error fetching unbilled jobs:', jobsRes.error);
+      showToast('Error fetching unbilled jobs: ' + jobsRes.error.message, 'error');
     }
 
-    const erpJobsList = (jobsData || []).map(j => ({ ...j, source_table: 'jobs' }));
-    setJobs(erpJobsList);
+    const erpJobsList = (jobsRes.data || []).map(j => ({ ...j, source_table: 'jobs' }));
+    const legacyJobsList = legacyResData.map(j => ({
+      ...j,
+      job_date: j.job_date || null,
+      actual_delivery: j.actual_delivery || null,
+      source_table: 'legacy_jobs'
+    }));
+    
+    console.log('Unbilled - Fetched jobs:', erpJobsList.length, 'legacy_jobs:', legacyJobsList.length);
+
+    // Combine both tables
+    const combinedList = [...erpJobsList, ...legacyJobsList];
+    setJobs(combinedList);
 
     // Fetch upcoming reminders across unbilled jobs
     fetchUpcomingReminders();
@@ -457,7 +508,7 @@ export default function UnbilledManagementPage() {
     return matchSearch && matchBranch && matchGoods && matchPo && matchSales;
   });
 
-  // Apply column sorts if active
+  // Apply column sorts if active; default to job_date descending
   const activeSortCol = Object.keys(columnSorts).find(key => columnSorts[key] !== null);
   if (activeSortCol && columnSorts[activeSortCol]) {
     const dir = columnSorts[activeSortCol] === 'asc' ? 1 : -1;
@@ -480,6 +531,17 @@ export default function UnbilledManagementPage() {
       if (valA < valB) return -1 * dir;
       if (valA > valB) return 1 * dir;
       return 0;
+    });
+  } else {
+    filteredJobs.sort((a, b) => {
+      const dateA = a.job_date ? new Date(a.job_date).getTime() : 0;
+      const dateB = b.job_date ? new Date(b.job_date).getTime() : 0;
+      if (dateA !== dateB) {
+        return dateA - dateB;
+      }
+      const numA = a.job_number || '';
+      const numB = b.job_number || '';
+      return numA.localeCompare(numB, undefined, { numeric: true, sensitivity: 'base' });
     });
   }
 
@@ -663,7 +725,8 @@ export default function UnbilledManagementPage() {
             <span className={styles.searchIcon}>🔍</span>
           </div>
 
-          {/* Download XLSX Button */}
+          {/* Download XLSX Button — only shown with Export Unbilled permission */}
+          {canExportUnbilled && (
           <button
             onClick={handleExportXlsx}
             style={{
@@ -684,8 +747,10 @@ export default function UnbilledManagementPage() {
           >
             📥 XL
           </button>
+          )}
 
-          {/* Reminders Bell Notification Icon */}
+          {/* Reminders Bell — only shown with Unbilled Followup permission */}
+          {canSeeReminders && (
           <div style={{ position: 'relative' }}>
             <button
               onClick={() => setShowRemindersPopup(true)}
@@ -711,6 +776,7 @@ export default function UnbilledManagementPage() {
               )}
             </button>
           </div>
+          )}
         </div>
       </div>
 
@@ -888,6 +954,7 @@ export default function UnbilledManagementPage() {
                         type="date"
                         value={j.packing_date || ''}
                         onChange={(e) => handleUpdateJobField(j, 'packing_date', e.target.value)}
+                        disabled={isViewer}
                         style={{ padding: '0.1rem 0.2rem', width: '100px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.7rem' }}
                       />
                     </td>
@@ -898,6 +965,7 @@ export default function UnbilledManagementPage() {
                         type="date"
                         value={j.actual_delivery || ''}
                         onChange={(e) => handleUpdateJobField(j, 'actual_delivery', e.target.value)}
+                        disabled={isViewer}
                         style={{ padding: '0.1rem 0.2rem', width: '100px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.7rem' }}
                       />
                     </td>
@@ -910,6 +978,7 @@ export default function UnbilledManagementPage() {
                         onChange={(val) => handleUpdateJobField(j, 'goods_track_status', val)}
                         options={BRANCH_GOODS_STATUS_OPTIONS.map(s => ({ value: s, label: s }))}
                         style={{ minWidth: '160px' }}
+                        disabled={isViewer}
                       />
                     </td>
 
@@ -919,6 +988,7 @@ export default function UnbilledManagementPage() {
                         type="date"
                         value={j.bill_closure_date || ''}
                         onChange={(e) => handleUpdateJobField(j, 'bill_closure_date', e.target.value)}
+                        disabled={isViewer}
                         style={{ padding: '0.1rem 0.2rem', width: '100px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.7rem' }}
                       />
                     </td>
@@ -931,6 +1001,7 @@ export default function UnbilledManagementPage() {
                         onChange={(val) => handleUpdateJobField(j, 'po_status', val)}
                         options={PO_STATUS_OPTIONS.map(p => ({ value: p, label: p }))}
                         style={{ minWidth: '140px' }}
+                        disabled={isViewer}
                       />
                     </td>
 
@@ -940,6 +1011,7 @@ export default function UnbilledManagementPage() {
                         type="date"
                         value={j.po_date || ''}
                         onChange={(e) => handleUpdateJobField(j, 'po_date', e.target.value)}
+                        disabled={isViewer}
                         style={{ padding: '0.1rem 0.2rem', width: '100px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.7rem' }}
                       />
                     </td>
@@ -950,6 +1022,7 @@ export default function UnbilledManagementPage() {
                         type="date"
                         value={j.inv_request_date || ''}
                         onChange={(e) => handleUpdateJobField(j, 'inv_request_date', e.target.value)}
+                        disabled={isViewer}
                         style={{ padding: '0.1rem 0.2rem', width: '100px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.7rem' }}
                       />
                     </td>
@@ -962,6 +1035,7 @@ export default function UnbilledManagementPage() {
                         onChange={(val) => handleUpdateJobField(j, 'sales_by', val)}
                         options={SALES_BY_OPTIONS.map(s => ({ value: s, label: s }))}
                         style={{ minWidth: '110px' }}
+                        disabled={isViewer}
                       />
                     </td>
                   </tr>
@@ -991,6 +1065,7 @@ export default function UnbilledManagementPage() {
               <button className={styles.closeBtn} onClick={() => setActiveDrawerJob(null)}>✕</button>
             </div>
 
+            {!isViewer && (
             <form onSubmit={handleSubmitFollowup} style={{ marginBottom: '1.5rem', background: 'var(--bg-color)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
               <div style={{ marginBottom: '0.85rem' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.3rem', color: 'var(--text-secondary)' }}>Today's Follow-up Update</label>
@@ -1032,6 +1107,7 @@ export default function UnbilledManagementPage() {
                 {drawerSubmitting ? 'Saving Update...' : 'Post Follow-up Note'}
               </button>
             </form>
+            )}
 
             <h4 style={{ margin: '0 0 1rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Previous Follow-up Logs</h4>
             <div className={styles.historyList}>
