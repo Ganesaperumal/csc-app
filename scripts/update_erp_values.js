@@ -103,11 +103,8 @@ async function scrapeEnquiryValue(page, rawEnqNumber) {
   const { searchId } = parsed;
 
   // Enter search ID (XXXX from EN/XXXX/YY/ZZZ) and search
-  const searchInput = page.locator('#tcdiv1search');
-  await searchInput.click();
-  await page.keyboard.press('Control+A');
-  await page.keyboard.press('Backspace');
-  await page.keyboard.type(searchId, { delay: 50 });
+  await page.fill('#tcdiv1search', '');
+  await page.fill('#tcdiv1search', searchId);
   await page.waitForTimeout(500);
   await page.click('//*[@id="div1imgsearch"]');
   await page.waitForTimeout(2500);
