@@ -66,25 +66,25 @@ export default function LoginPage() {
 
     // 3. Fallback: Search profiles table by username, phone, or name to find associated email
     if (authError) {
-      const candidateEmails: string[] = [];
+      let candidateEmails: string[] = [];
       if (cleanInput === 'admin' || cleanInput === 'ganesh' || cleanInput === 'ganesaperumal') {
         candidateEmails.push('gp@transworldintl.com');
       }
 
-      const { data: matchedProfiles } = await supabase
-        .from('profiles')
-        .select('username, phone, id')
-        .or(`username.ilike.${cleanInput},phone.ilike.${cleanInput},name.ilike.${cleanInput}`);
-
-      if (matchedProfiles && matchedProfiles.length > 0) {
-        for (const p of matchedProfiles) {
-          if (p.username) {
-            candidateEmails.push(`${p.username}@transworldintl.com`.toLowerCase());
-            if (p.username === 'admin') {
-              candidateEmails.push('gp@transworldintl.com');
-            }
+      try {
+        const res = await fetch('/api/auth/resolve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ input: cleanInput })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.emails && data.emails.length > 0) {
+            candidateEmails = candidateEmails.concat(data.emails);
           }
         }
+      } catch (err) {
+        console.error('Failed to resolve email:', err);
       }
 
       for (const email of Array.from(new Set(candidateEmails))) {
