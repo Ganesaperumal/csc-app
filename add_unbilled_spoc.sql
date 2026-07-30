@@ -1,0 +1,2 @@
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS unbilled_spoc TEXT;
+ALTER TABLE legacy_jobs ADD COLUMN IF NOT EXISTS unbilled_spoc TEXT;
