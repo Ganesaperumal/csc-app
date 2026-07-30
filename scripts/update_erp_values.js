@@ -106,10 +106,10 @@ async function scrapeEnquiryValue(page, rawEnqNumber) {
   await page.fill('#tcdiv1search', '');
   await page.fill('#tcdiv1search', searchId);
   await page.click('//*[@id="div1imgsearch"]');
-  await page.waitForTimeout(12000);
+  await page.waitForTimeout(2000);
 
   // Find and click the exact matching row
-  const rowLocator = `tr:has(td:text-is("${enqNumber}"))`;
+  const rowLocator = `//tr[td[contains(., '${enqNumber}')]]`;
   try {
     await page.waitForSelector(rowLocator, { timeout: 8000 });
   } catch {
