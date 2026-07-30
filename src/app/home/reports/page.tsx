@@ -834,13 +834,13 @@ export default function ReportsPage() {
     });
 
     const branchList = Array.from(branchSet);
-    const data = branchList.map(br => ({ branch: br, ...matrix[br] }));
+    const data: any[] = branchList.map(br => ({ branch: br, ...matrix[br] }));
     
     const totals: Record<string, number> = { branch: 'TOTAL' as any };
     categories.forEach(c => {
-      totals[c] = data.reduce((sum, row) => sum + (row[c] as number || 0), 0);
+      totals[c] = data.reduce((sum, row) => sum + ((row as any)[c] as number || 0), 0);
     });
-    totals['Total'] = data.reduce((sum, row) => sum + (row['Total'] as number || 0), 0);
+    totals['Total'] = data.reduce((sum, row) => sum + ((row as any)['Total'] as number || 0), 0);
     
     // Prepare Donut chart data for branch distribution (using total unbilled)
     const branchChart = data.filter(d => d.Total > 0).map(d => ({ label: d.branch as string, value: d.Total }));
