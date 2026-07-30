@@ -3,13 +3,13 @@ import { supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
-    const { email, password, name, role, csc_role, tracking_role, unbilled_role, branches, phone, photo, is_approved } = await request.json();
+    const { email, password, name, username: reqUsername, role, csc_role, tracking_role, unbilled_role, branches, phone, photo, is_approved } = await request.json();
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
-    const username = email.split('@')[0].toLowerCase();
+    const username = reqUsername ? reqUsername.toLowerCase() : email.split('@')[0].toLowerCase();
 
     // 1. Create Auth User in Supabase Auth via Admin API
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({

@@ -113,6 +113,7 @@ export default function UsersPage() {
           email: formattedEmail,
           password,
           name,
+          username,
           role: cscRole !== 'None' ? cscRole : 'Executive',
           csc_role: cscRole,
           tracking_role: trackingRole,
