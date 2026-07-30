@@ -66,6 +66,8 @@ export default function AdminPage() {
   const [savingAi, setSavingAi] = useState(false);
   const [loadingBulkUpdate, setLoadingBulkUpdate] = useState(false);
   const [bulkUpdateProgress, setBulkUpdateProgress] = useState<{ current: number, total: number } | null>(null);
+  const [loadingForceUpdate, setLoadingForceUpdate] = useState(false);
+  const [forceUpdateProgress, setForceUpdateProgress] = useState<{ current: number, total: number } | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
@@ -223,6 +225,101 @@ export default function AdminPage() {
       error: (error) => {
         setMessage({ type: 'error', text: `CSV Parse Error: ${error.message}` });
         setLoadingBulkUpdate(false);
+        e.target.value = '';
+      }
+    });
+  };
+
+  const uploadForceUpdateCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setLoadingForceUpdate(true);
+    setMessage(null);
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        try {
+          const data = results.data as any[];
+          
+          if (data.length === 0) throw new Error("CSV is empty");
+
+          const headers = Object.keys(data[0]);
+          if (headers.length < 2) {
+             throw new Error("CSV must have at least 2 columns: Job_number and the columns to update.");
+          }
+
+          const jobNumberKey = headers.find(h => h.toLowerCase() === 'job_number' || h.toLowerCase() === 'job number' || h.toLowerCase() === 'jobnumber');
+          if (!jobNumberKey) {
+            throw new Error("Could not find a 'Job_number' column in the CSV.");
+          }
+
+          const updateColumns = headers.filter(h => h !== jobNumberKey);
+          if (updateColumns.length === 0) {
+            throw new Error("Could not find any columns to update in the CSV.");
+          }
+
+          let successCount = 0;
+          let failCount = 0;
+          let skipCount = 0;
+          const totalRows = data.filter(r => r[jobNumberKey]).length;
+          let currentRowIndex = 0;
+
+          setForceUpdateProgress({ current: 0, total: totalRows });
+
+          for (const row of data) {
+            const jobNumber = row[jobNumberKey];
+            if (!jobNumber) continue;
+            
+            currentRowIndex++;
+            setForceUpdateProgress({ current: currentRowIndex, total: totalRows });
+
+            const updateData: any = {};
+            let hasUpdates = false;
+
+            for (const col of updateColumns) {
+              let newValue = row[col];
+              if (newValue === null || newValue === undefined || newValue === '') {
+                continue;
+              }
+              updateData[col] = newValue;
+              hasUpdates = true;
+            }
+
+            if (!hasUpdates) {
+              skipCount++;
+              continue;
+            }
+
+            const { error } = await supabase
+              .from('jobs')
+              .update(updateData)
+              .eq('job_number', jobNumber);
+              
+            if (error) {
+              console.error(`Failed to update ${jobNumber}:`, error);
+              failCount++;
+            } else {
+              successCount++;
+            }
+          }
+          
+          setMessage({ type: 'success', text: `Successfully force-updated ${successCount} jobs! Skipped ${skipCount} jobs entirely (no values provided). ${failCount > 0 ? `Failed on ${failCount} jobs.` : ''}` });
+          setForceUpdateProgress(null);
+
+        } catch (err: any) {
+           setMessage({ type: 'error', text: `Failed to force update: ${err.message}` });
+           setForceUpdateProgress(null);
+        } finally {
+          setLoadingForceUpdate(false);
+          e.target.value = '';
+        }
+      },
+      error: (error) => {
+        setMessage({ type: 'error', text: `CSV Parse Error: ${error.message}` });
+        setLoadingForceUpdate(false);
         e.target.value = '';
       }
     });
@@ -507,6 +604,32 @@ export default function AdminPage() {
                 {loadingBulkUpdate ? (bulkUpdateProgress ? `Updating ${bulkUpdateProgress.current} of ${bulkUpdateProgress.total}...` : 'Updating...') : 'Upload Bulk Update CSV'}
               </button>
          
+            </div>
+          </div>
+        </div>
+
+        {/* Force Update Section */}
+        <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Force Update Jobs (Multi-Column)</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+            Upload a CSV with <strong>Job_number</strong> and columns to update. This will <strong>OVERWRITE</strong> existing data in the database with the values from your CSV. (Empty CSV cells are ignored).
+          </p>
+          
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <div style={{ position: 'relative' }}>
+              <input 
+                type="file" 
+                accept=".csv"
+                onChange={uploadForceUpdateCSV}
+                style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
+                disabled={loadingForceUpdate}
+              />
+              <button 
+                disabled={loadingForceUpdate}
+                style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: loadingForceUpdate ? 'var(--border-color)' : 'linear-gradient(135deg, #ef4444, #b91c1c)', color: 'white', border: 'none', pointerEvents: 'none', fontWeight: 600, boxShadow: '0 4px 12px rgba(239,68,68,0.3)' }}
+              >
+                {loadingForceUpdate ? (forceUpdateProgress ? `Updating ${forceUpdateProgress.current} of ${forceUpdateProgress.total}...` : 'Updating...') : 'Upload Force Update CSV'}
+              </button>
             </div>
           </div>
         </div>
