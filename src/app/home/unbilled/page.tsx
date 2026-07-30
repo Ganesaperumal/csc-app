@@ -34,10 +34,7 @@ const PO_STATUS_OPTIONS = [
   "Not Required"
 ];
 
-const SALES_BY_OPTIONS = [
-  "TI",
-  "HYBRID"
-];
+
 
 const getDisplayGoodsStatus = (status: string | null) => {
   if (!status) return status;
@@ -67,7 +64,7 @@ const ALL_UNBILLED_COLUMNS = [
   { id: 'po_status', label: 'PO Status' },
   { id: 'po_date', label: 'PO Rcvd Dt' },
   { id: 'inv_request_date', label: 'Inv Request Dt' },
-  { id: 'sales_by', label: 'Sales By' }
+  { id: 'spoc_name', label: 'SPOC' }
 ];
 
 const formatDate = (dateStr: string | null) => {
@@ -172,7 +169,7 @@ function ColumnFilterDropdown({
       case 'po_status': return job.po_status || '—';
       case 'po_date': return formatDate(job.po_date);
       case 'inv_request_date': return formatDate(job.inv_request_date);
-      case 'sales_by': return job.sales_by || '—';
+      case 'spoc_name': return job.spoc_name || '—';
       default: return '—';
     }
   };
@@ -193,7 +190,7 @@ function ColumnFilterDropdown({
       case 'po_status': return job.po_status || '';
       case 'po_date': return job.po_date || '';
       case 'inv_request_date': return job.inv_request_date || '';
-      case 'sales_by': return job.sales_by || '';
+      case 'spoc_name': return job.spoc_name || '';
       default: return '';
     }
   };
@@ -268,7 +265,7 @@ export default function UnbilledManagementPage() {
   const [selectedBranch, setSelectedBranch] = useState<string[]>(['All']);
   const [selectedGoodsStatus, setSelectedGoodsStatus] = useState<string[]>(['All']);
   const [selectedPoStatus, setSelectedPoStatus] = useState<string[]>(['All']);
-  const [selectedSalesBy, setSelectedSalesBy] = useState<string[]>(['All']);
+  const [selectedSpoc, setSelectedSpoc] = useState<string[]>(['All']);
 
   // ColumnFunnel filters
   const [showColumnFilters, setShowColumnFilters] = useState(false);
@@ -539,7 +536,7 @@ export default function UnbilledManagementPage() {
                        (selectedGoodsStatus.includes('No Status') && (!j.goods_track_status || j.goods_track_status.trim() === '')) ||
                        selectedGoodsStatus.includes(getDisplayGoodsStatus(j.goods_track_status) || '');
     const matchPo = selectedPoStatus.includes('All') || selectedPoStatus.includes(j.po_status || '');
-    const matchSales = selectedSalesBy.includes('All') || selectedSalesBy.includes(j.sales_by || '');
+    const matchSpoc = selectedSpoc.includes('All') || selectedSpoc.includes(j.spoc_name || '');
 
     // Check Column Funnel Filters
     for (const [colId, allowedVals] of Object.entries(columnFilters)) {
@@ -558,13 +555,13 @@ export default function UnbilledManagementPage() {
         else if (colId === 'po_status') val = j.po_status || '';
         else if (colId === 'po_date') val = j.po_date || '';
         else if (colId === 'inv_request_date') val = j.inv_request_date || '';
-        else if (colId === 'sales_by') val = j.sales_by || '';
+        else if (colId === 'spoc_name') val = j.spoc_name || '';
 
         if (!allowedVals.includes(val)) return false;
       }
     }
 
-    return matchSearch && matchBranch && matchGoods && matchPo && matchSales;
+    return matchSearch && matchBranch && matchGoods && matchPo && matchSpoc;
   });
 
   // Apply column sorts if active; default to job_date descending
@@ -627,9 +624,9 @@ export default function UnbilledManagementPage() {
         'Goods Status': getDisplayGoodsStatus(j.goods_track_status) || '',
         'PO Status': j.po_status || '',
         'PO Date': formatDate(j.po_date),
-        'Inv Request Date': formatDate(j.inv_request_date),
+        'Inv Request Dt': formatDate(j.inv_request_date),
         'Bill Closure Date': formatDate(j.bill_closure_date),
-        'Sales By': j.sales_by || ''
+        'SPOC': j.spoc_name || ''
       };
     });
 
@@ -700,7 +697,7 @@ export default function UnbilledManagementPage() {
   // 8. Execution Pending: goods_track_status is 00. Execution Pending AND po_status is empty/null
   const executionPendingKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '00. Execution Pending' && !isGoodsEmpty(j) && isPoEmpty(j));
 
-  const hasAppliedFilters = Object.keys(columnFilters).length > 0 || search.trim() !== '' || !selectedBranch.includes('All') || !selectedGoodsStatus.includes('All') || !selectedPoStatus.includes('All') || !selectedSalesBy.includes('All');
+  const hasAppliedFilters = Object.keys(columnFilters).length > 0 || search.trim() !== '' || !selectedBranch.includes('All') || !selectedGoodsStatus.includes('All') || !selectedPoStatus.includes('All') || !selectedSpoc.includes('All');
 
   if (loading) {
     return <div style={{ padding: '2rem' }}>Loading Unbilled Management Dashboard...</div>;
@@ -733,7 +730,7 @@ export default function UnbilledManagementPage() {
           </button>
         )}
           <div style={{ flexShrink: 1, minWidth: 0 }}>
-            <h1 className={styles.title} style={{ fontSize: '1.5rem', whiteSpace: 'nowrap', margin: 0 }}>
+            <h1 className={styles.title} style={{ fontSize: '1.2rem', whiteSpace: 'nowrap', margin: 0 }}>
               🧾 <span className={styles.titleText}>Unbilled<span className={styles.hideOnMobile}> Management</span></span>
             </h1>
           </div>
@@ -747,9 +744,9 @@ export default function UnbilledManagementPage() {
             <MultiSelect
               value={selectedBranch}
               onChange={(val) => setSelectedBranch(val)}
-              options={[{ value: 'All', label: 'Branches' }, ...Array.from(new Set(jobs.map(j => j.branch).filter(Boolean))).map(b => ({ value: b, label: b as string }))]}
+              options={[{ value: 'All', label: 'All Branches' }, ...Array.from(new Set(jobs.map(j => j.branch).filter(Boolean))).map(b => ({ value: b, label: b as string }))]}
               style={{ width: '130px' }}
-              placeholder="Branches"
+              placeholder="All Branches"
             />
 
             <MultiSelect
@@ -767,17 +764,17 @@ export default function UnbilledManagementPage() {
             <MultiSelect
               value={selectedPoStatus}
               onChange={(val) => setSelectedPoStatus(val)}
-              options={[{ value: 'All', label: 'PO Status' }, ...PO_STATUS_OPTIONS.map(p => ({ value: p, label: p }))]}
+              options={[{ value: 'All', label: 'All PO Status' }, ...PO_STATUS_OPTIONS.map(p => ({ value: p, label: p }))]}
               style={{ width: '140px' }}
-              placeholder="PO Status"
+              placeholder="All PO Status"
             />
 
             <MultiSelect
-              value={selectedSalesBy}
-              onChange={(val) => setSelectedSalesBy(val)}
-              options={[{ value: 'All', label: 'Sales By' }, ...SALES_BY_OPTIONS.map(s => ({ value: s, label: s }))]}
+              value={selectedSpoc}
+              onChange={(val) => setSelectedSpoc(val)}
+              options={[{ value: 'All', label: 'All SPOC' }, ...Array.from(new Set(jobs.map(j => j.spoc_name).filter(Boolean))).map(s => ({ value: s as string, label: s as string }))]}
               style={{ width: '130px' }}
-              placeholder="Sales By"
+              placeholder="All SPOC"
             />
           </div>
 
@@ -791,7 +788,7 @@ export default function UnbilledManagementPage() {
                 setSelectedBranch(['All']);
                 setSelectedGoodsStatus(['All']);
                 setSelectedPoStatus(['All']);
-                setSelectedSalesBy(['All']);
+                setSelectedSpoc(['All']);
                 setActiveFilterColumn(null);
               } else {
                 setShowColumnFilters(true);
@@ -1118,15 +1115,29 @@ export default function UnbilledManagementPage() {
                       />
                     </td>
 
-                    {/* 15. Sales By */}
+                    {/* 15. SPOC */}
                     <td>
-                      <CustomSelect
-                        value={j.sales_by || ''}
-                        placeholder="- Select -"
-                        onChange={(val) => handleUpdateJobField(j, 'sales_by', val)}
-                        options={SALES_BY_OPTIONS.map(s => ({ value: s, label: s }))}
-                        style={{ minWidth: '110px' }}
+                      <input
+                        type="text"
+                        value={j.spoc_name || ''}
                         disabled={isViewer}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setJobs(prev => prev.map(job => job.job_number === j.job_number ? { ...job, spoc_name: val } : job));
+                        }}
+                        onBlur={(e) => handleUpdateJobField(j, 'spoc_name', e.target.value)}
+                        placeholder="SPOC Name"
+                        style={{
+                          width: '110px',
+                          padding: '0.4rem 0.6rem',
+                          borderRadius: '6px',
+                          border: '1px solid var(--border-color)',
+                          background: isViewer ? 'var(--surface-color)' : 'var(--bg-color)',
+                          color: 'var(--text-primary)',
+                          fontSize: '0.78rem',
+                          fontFamily: 'inherit',
+                          boxSizing: 'border-box'
+                        }}
                       />
                     </td>
                   </tr>

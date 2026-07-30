@@ -43,16 +43,17 @@ export default function MultiSelect({
         position: 'absolute',
         top: `${top}px`,
         left: `${left}px`,
-        width: `${width}px`,
+        minWidth: `${Math.max(width, 240)}px`,
+        maxWidth: '300px',
         background: '#ffffff',
         border: '1px solid #cbd5e1',
         borderRadius: '12px',
         boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
         zIndex: 99999,
-        padding: '4px',
+        padding: '0.75rem',
         display: 'flex',
-        flexDirection: 'column',
-        gap: '2px',
+        flexWrap: 'wrap',
+        gap: '0.4rem',
         maxHeight: `${maxDropdownHeight}px`,
         overflowY: 'auto'
       });
@@ -101,6 +102,8 @@ export default function MultiSelect({
     return `${value.length} selected`;
   };
 
+  const isFiltered = value && value.length > 0 && !value.includes('All');
+
   return (
     <div 
       ref={containerRef} 
@@ -117,16 +120,16 @@ export default function MultiSelect({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
+          justifyContent: 'center',
           alignItems: 'center',
-          background: disabled ? 'var(--surface-color)' : (textColor ? `${textColor}15` : 'var(--bg-color)'),
-          border: textColor ? `1px solid ${textColor}40` : '1px solid var(--border-color)',
-          color: textColor || (value && value.length > 0 ? 'var(--text-primary)' : 'var(--text-secondary)'),
-          fontWeight: textColor ? 700 : 'inherit',
+          background: isFiltered ? 'rgba(79, 70, 229, 0.1)' : (disabled ? 'var(--surface-color)' : (textColor ? `${textColor}15` : 'var(--bg-color)')),
+          border: isFiltered ? '1px solid #4f46e5' : (textColor ? `1px solid ${textColor}40` : '1px solid var(--border-color)'),
+          color: isFiltered ? '#4f46e5' : (textColor || 'var(--text-primary)'),
           borderRadius: '10px',
-          padding: '0.55rem 0.85rem',
-          fontSize: '0.875rem',
+          padding: '0.45rem 0.65rem',
+          fontSize: '0.75rem',
           fontFamily: "'Outfit', sans-serif",
+          fontWeight: isFiltered ? 700 : (textColor ? 700 : 600),
           cursor: disabled ? 'not-allowed' : 'pointer',
           transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
           boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.015)',
@@ -134,36 +137,17 @@ export default function MultiSelect({
           boxSizing: 'border-box'
         }}
         onMouseOver={(e) => {
-          if (!disabled) {
+          if (!disabled && !isFiltered) {
             e.currentTarget.style.borderColor = 'rgba(79, 70, 229, 0.4)';
           }
         }}
         onMouseOut={(e) => {
-          if (!disabled) {
-            e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.25)';
+          if (!disabled && !isFiltered) {
+            e.currentTarget.style.borderColor = textColor ? `${textColor}40` : 'var(--border-color)';
           }
         }}
       >
         <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{getDisplayText()}</span>
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          width="16" 
-          height="16" 
-          viewBox="0 0 24 24" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2.5" 
-          strokeLinecap="round" 
-          strokeLinejoin="round"
-          style={{ 
-            transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)', 
-            transform: isOpen ? 'rotate(180deg)' : 'none',
-            color: '#4f46e5',
-            flexShrink: 0
-          }}
-        >
-          <polyline points="6 9 12 15 18 9"></polyline>
-        </svg>
       </div>
 
       {isOpen && typeof window !== 'undefined' && createPortal(
@@ -175,29 +159,19 @@ export default function MultiSelect({
                 key={opt.value}
                 onClick={(e) => toggleOption(opt.value, e)}
                 style={{
-                  padding: '0.55rem 0.85rem',
-                  fontSize: '0.85rem',
-                  borderRadius: '8px',
+                  padding: '0.35rem 0.7rem',
+                  borderRadius: '16px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
                   cursor: 'pointer',
-                  fontFamily: "'Outfit', sans-serif",
-                  fontWeight: isSelected ? 700 : 500,
+                  border: `1px solid ${isSelected ? '#4f46e5' : '#cbd5e1'}`,
+                  background: isSelected ? 'rgba(79,70,229,0.1)' : '#ffffff',
+                  color: isSelected ? '#4f46e5' : '#475569',
                   transition: 'all 0.15s ease',
-                  background: isSelected ? 'rgba(79, 70, 229, 0.1)' : 'transparent',
-                  color: isSelected ? '#4f46e5' : 'var(--text-primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
+                  userSelect: 'none'
                 }}
-                onMouseEnter={e => !isSelected && (e.currentTarget.style.background = 'var(--surface-hover)')}
-                onMouseLeave={e => !isSelected && (e.currentTarget.style.background = 'transparent')}
               >
-                <input 
-                  type="checkbox" 
-                  checked={isSelected} 
-                  readOnly 
-                  style={{ accentColor: '#4f46e5', pointerEvents: 'none' }} 
-                />
-                {opt.label}
+                {isSelected ? '✓ ' : '+ '} {opt.label}
               </div>
             );
           })}
