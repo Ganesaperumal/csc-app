@@ -745,7 +745,6 @@ export default function UnbilledManagementPage() {
               value={selectedBranch}
               onChange={(val) => setSelectedBranch(val)}
               options={[{ value: 'All', label: 'All Branches' }, ...Array.from(new Set(jobs.map(j => j.branch).filter(Boolean))).map(b => ({ value: b, label: b as string }))]}
-              style={{ width: '130px' }}
               placeholder="All Branches"
             />
 
@@ -757,7 +756,6 @@ export default function UnbilledManagementPage() {
                 { value: 'No Status', label: 'No Status' },
                 ...BRANCH_GOODS_STATUS_OPTIONS.map(s => ({ value: s, label: s }))
               ]}
-              style={{ width: '150px' }}
               placeholder="All Status"
             />
 
@@ -765,7 +763,6 @@ export default function UnbilledManagementPage() {
               value={selectedPoStatus}
               onChange={(val) => setSelectedPoStatus(val)}
               options={[{ value: 'All', label: 'All PO Status' }, ...PO_STATUS_OPTIONS.map(p => ({ value: p, label: p }))]}
-              style={{ width: '140px' }}
               placeholder="All PO Status"
             />
 
@@ -773,7 +770,6 @@ export default function UnbilledManagementPage() {
               value={selectedSpoc}
               onChange={(val) => setSelectedSpoc(val)}
               options={[{ value: 'All', label: 'All SPOC' }, ...Array.from(new Set(jobs.map(j => j.spoc_name).filter(Boolean))).map(s => ({ value: s as string, label: s as string }))]}
-              style={{ width: '130px' }}
               placeholder="All SPOC"
             />
           </div>

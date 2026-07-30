@@ -109,8 +109,7 @@ export default function MultiSelect({
       ref={containerRef} 
       style={{ 
         position: 'relative', 
-        width: '100%', 
-        flexGrow: 1,
+        width: 'max-content', 
         opacity: disabled ? 0.6 : 1,
         pointerEvents: disabled ? 'none' : 'auto',
         ...style 
@@ -122,18 +121,19 @@ export default function MultiSelect({
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
+          gap: '4px',
           background: isFiltered ? 'rgba(79, 70, 229, 0.1)' : (disabled ? 'var(--surface-color)' : (textColor ? `${textColor}15` : 'var(--bg-color)')),
           border: isFiltered ? '1px solid #4f46e5' : (textColor ? `1px solid ${textColor}40` : '1px solid var(--border-color)'),
           color: isFiltered ? '#4f46e5' : (textColor || 'var(--text-primary)'),
           borderRadius: '10px',
-          padding: '0.45rem 0.65rem',
+          padding: '0.35rem 0.5rem',
           fontSize: '0.75rem',
           fontFamily: "'Outfit', sans-serif",
           fontWeight: isFiltered ? 700 : (textColor ? 700 : 600),
           cursor: disabled ? 'not-allowed' : 'pointer',
           transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
           boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.015)',
-          minHeight: '38px',
+          minHeight: '34px',
           boxSizing: 'border-box'
         }}
         onMouseOver={(e) => {
@@ -148,6 +148,25 @@ export default function MultiSelect({
         }}
       >
         <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{getDisplayText()}</span>
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          width="14" 
+          height="14" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2.5" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+          style={{ 
+            transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)', 
+            transform: isOpen ? 'rotate(180deg)' : 'none',
+            color: isFiltered ? '#4f46e5' : 'inherit',
+            flexShrink: 0
+          }}
+        >
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
       </div>
 
       {isOpen && typeof window !== 'undefined' && createPortal(
