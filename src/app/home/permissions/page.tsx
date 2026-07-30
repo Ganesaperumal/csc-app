@@ -14,7 +14,8 @@ const UI_TAB_SECTIONS: Record<string, { section: string; category: string }[]> =
     { section: 'Follow-ups', category: 'CSC' },
     { section: 'Reports', category: 'CSC' },
     { section: 'Unbilled', category: 'Unbilled' },
-    { section: 'Activity Log', category: 'CSC' }
+    { section: 'Activity Log', category: 'CSC' },
+    { section: 'SPOC Management', category: 'CSC' }
   ],
   'Features': [
     { section: 'Group Chat', category: 'CSC' },

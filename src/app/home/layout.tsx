@@ -64,6 +64,12 @@ function DashboardNav({ profile }: { profile: any }) {
         </Link>
       )}
 
+      {getAccessLevel('SPOC Management', profile) !== 'None' && (
+        <Link href="/home/spocs" className={`${styles.navItem} ${pathname === '/home/spocs' ? styles.active : ''}`}>
+          <span>👔</span> SPOC Management
+        </Link>
+      )}
+
     </nav>
   );
 }
