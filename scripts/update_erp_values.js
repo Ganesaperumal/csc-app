@@ -106,19 +106,19 @@ async function navigateToEnquiryModule(page) {
   console.log('📂 Navigating to Enquiry module...');
   
   // Menu 1: Queries / Master menu (#r10c1)
-  const menu1 = page.locator('#r10c1, //*[@id="r10c1"]');
-  await menu1.first().waitFor({ state: 'visible', timeout: 15000 });
-  await menu1.first().click();
+  const menu1 = page.locator('#r10c1');
+  await menu1.waitFor({ state: 'visible', timeout: 15000 });
+  await menu1.click();
   
   // Menu 2: Enquiry submenu (#r4c2)
-  const menu2 = page.locator('#r4c2, //*[@id="r4c2"]');
-  await menu2.first().waitFor({ state: 'visible', timeout: 15000 });
-  await menu2.first().click();
+  const menu2 = page.locator('#r4c2');
+  await menu2.waitFor({ state: 'visible', timeout: 15000 });
+  await menu2.click();
   
   // Menu 3: Enquiry Query item (#r4c3)
-  const menu3 = page.locator('#r4c3, //*[@id="r4c3"]');
-  await menu3.first().waitFor({ state: 'visible', timeout: 15000 });
-  await menu3.first().click();
+  const menu3 = page.locator('#r4c3');
+  await menu3.waitFor({ state: 'visible', timeout: 15000 });
+  await menu3.click();
   
   await page.waitForTimeout(1500);
 
