@@ -113,7 +113,7 @@ async function scrapeEnquiryValue(page, rawEnqNumber) {
   await page.waitForTimeout(2500);
 
   // Find and click the exact matching row
-  const rowLocator = `//tr[td[contains(., '${enqNumber}')]]`;
+  const rowLocator = `//td[normalize-space(text())='${enqNumber}']`;
   try {
     await page.waitForSelector(rowLocator, { timeout: 8000 });
   } catch {
