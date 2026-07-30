@@ -169,7 +169,7 @@ function ColumnFilterDropdown({
       case 'po_status': return job.po_status || '—';
       case 'po_date': return formatDate(job.po_date);
       case 'inv_request_date': return formatDate(job.inv_request_date);
-      case 'spoc_name': return job.spoc_name || '—';
+      case 'spoc_name': return job.unbilled_spoc || job.spoc_name || '—';
       default: return '—';
     }
   };
@@ -190,7 +190,7 @@ function ColumnFilterDropdown({
       case 'po_status': return job.po_status || '';
       case 'po_date': return job.po_date || '';
       case 'inv_request_date': return job.inv_request_date || '';
-      case 'spoc_name': return job.spoc_name || '';
+      case 'spoc_name': return job.unbilled_spoc || job.spoc_name || '';
       default: return '';
     }
   };
@@ -536,7 +536,7 @@ export default function UnbilledManagementPage() {
                        (selectedGoodsStatus.includes('No Status') && (!j.goods_track_status || j.goods_track_status.trim() === '')) ||
                        selectedGoodsStatus.includes(getDisplayGoodsStatus(j.goods_track_status) || '');
     const matchPo = selectedPoStatus.includes('All') || selectedPoStatus.includes(j.po_status || '');
-    const matchSpoc = selectedSpoc.includes('All') || selectedSpoc.includes(j.spoc_name || '');
+    const matchSpoc = selectedSpoc.includes('All') || selectedSpoc.includes(j.unbilled_spoc || j.spoc_name || '');
 
     // Check Column Funnel Filters
     for (const [colId, allowedVals] of Object.entries(columnFilters)) {
@@ -555,7 +555,7 @@ export default function UnbilledManagementPage() {
         else if (colId === 'po_status') val = j.po_status || '';
         else if (colId === 'po_date') val = j.po_date || '';
         else if (colId === 'inv_request_date') val = j.inv_request_date || '';
-        else if (colId === 'spoc_name') val = j.spoc_name || '';
+        else if (colId === 'spoc_name') val = j.unbilled_spoc || j.spoc_name || '';
 
         if (!allowedVals.includes(val)) return false;
       }
@@ -626,7 +626,7 @@ export default function UnbilledManagementPage() {
         'PO Date': formatDate(j.po_date),
         'Inv Request Dt': formatDate(j.inv_request_date),
         'Bill Closure Date': formatDate(j.bill_closure_date),
-        'SPOC': j.spoc_name || ''
+        'SPOC': j.unbilled_spoc || j.spoc_name || ''
       };
     });
 
@@ -769,7 +769,7 @@ export default function UnbilledManagementPage() {
             <MultiSelect
               value={selectedSpoc}
               onChange={(val) => setSelectedSpoc(val)}
-              options={[{ value: 'All', label: 'All SPOC' }, ...Array.from(new Set(jobs.map(j => j.spoc_name).filter(Boolean))).map(s => ({ value: s as string, label: s as string }))]}
+              options={[{ value: 'All', label: 'All SPOC' }, ...Array.from(new Set(jobs.map(j => j.unbilled_spoc || j.spoc_name).filter(Boolean))).map(s => ({ value: s as string, label: s as string }))]}
               placeholder="All SPOC"
             />
           </div>
@@ -1115,13 +1115,13 @@ export default function UnbilledManagementPage() {
                     <td>
                       <input
                         type="text"
-                        value={j.spoc_name || ''}
+                        value={j.unbilled_spoc || j.spoc_name || ''}
                         disabled={isViewer}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setJobs(prev => prev.map(job => job.job_number === j.job_number ? { ...job, spoc_name: val } : job));
+                          setJobs(prev => prev.map(job => job.job_number === j.job_number ? { ...job, unbilled_spoc: val } : job));
                         }}
-                        onBlur={(e) => handleUpdateJobField(j, 'spoc_name', e.target.value)}
+                        onBlur={(e) => handleUpdateJobField(j, 'unbilled_spoc', e.target.value)}
                         placeholder="SPOC Name"
                         style={{
                           width: '110px',

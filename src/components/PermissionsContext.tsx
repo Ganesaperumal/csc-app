@@ -57,8 +57,8 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
 
     permissions.forEach(perm => {
       if (perm.section === pageName) {
-        // Prevent orphaned Unbilled category permissions from overriding Activity Log and SPOC Management
-        if ((pageName === 'Activity Log' || pageName === 'SPOC Management') && perm.category === 'Unbilled') return;
+        // Prevent orphaned Unbilled category permissions from overriding Activity Log
+        if (pageName === 'Activity Log' && perm.category === 'Unbilled') return;
 
         // Determine the applicable role for this permission's category
         let applicableRole = userRoles.role; // Default/legacy role
