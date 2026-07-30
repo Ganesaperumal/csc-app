@@ -7,6 +7,7 @@ import { fetchLegacyJobsBypassingRLS } from './actions';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import CustomSelect from '../components/CustomSelect';
+import MultiSelect from '../components/MultiSelect';
 import * as XLSX from 'xlsx';
 import styles from './unbilled.module.css';
 import { usePermissions } from '@/components/PermissionsContext';
@@ -264,10 +265,10 @@ export default function UnbilledManagementPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [search, setSearch] = useState('');
-  const [selectedBranch, setSelectedBranch] = useState<string>('All');
-  const [selectedGoodsStatus, setSelectedGoodsStatus] = useState<string>('All');
-  const [selectedPoStatus, setSelectedPoStatus] = useState<string>('All');
-  const [selectedSalesBy, setSelectedSalesBy] = useState<string>('All');
+  const [selectedBranch, setSelectedBranch] = useState<string[]>(['All']);
+  const [selectedGoodsStatus, setSelectedGoodsStatus] = useState<string[]>(['All']);
+  const [selectedPoStatus, setSelectedPoStatus] = useState<string[]>(['All']);
+  const [selectedSalesBy, setSelectedSalesBy] = useState<string[]>(['All']);
 
   // ColumnFunnel filters
   const [showColumnFilters, setShowColumnFilters] = useState(false);
@@ -533,11 +534,12 @@ export default function UnbilledManagementPage() {
       (j.company && j.company.toLowerCase().includes(q))
     );
 
-    const matchBranch = selectedBranch === 'All' || j.branch === selectedBranch;
-    const matchGoods = selectedGoodsStatus === 'All' || 
-                       (selectedGoodsStatus === 'No Status' ? (!j.goods_track_status || j.goods_track_status.trim() === '') : getDisplayGoodsStatus(j.goods_track_status) === selectedGoodsStatus);
-    const matchPo = selectedPoStatus === 'All' || j.po_status === selectedPoStatus;
-    const matchSales = selectedSalesBy === 'All' || j.sales_by === selectedSalesBy;
+    const matchBranch = selectedBranch.includes('All') || selectedBranch.includes(j.branch || '');
+    const matchGoods = selectedGoodsStatus.includes('All') || 
+                       (selectedGoodsStatus.includes('No Status') && (!j.goods_track_status || j.goods_track_status.trim() === '')) ||
+                       selectedGoodsStatus.includes(getDisplayGoodsStatus(j.goods_track_status) || '');
+    const matchPo = selectedPoStatus.includes('All') || selectedPoStatus.includes(j.po_status || '');
+    const matchSales = selectedSalesBy.includes('All') || selectedSalesBy.includes(j.sales_by || '');
 
     // Check Column Funnel Filters
     for (const [colId, allowedVals] of Object.entries(columnFilters)) {
@@ -698,7 +700,7 @@ export default function UnbilledManagementPage() {
   // 8. Execution Pending: goods_track_status is 00. Execution Pending AND po_status is empty/null
   const executionPendingKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '00. Execution Pending' && !isGoodsEmpty(j) && isPoEmpty(j));
 
-  const hasAppliedFilters = Object.keys(columnFilters).length > 0 || search.trim() !== '' || selectedBranch !== 'All' || selectedGoodsStatus !== 'All' || selectedPoStatus !== 'All' || selectedSalesBy !== 'All';
+  const hasAppliedFilters = Object.keys(columnFilters).length > 0 || search.trim() !== '' || !selectedBranch.includes('All') || !selectedGoodsStatus.includes('All') || !selectedPoStatus.includes('All') || !selectedSalesBy.includes('All');
 
   if (loading) {
     return <div style={{ padding: '2rem' }}>Loading Unbilled Management Dashboard...</div>;
@@ -742,14 +744,15 @@ export default function UnbilledManagementPage() {
           <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'nowrap' }}>
             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', marginRight: '0.15rem', whiteSpace: 'nowrap' }}>Filters:</span>
             
-            <CustomSelect
+            <MultiSelect
               value={selectedBranch}
               onChange={(val) => setSelectedBranch(val)}
-              options={[{ value: 'All', label: 'Branches' }, ...Array.from(new Set(jobs.map(j => j.branch).filter(Boolean))).map(b => ({ value: b, label: b }))]}
-              style={{ width: '115px' }}
+              options={[{ value: 'All', label: 'Branches' }, ...Array.from(new Set(jobs.map(j => j.branch).filter(Boolean))).map(b => ({ value: b, label: b as string }))]}
+              style={{ width: '130px' }}
+              placeholder="Branches"
             />
 
-            <CustomSelect
+            <MultiSelect
               value={selectedGoodsStatus}
               onChange={(val) => setSelectedGoodsStatus(val)}
               options={[
@@ -757,21 +760,24 @@ export default function UnbilledManagementPage() {
                 { value: 'No Status', label: 'No Status' },
                 ...BRANCH_GOODS_STATUS_OPTIONS.map(s => ({ value: s, label: s }))
               ]}
-              style={{ width: '135px' }}
+              style={{ width: '150px' }}
+              placeholder="All Status"
             />
 
-            <CustomSelect
+            <MultiSelect
               value={selectedPoStatus}
               onChange={(val) => setSelectedPoStatus(val)}
               options={[{ value: 'All', label: 'PO Status' }, ...PO_STATUS_OPTIONS.map(p => ({ value: p, label: p }))]}
-              style={{ width: '125px' }}
+              style={{ width: '140px' }}
+              placeholder="PO Status"
             />
 
-            <CustomSelect
+            <MultiSelect
               value={selectedSalesBy}
               onChange={(val) => setSelectedSalesBy(val)}
               options={[{ value: 'All', label: 'Sales By' }, ...SALES_BY_OPTIONS.map(s => ({ value: s, label: s }))]}
-              style={{ width: '115px' }}
+              style={{ width: '130px' }}
+              placeholder="Sales By"
             />
           </div>
 
@@ -782,10 +788,10 @@ export default function UnbilledManagementPage() {
                 setShowColumnFilters(false);
                 setColumnFilters({});
                 setSearch('');
-                setSelectedBranch('All');
-                setSelectedGoodsStatus('All');
-                setSelectedPoStatus('All');
-                setSelectedSalesBy('All');
+                setSelectedBranch(['All']);
+                setSelectedGoodsStatus(['All']);
+                setSelectedPoStatus(['All']);
+                setSelectedSalesBy(['All']);
                 setActiveFilterColumn(null);
               } else {
                 setShowColumnFilters(true);
