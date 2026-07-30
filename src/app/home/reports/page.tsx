@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { getUserColor } from '@/lib/colorUtils';
 import CustomSelect from '../components/CustomSelect';
 import { usePermissions } from '@/components/PermissionsContext';
+import { fetchLegacyJobsBypassingRLS } from '../unbilled/actions';
 
 // HSL-based beautiful color palette for charts
 const CHART_COLORS = [
@@ -510,6 +511,8 @@ export default function ReportsPage() {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [comms, setComms] = useState<any[]>([]);
   const [notes, setNotes] = useState<any[]>([]);
+  const [enquiryValues, setEnquiryValues] = useState<Record<string, number>>({});
+  const [legacyJobs, setLegacyJobs] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
 
   // 360-Degree Filters for Active Jobs
@@ -577,6 +580,23 @@ export default function ReportsPage() {
       // 5. Fetch Job Notes
       const { data: nData } = await supabase.from('job_notes').select('*');
       setNotes(nData || []);
+
+      // 6. Fetch Enquiries for accurate values
+      const { data: enqData } = await supabase.from('enquiries').select('enquiry_number, quote_value');
+      const enqMap: Record<string, number> = {};
+      if (enqData) {
+        enqData.forEach((item: any) => {
+          if (item.enquiry_number) enqMap[item.enquiry_number] = Number(item.quote_value) || 0;
+        });
+      }
+      setEnquiryValues(enqMap);
+
+      // 7. Fetch legacy jobs for accurate Unbilled matrix
+      const legacyResData = await fetchLegacyJobsBypassingRLS(['ALL']).catch(err => {
+        console.error('Failed to fetch legacy jobs:', err);
+        return [];
+      });
+      setLegacyJobs(legacyResData);
 
     } catch (error) {
       console.error('Error fetching reports data:', error);
@@ -761,36 +781,72 @@ export default function ReportsPage() {
     };
   }, [filteredActiveJobs]);
 
-  // Compute Unbilled Jobs Raw
-  const unbilledJobsRaw = useMemo(() => {
-    return jobs.filter(job => {
-      if (job.erp_status?.toLowerCase().includes('cancel')) return false;
-      const isBilled = job.erp_status?.toLowerCase() === 'billed';
-      if (isBilled) return false;
+  const unbilledMatrix = useMemo(() => {
+    const isPoEmpty = (j: any) => !j.po_status || j.po_status.trim() === '';
+    const isGoodsEmpty = (j: any) => !j.goods_track_status || j.goods_track_status.trim() === '';
 
-      const goodsCompleted = job.goods_track_status === '22. Job Completed';
-      const carIncluded = job.car_included === true || job.car_included === 'Yes' || job.car_included === 'yes';
-
-      if (!carIncluded) {
-        return goodsCompleted;
-      } else {
-        const carCompleted = job.car_track_status === '16. Job Completed';
-        return goodsCompleted && carCompleted;
-      }
+    const categories = [
+      'No Details', 'PO&PI Pending', 'Job Completed', 'Damage',
+      'Storage', 'Ready for Billing', 'To Be Cancelled', 'Execution Pending'
+    ];
+    
+    const branchSet = new Set(['BLR', 'DEL', 'BOM', 'MAA', 'HYD', 'PNQ', 'AMD', 'COK', 'KOL', 'OSS']);
+    const matrix: Record<string, Record<string, number>> = {};
+    Array.from(branchSet).forEach(b => {
+      matrix[b] = {};
+      categories.forEach(c => matrix[b][c] = 0);
+      matrix[b]['Total'] = 0;
     });
-  }, [jobs]);
 
-  const unbilledMetrics = useMemo(() => {
-    const branchCounts: Record<string, number> = {};
-    unbilledJobsRaw.forEach(j => {
-      const br = j.branch || 'Unknown';
-      branchCounts[br] = (branchCounts[br] || 0) + 1;
-    });
-    return {
-      total: unbilledJobsRaw.length,
-      branchChart: Object.entries(branchCounts).map(([label, value]) => ({ label, value }))
+    const getCat = (j: any) => {
+      const g = j.goods_track_status || '';
+      const p = j.po_status || '';
+      if (isGoodsEmpty(j) && isPoEmpty(j)) return 'No Details';
+      if (p === 'PO Pending' || p === 'PI Pending') return 'PO&PI Pending';
+      if (g.includes('22. Job Completed') && isPoEmpty(j)) return 'Job Completed';
+      if (g.includes('17. Damages')) return 'Damage';
+      if (g.includes('21. Storage') && isPoEmpty(j)) return 'Storage';
+      if (g.includes('27. Billing Pending') || g.includes('26. Billing Pending') || g.includes('27. Month End Billing') || g.includes('23. Job # taken for Billing')) return 'Ready for Billing';
+      if (g.includes('28. Free Job') || g.includes('25. Job # to be Cancelled')) return 'To Be Cancelled';
+      if (g.includes('00. Execution Pending') && !isGoodsEmpty(j) && isPoEmpty(j)) return 'Execution Pending';
+      return null;
     };
-  }, [unbilledJobsRaw]);
+
+    // Combine jobs (New Order only) with legacyJobs
+    const erpUnbilled = jobs.filter(j => j.erp_status === 'New Order');
+    const allUnbilledJobs = [...erpUnbilled, ...legacyJobs];
+
+    allUnbilledJobs.forEach(j => {
+      const cat = getCat(j);
+      if (!cat) return;
+      
+      const br = j.branch?.toUpperCase() || 'UNKNOWN';
+      if (!matrix[br]) {
+         branchSet.add(br);
+         matrix[br] = {};
+         categories.forEach(c => matrix[br][c] = 0);
+         matrix[br]['Total'] = 0;
+      }
+      
+      const val = Number(enquiryValues[j.enq_number || j.enquiry_number || ''] || j.quote_value || 0);
+      matrix[br][cat] += val;
+      matrix[br]['Total'] += val;
+    });
+
+    const branchList = Array.from(branchSet);
+    const data = branchList.map(br => ({ branch: br, ...matrix[br] }));
+    
+    const totals: Record<string, number> = { branch: 'TOTAL' as any };
+    categories.forEach(c => {
+      totals[c] = data.reduce((sum, row) => sum + (row[c] as number || 0), 0);
+    });
+    totals['Total'] = data.reduce((sum, row) => sum + (row['Total'] as number || 0), 0);
+    
+    // Prepare Donut chart data for branch distribution (using total unbilled)
+    const branchChart = data.filter(d => d.Total > 0).map(d => ({ label: d.branch as string, value: d.Total }));
+    
+    return { data, totals, categories, branchChart, grandTotal: totals['Total'] };
+  }, [jobs, legacyJobs, enquiryValues]);
 
   // --- 2. AGENTS DATA PROCESSING ---
 
@@ -1596,14 +1652,63 @@ export default function ReportsPage() {
 
       {/* --- UNBILLED REPORT TAB --- */}
       {activeTab === 'unbilled' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          
+          <div className="glass" style={{ padding: '1.5rem', overflowX: 'auto', borderRadius: '16px' }}>
+            <h3 style={{ margin: '0 0 1.5rem 0', color: 'var(--text-primary)', fontSize: '1.2rem', fontWeight: 800 }}>Unbilled Jobs Matrix (Value)</h3>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', fontSize: '0.85rem' }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', textAlign: 'center', fontWeight: 800, position: 'sticky', left: 0, zIndex: 10 }}>Branch</th>
+                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: '#000000', color: '#ffffff', textAlign: 'center', fontWeight: 800 }}>No Details</th>
+                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: '#fce7f3', color: '#be185d', textAlign: 'center', fontWeight: 800 }}>PO&PI Pending</th>
+                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: '#dbeafe', color: '#1d4ed8', textAlign: 'center', fontWeight: 800 }}>Job Completed</th>
+                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: '#fee2e2', color: '#b91c1c', textAlign: 'center', fontWeight: 800 }}>Damage</th>
+                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: '#ffedd5', color: '#c2410c', textAlign: 'center', fontWeight: 800 }}>Storage</th>
+                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: '#d1fae5', color: '#047857', textAlign: 'center', fontWeight: 800 }}>Ready for Billing</th>
+                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: '#ffffff', color: '#000000', textAlign: 'center', fontWeight: 800 }}>To Be Cancelled</th>
+                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: '#ede9fe', color: '#6d28d9', textAlign: 'center', fontWeight: 800 }}>Execution Pending</th>
+                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: '#fef3c7', color: '#b45309', textAlign: 'center', fontWeight: 800 }}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {unbilledMatrix.data.map((row: any) => (
+                  <tr key={row.branch} style={{ background: 'var(--bg-color)', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-color)'}>
+                    <td style={{ padding: '0.6rem 0.8rem', border: '1px solid var(--border-color)', fontWeight: 800, textAlign: 'center', position: 'sticky', left: 0, background: 'var(--bg-color)', zIndex: 5, color: 'var(--text-primary)' }}>{row.branch}</td>
+                    {unbilledMatrix.categories.map(c => (
+                      <td key={c} style={{ padding: '0.6rem 0.8rem', border: '1px solid var(--border-color)', color: row[c] ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: row[c] ? 600 : 400 }}>
+                        {row[c] ? row[c].toLocaleString('en-IN', { maximumFractionDigits: 0 }) : ''}
+                      </td>
+                    ))}
+                    <td style={{ padding: '0.6rem 0.8rem', border: '1px solid var(--border-color)', fontWeight: 800, background: 'rgba(245, 158, 11, 0.05)', color: 'var(--text-primary)' }}>
+                      {row.Total ? row.Total.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : ''}
+                    </td>
+                  </tr>
+                ))}
+                {/* Grand Total Row */}
+                <tr style={{ background: '#f8fafc' }}>
+                  <td style={{ padding: '0.8rem', border: '1px solid var(--border-color)', fontWeight: 800, textAlign: 'center', position: 'sticky', left: 0, background: '#f8fafc', zIndex: 5, color: 'var(--text-primary)' }}>TOTAL</td>
+                  {unbilledMatrix.categories.map(c => (
+                    <td key={c} style={{ padding: '0.8rem', border: '1px solid var(--border-color)', fontWeight: 800, color: unbilledMatrix.totals[c] ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                      {unbilledMatrix.totals[c] ? unbilledMatrix.totals[c].toLocaleString('en-IN', { maximumFractionDigits: 0 }) : 0}
+                    </td>
+                  ))}
+                  <td style={{ padding: '0.8rem', border: '1px solid var(--border-color)', fontWeight: 800, background: '#fef3c7', color: '#b45309', fontSize: '0.9rem' }}>
+                    {unbilledMatrix.grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
           <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
             <div className="glass" style={{ padding: '1.5rem', flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Total Unbilled Jobs</span>
-              <span style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--text-primary)' }}>{unbilledMetrics.total}</span>
+              <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Total Unbilled Value</span>
+              <span style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--text-primary)' }}>₹{unbilledMatrix.grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
             </div>
-            <DonutChart data={unbilledMetrics.branchChart} title="Unbilled Jobs by Branch" />
+            <DonutChart data={unbilledMatrix.branchChart} title="Unbilled Value by Branch" />
           </div>
+
         </div>
       )}
 
