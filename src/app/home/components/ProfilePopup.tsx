@@ -190,7 +190,7 @@ export default function ProfilePopup({ user }: { user: any }) {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to trigger ENQ Sync via API');
       }
-      showToast('ENQ Sync triggered successfully!', 'success');
+      showToast('ENQ Sync triggered successfully! Please check GitHub Actions tab for live logs and completion status.', 'success');
       setIsOpen(false);
     } catch (err: any) {
       showToast(err.message, 'error');
