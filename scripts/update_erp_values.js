@@ -114,6 +114,11 @@ async function scrapeEnquiryValue(page, rawEnqNumber) {
     await page.waitForSelector(rowLocator, { timeout: 8000 });
   } catch {
     console.log(`   ⚠️  ${enqNumber} — row not found in ERP search results`);
+    try {
+      const rows = await page.locator('tr').allInnerTexts();
+      console.log('   [DEBUG] Visible rows in ERP:');
+      rows.slice(0, 10).forEach((r, i) => console.log(`     Row ${i}: ${r.replace(/\n/g, ' | ')}`));
+    } catch(e) {}
     return null;
   }
 
