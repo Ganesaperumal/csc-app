@@ -95,7 +95,8 @@ async function navigateToEnquiryModule(page) {
 
 // ── Step 4: Scrape one enquiry value ─────────────────────
 
-async function scrapeEnquiryValue(page, enqNumber) {
+async function scrapeEnquiryValue(page, rawEnqNumber) {
+  const enqNumber = String(rawEnqNumber).trim();
   const parsed = parseEnqNumber(enqNumber);
   if (!parsed) return null;
 
@@ -108,15 +109,15 @@ async function scrapeEnquiryValue(page, enqNumber) {
   await page.waitForTimeout(2000);
 
   // Find and click the exact matching row
-  const rowXPath = `//td[normalize-space(text())='${enqNumber}']/parent::tr`;
+  const rowLocator = `tr:has(td:text-is("${enqNumber}"))`;
   try {
-    await page.waitForSelector(`xpath=${rowXPath}`, { timeout: 8000 });
+    await page.waitForSelector(rowLocator, { timeout: 8000 });
   } catch {
     console.log(`   ⚠️  ${enqNumber} — row not found in ERP search results`);
     return null;
   }
 
-  await page.click(`xpath=${rowXPath}`);
+  await page.click(rowLocator);
 
   // Click Tab 3 (Quote/Value tab)
   await page.waitForSelector('#tab3', { timeout: 15000 });
