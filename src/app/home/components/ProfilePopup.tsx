@@ -182,6 +182,21 @@ export default function ProfilePopup({ user }: { user: any }) {
 
 
 
+  const handleTriggerEnqSync = async () => {
+    try {
+      showToast('Triggering ENQ Sync...', 'info');
+      const res = await fetch('/api/ingest-erp/manual-trigger-enq', { method: 'POST' });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to trigger ENQ Sync via API');
+      }
+      showToast('ENQ Sync triggered successfully!', 'success');
+      setIsOpen(false);
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+  };
+
   const AvatarComponent = ({ size = 40, showPencil = false }: { size?: number; showPencil?: boolean }) => (
     <div style={{ position: 'relative', width: size, height: size, borderRadius: '50%', cursor: 'pointer', flexShrink: 0,
                   background: 'linear-gradient(135deg, #f472b6, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: size * 0.4 }}>
@@ -283,6 +298,10 @@ export default function ProfilePopup({ user }: { user: any }) {
                   <Link href="/home/permissions" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.5rem', borderRadius: '8px', color: 'var(--text-primary)', textDecoration: 'none', fontSize: '0.9rem' }}>
                     <span style={{ fontSize: '1.2rem' }}>🛡️</span> Role Permissions
                   </Link>
+                  
+                  <button onClick={handleTriggerEnqSync} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.5rem', borderRadius: '8px', color: 'var(--text-primary)', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: '0.9rem', marginTop: '4px' }}>
+                    <span style={{ fontSize: '1.2rem' }}>🌐</span> Run ENQ Scraper (Headless)
+                  </button>
                 </div>
               )}
 

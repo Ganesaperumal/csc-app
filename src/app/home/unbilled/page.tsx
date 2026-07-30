@@ -697,6 +697,15 @@ export default function UnbilledManagementPage() {
   // 8. Execution Pending: goods_track_status is 00. Execution Pending AND po_status is empty/null
   const executionPendingKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '00. Execution Pending' && !isGoodsEmpty(j) && isPoEmpty(j));
 
+  // 9. Billable: PO status is not empty + Goods Status is empty + storage + Job completed + Job # taken for Billing + Billing Pending + Month End Billing
+  const billableKpi = calcKpi(j => {
+    const hasPo = !isPoEmpty(j);
+    const goodsEmpty = isGoodsEmpty(j);
+    const s = getDisplayGoodsStatus(j.goods_track_status) || '';
+    const validGoods = ['21. Storage', '22. Job Completed', '23. Job # taken for Billing', '26. Billing Pending', '27. Billing Pending', '27. Month End Billing'].includes(s);
+    return hasPo || goodsEmpty || validGoods;
+  });
+
   const hasAppliedFilters = Object.keys(columnFilters).length > 0 || search.trim() !== '' || !selectedBranch.includes('All') || !selectedGoodsStatus.includes('All') || !selectedPoStatus.includes('All') || !selectedSpoc.includes('All');
 
   if (loading) {
@@ -884,6 +893,18 @@ export default function UnbilledManagementPage() {
         <div className={styles.tableContainer}>
           {/* KPI Metric Cards */}
           <div className={styles.kpiGrid}>
+          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(6,182,212,0.15), rgba(6,182,212,0.02))', borderColor: 'rgba(6,182,212,0.3)' }}>
+            <div className={styles.kpiLabel} style={{ color: '#06b6d4' }}>Total</div>
+            <div className={styles.kpiValue}>₹{totalKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+            <div className={styles.kpiCount} style={{ color: '#06b6d4' }}>{totalKpi.count} Jobs</div>
+          </div>
+
+          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(34,197,94,0.02))', borderColor: 'rgba(34,197,94,0.3)' }}>
+            <div className={styles.kpiLabel} style={{ color: '#22c55e' }}>Billable</div>
+            <div className={styles.kpiValue}>₹{billableKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+            <div className={styles.kpiCount} style={{ color: '#22c55e' }}>{billableKpi.count} Jobs</div>
+          </div>
+
           <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.02))', borderColor: 'rgba(239,68,68,0.3)' }}>
             <div className={styles.kpiLabel} style={{ color: '#ef4444' }}>No Details</div>
             <div className={styles.kpiValue}>₹{noDetailsKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>

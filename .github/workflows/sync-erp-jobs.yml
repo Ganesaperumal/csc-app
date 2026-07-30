@@ -1,0 +1,69 @@
+name: Sync ERP Jobs Only
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  sync-jobs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm' # Automatically caches node_modules if package-lock.json exists
+
+      - name: Install Node Dependencies
+        run: |
+          cd scripts
+          npm install
+
+      - name: Cache Playwright Chromium Browser
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('scripts/package-lock.json') }}
+
+      - name: Install Playwright Chromium (Only if cache misses)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: |
+          cd scripts
+          npx playwright install chromium --with-deps
+
+      - name: Install Playwright System Dependencies (If cache hits)
+        if: steps.playwright-cache.outputs.cache-hit == 'main' || steps.playwright-cache.outputs.cache-hit == 'true'
+        run: |
+          cd scripts
+          npx playwright install-deps chromium
+
+      - name: "Step 1 — Sync ERP Jobs to Supabase"
+        env:
+          ERP_USERNAME: ${{ secrets.ERP_USERNAME }}
+          ERP_PASSWORD: ${{ secrets.ERP_PASSWORD }}
+          ERP_SITE: ${{ secrets.ERP_SITE }}
+          API_URL: ${{ secrets.API_URL }}
+          CRON_SECRET_KEY: ${{ secrets.CRON_SECRET_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "=== Syncing ERP Job records to Supabase jobs table ==="
+          cd scripts
+          node github_sync.js
+
+      - name: Upload ERP Reports for debugging
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: erp-jobs-reports
+          path: |
+            scripts/*.xls
+            scripts/*.xlsx
+            scripts/*.csv
+          retention-days: 1
