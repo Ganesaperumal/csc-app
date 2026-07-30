@@ -142,25 +142,43 @@ async function scrapeEnquiryValue(page, rawEnqNumber) {
   // Enter search ID (XXXX from EN/XXXX/YY/ZZZ) and search
   await page.fill('#tcdiv1search', '');
   await page.fill('#tcdiv1search', searchId);
-  await page.waitForTimeout(500);
-  await page.click('//*[@id="div1imgsearch"]');
+  await page.waitForTimeout(300);
+  await page.press('#tcdiv1search', 'Enter').catch(() => {});
+  await page.click('//*[@id="div1imgsearch"]').catch(() => {});
   await page.waitForTimeout(2500);
 
-  // Find and click the exact matching row
-  const rowLocator = `//td[normalize-space(text())='${enqNumber}']`;
-  try {
-    await page.waitForSelector(rowLocator, { timeout: 8000 });
-  } catch {
-    console.log(`   ⚠️  ${enqNumber} — row not found in ERP search results`);
-    try {
-      const rows = await page.locator('tr').allInnerTexts();
-      console.log('   [DEBUG] Visible rows in ERP:');
-      rows.slice(0, 10).forEach((r, i) => console.log(`     Row ${i}: ${r.replace(/\n/g, ' | ')}`));
-    } catch(e) {}
-    return null;
+  // Find and click the exact matching row (try exact match first, then contains)
+  const locatorsToTry = [
+    `//td[normalize-space(text())='${enqNumber}']`,
+    `//td[contains(normalize-space(.), '${enqNumber}')]`,
+    `//a[contains(text(), '${enqNumber}')]`,
+    `//td[contains(text(), '/${searchId}/26/')]`
+  ];
+
+  let targetLocator = null;
+  for (const loc of locatorsToTry) {
+    if (await page.locator(loc).count() > 0) {
+      targetLocator = loc;
+      break;
+    }
   }
 
-  await page.click(rowLocator);
+  if (!targetLocator) {
+    try {
+      await page.waitForSelector(locatorsToTry[0], { timeout: 4000 });
+      targetLocator = locatorsToTry[0];
+    } catch {
+      console.log(`   ⚠️  ${enqNumber} — row not found in ERP search results`);
+      try {
+        const rows = await page.locator('tr').allInnerTexts();
+        console.log('   [DEBUG] Visible rows in ERP:');
+        rows.slice(0, 10).forEach((r, i) => console.log(`     Row ${i}: ${r.replace(/\n/g, ' | ')}`));
+      } catch(e) {}
+      return null;
+    }
+  }
+
+  await page.click(targetLocator);
 
   // Click Tab 3 (Quote/Value tab)
   await page.waitForSelector('#tab3', { timeout: 15000 });
