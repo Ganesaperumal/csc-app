@@ -72,11 +72,31 @@ async function fetchJobsNeedingValues() {
 
 async function loginToERP(page) {
   console.log(`🔐 Logging into ERP: ${ERP_SITE}`);
-  await page.goto(ERP_SITE);
-  await page.fill('#tcusr', ERP_USERNAME);
-  await page.fill('#tcpwd', ERP_PASSWORD);
+  
+  // Clear any existing cookies/session state
+  await page.context().clearCookies();
+  await page.goto(ERP_SITE, { waitUntil: 'domcontentloaded' });
+  
+  await page.fill('#tcusr', ERP_USERNAME.trim());
+  await page.fill('#tcpwd', ERP_PASSWORD.trim());
   await page.click("input[name='login']");
-  await page.waitForSelector('#r10c1', { timeout: 60000 });
+  
+  // Wait for network response/navigation
+  await page.waitForTimeout(2000);
+  
+  if (page.url().includes('tnerr=')) {
+    throw new Error(`ERP Login Failed! ERP redirected to error URL: ${page.url()} (tnerr=8 usually means invalid username/password or active session conflict)`);
+  }
+  
+  try {
+    await page.waitForSelector('#r10c1, #r3c1', { state: 'visible', timeout: 30000 });
+  } catch (err) {
+    if (page.url().includes('tnerr=')) {
+      throw new Error(`ERP Login Failed (tnerr in URL: ${page.url()})`);
+    }
+    throw new Error(`ERP Login timed out waiting for main menu: ${err.message}`);
+  }
+
   console.log('   ✅ Login successful');
 }
 
@@ -84,12 +104,29 @@ async function loginToERP(page) {
 
 async function navigateToEnquiryModule(page) {
   console.log('📂 Navigating to Enquiry module...');
-  await page.click('//*[@id="r10c1"]');
-  await page.waitForTimeout(700);
-  await page.click('//*[@id="r4c2"]');
-  await page.waitForTimeout(700);
-  await page.click('//*[@id="r4c3"]');
-  await page.waitForSelector('#tcdiv1search', { timeout: 30000 });
+  
+  // Menu 1: Queries / Master menu (#r10c1)
+  const menu1 = page.locator('#r10c1, //*[@id="r10c1"]');
+  await menu1.first().waitFor({ state: 'visible', timeout: 15000 });
+  await menu1.first().click();
+  
+  // Menu 2: Enquiry submenu (#r4c2)
+  const menu2 = page.locator('#r4c2, //*[@id="r4c2"]');
+  await menu2.first().waitFor({ state: 'visible', timeout: 15000 });
+  await menu2.first().click();
+  
+  // Menu 3: Enquiry Query item (#r4c3)
+  const menu3 = page.locator('#r4c3, //*[@id="r4c3"]');
+  await menu3.first().waitFor({ state: 'visible', timeout: 15000 });
+  await menu3.first().click();
+  
+  await page.waitForTimeout(1500);
+
+  if (page.url().includes('tnerr=')) {
+    throw new Error(`ERP Menu Navigation Failed! Redirected to error URL: ${page.url()} (User account may lack permission to access Enquiry module, or session expired)`);
+  }
+
+  await page.waitForSelector('#tcdiv1search', { state: 'visible', timeout: 30000 });
   console.log('   ✅ Enquiry query page ready');
 }
 
