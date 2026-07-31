@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabase';
 import { PermissionsProvider, usePermissions } from '@/components/PermissionsContext';
 import Link from 'next/link';
 import styles from './home.module.css';
-import GroupChat from './components/GroupChat';
 import ProfilePopup from './components/ProfilePopup';
 import SyncERPButton from './components/SyncERPButton';
 import CommandPalette from './components/CommandPalette';
@@ -270,10 +269,6 @@ export default function DashboardLayout({
                 </Suspense>
               </div>
               
-              <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flexShrink: 0, marginTop: '0.5rem' }}>
-                 <GroupChatWrapper user={user} profile={profile} />
-              </div>
-
               <div style={{ flexShrink: 0 }}>
                 <SyncERPWrapper user={user} profile={profile} />
               </div>
@@ -290,12 +285,6 @@ export default function DashboardLayout({
       </div>
     </PermissionsProvider>
   );
-}
-
-function GroupChatWrapper({ user, profile }: { user: any, profile: any }) {
-  const { getAccessLevel } = usePermissions();
-  if (getAccessLevel('Group Chat', profile) === 'None') return null;
-  return <GroupChat user={user} profile={profile} />;
 }
 
 function SyncERPWrapper({ user, profile }: { user: any, profile: any }) {
