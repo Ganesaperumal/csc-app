@@ -82,21 +82,12 @@ export default function PermissionsPage({ isEmbedded }: { isEmbedded?: boolean }
   const [activeTab, setActiveTab] = useState('Pages');
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        supabase.from('profiles').select('role').eq('id', data.user.id).single()
-          .then(({ data: profile }) => {
-            if (profile && profile.role === 'Admin') {
-              fetchPermissions();
-            } else {
-              window.location.href = '/home';
-            }
-          });
-      } else {
-        window.location.href = '/home';
-      }
-    });
-  }, []);
+    if (!isEmbedded) {
+      window.location.href = '/home/admin';
+      return;
+    }
+    fetchPermissions();
+  }, [isEmbedded]);
 
   const fetchPermissions = async () => {
     setLoading(true);

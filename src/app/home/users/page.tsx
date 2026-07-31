@@ -67,28 +67,13 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
   const router = useRouter();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setCurrentUser(data.user);
-        supabase.from('profiles').select('*').eq('id', data.user.id).single()
-          .then(({ data: profile }) => {
-            if (profile) {
-              const level = getAccessLevel('User Management', profile);
-              if (level === 'None') { router.push('/home'); return; }
-              const canEdit = level === 'Edit';
-              setUserRole(profile.role);
-              setIsViewerMode(!canEdit);
-              setCheckingAuth(false);
-              fetchUsers();
-            } else {
-              router.push('/home');
-            }
-          });
-      } else {
-        router.push('/home');
-      }
-    });
-  }, [router, getAccessLevel]);
+    if (!isEmbedded) {
+      window.location.href = '/home/admin';
+      return;
+    }
+    setCheckingAuth(false);
+    fetchUsers();
+  }, [isEmbedded]);
 
   const fetchUsers = async () => {
     try {

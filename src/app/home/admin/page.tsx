@@ -148,18 +148,22 @@ export default function AdminPage() {
         router.push('/login');
         return;
       }
+      const userEmail = data.user.email?.toLowerCase();
+      if (userEmail !== 'gp@transworldintl.com') {
+        showToast('⛔ Access Denied: Admin Center is restricted to Super Admin (gp@transworldintl.com) only.', 'error');
+        router.push('/home/active-jobs');
+        return;
+      }
       setCurrentUser(data.user);
       supabase.from('profiles').select('*').eq('id', data.user.id).single()
         .then(({ data: profile }) => {
           if (profile) {
-            const level = getAccessLevel('Admin Center', profile);
-            if (level === 'None') { router.push('/home'); return; }
             setUserRole(profile.role);
             setCheckingAuth(false);
           }
         });
     });
-  }, [router, getAccessLevel]);
+  }, [router]);
 
   const downloadCSV = async (table: string = 'jobs') => {
     try {

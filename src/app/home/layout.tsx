@@ -36,13 +36,10 @@ function DashboardNav({ profile }: { profile: any }) {
     }
   };
 
+  const isSuperAdmin = profile?.email?.toLowerCase() === 'gp@transworldintl.com';
   const isAdmin = profile?.role === 'Admin';
-  const canManageUsers = isAdmin || getAccessLevel('User Management', profile) !== 'None';
-  const canAdminCenter = isAdmin || getAccessLevel('Admin Center', profile) !== 'None';
-  const canPermissions = isAdmin;
-  const canRunEnq = isAdmin;
-
-  const hasControlCenterAccess = canManageUsers || canAdminCenter || canPermissions || canRunEnq;
+  const canRunEnq = isAdmin || isSuperAdmin;
+  const hasControlCenterAccess = isSuperAdmin || canRunEnq;
 
   const canAccessActive = getAccessLevel('Active Jobs', profile) !== 'None';
   const canAccessClosed = getAccessLevel('Closed Jobs', profile) !== 'None';
@@ -161,21 +158,9 @@ function DashboardNav({ profile }: { profile: any }) {
             Control Center
           </div>
 
-          {canManageUsers && (
-            <Link href="/home/users" className={`${styles.navItem} ${pathname === '/home/users' ? styles.active : ''}`}>
-              <span>👥</span> User Management
-            </Link>
-          )}
-
-          {canAdminCenter && (
+          {isSuperAdmin && (
             <Link href="/home/admin" className={`${styles.navItem} ${pathname === '/home/admin' ? styles.active : ''}`}>
               <span>⚙️</span> Admin Center
-            </Link>
-          )}
-
-          {canPermissions && (
-            <Link href="/home/permissions" className={`${styles.navItem} ${pathname === '/home/permissions' ? styles.active : ''}`}>
-              <span>🛡️</span> Role Permissions
             </Link>
           )}
 
