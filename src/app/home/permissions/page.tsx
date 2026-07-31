@@ -142,14 +142,12 @@ export default function PermissionsPage({ isEmbedded }: { isEmbedded?: boolean }
     for (const { section: sec, category: cat } of ALL_SECTIONS) {
       for (const role of ROLES) {
         const cell = matrix[cat]?.[sec]?.[role];
-        const payloadItem: any = {
+        allPayload.push({
           category: cat,
           section: sec,
           role,
           access: cell?.access || 'None'
-        };
-        if (cell?.id) payloadItem.id = cell.id;
-        allPayload.push(payloadItem);
+        });
       }
     }
 
