@@ -66,12 +66,8 @@ function buildMatrix(rows: any[]): Matrix {
   for (const row of rows) {
     let { category, section, role, access, id } = row;
     if (access === 'Read') access = 'View';
-    if (section === 'Active Jobs' || section === 'Closed Jobs') {
-      section = 'CSC Jobs';
-    }
     if (matrix[category]?.[section]?.[role] !== undefined) {
-      const existingId = matrix[category][section][role]?.id;
-      matrix[category][section][role] = { id: existingId || id, access: access || 'None' };
+      matrix[category][section][role] = { id, access: access || 'None' };
     }
   }
   return matrix;
