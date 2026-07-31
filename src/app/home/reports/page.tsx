@@ -629,18 +629,7 @@ export default function ReportsPage() {
       setComms(cData || []);
 
       // 5. Fetch Job Notes
-      const { data: nData } = await supabase.from('job_notes').select('*');
-      setNotes(nData || []);
 
-      // 6. Fetch Enquiries for accurate values
-      const { data: enqData } = await supabase.from('enquiries').select('enquiry_number, quote_value');
-      const enqMap: Record<string, number> = {};
-      if (enqData) {
-        enqData.forEach((item: any) => {
-          if (item.enquiry_number) enqMap[item.enquiry_number] = Number(item.quote_value) || 0;
-        });
-      }
-      setEnquiryValues(enqMap);
 
       // 7. Fetch legacy jobs for accurate Unbilled matrix
       const legacyResData = await fetchLegacyJobsBypassingRLS(['ALL']).catch(err => {

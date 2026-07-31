@@ -12,11 +12,8 @@ export async function POST(request: Request) {
   try {
     const { prompt, context, systemInstruction, provider, trackingJobNumber } = await request.json();
 
-    // Fetch dynamic system prompt from Supabase
     const supabaseAdmin = getSupabaseAdmin();
-    const { data: aiSettings } = await supabaseAdmin.from('ai_settings').select('system_prompt').eq('id', 1).single();
 
-    // Fallback default context if DB fetch fails
     const fallbackSysPrompt = `You are a highly professional Customer Service Assistant for Transworld International (Ti) Packing and Moving Company. 
 
 Guidelines:
@@ -26,7 +23,7 @@ Guidelines:
 4. Conciseness: Keep your answers concise, actionable, and straight to the point. Use bullet points for readability when explaining processes.
 5. Limitations: If you do not have enough tracking data or job history to answer a question, state clearly that you need more information rather than making up (hallucinating) dates or locations.`;
     
-    const sysPrompt = systemInstruction || aiSettings?.system_prompt || fallbackSysPrompt;
+    const sysPrompt = systemInstruction || fallbackSysPrompt;
 
     let augmentedContext = context || '';
 

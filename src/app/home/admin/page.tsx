@@ -890,40 +890,7 @@ export default function AdminPage() {
 
       </div>
 
-      {/* AI Settings Card (Under Bulk Data Management) */}
-      <div style={cardStyle}>
-        <h2 style={{ margin: '0 0 1rem', fontSize: '1.25rem', fontWeight: 800, color: '#8b5cf6', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ background: 'rgba(139,92,246,0.1)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>🤖</span>
-          AI System Instructions
-        </h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-          Edit the core behavioral guidelines, rules, and logic for the Transworld Intl AI Assistant. These rules apply globally to all AI features.
-        </p>
-        
-        <textarea
-          value={aiPrompt}
-          onChange={(e) => setAiPrompt(e.target.value)}
-          rows={12}
-          style={{ ...inputStyle, fontFamily: 'monospace', fontSize: '0.85rem', lineHeight: '1.5', resize: 'vertical', marginBottom: '1rem' }}
-          placeholder="Loading AI instructions..."
-        />
-        
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <button 
-            onClick={handleSaveAiSettings}
-            disabled={savingAi}
-            style={{ 
-              padding: '0.6rem 1.5rem', borderRadius: '8px', 
-              background: savingAi ? 'var(--border-color)' : 'linear-gradient(135deg, #8b5cf6, #6d28d9)', 
-              color: 'white', border: 'none', cursor: savingAi ? 'not-allowed' : 'pointer', 
-              fontWeight: 700, boxShadow: '0 4px 12px rgba(139,92,246,0.3)',
-              transition: 'all 0.2s'
-            }}
-          >
-            {savingAi ? 'Saving...' : '💾 Save AI Instructions'}
-          </button>
-        </div>
-      </div>
+
 
       {showBulkUpload && (
         <BulkPodUploadModal 
