@@ -150,20 +150,6 @@ export default function PermissionsPage({ isEmbedded }: { isEmbedded?: boolean }
         };
         if (cell?.id) payloadItem.id = cell.id;
         allPayload.push(payloadItem);
-
-        // Sync legacy Active Jobs & Closed Jobs sections when CSC Jobs is updated
-        if (sec === 'CSC Jobs') {
-          const activeCell = matrix[cat]?.['Active Jobs']?.[role];
-          const closedCell = matrix[cat]?.['Closed Jobs']?.[role];
-          
-          const activePayload: any = { category: cat, section: 'Active Jobs', role, access: cell?.access || 'None' };
-          if (activeCell?.id) activePayload.id = activeCell.id;
-          allPayload.push(activePayload);
-
-          const closedPayload: any = { category: cat, section: 'Closed Jobs', role, access: cell?.access || 'None' };
-          if (closedCell?.id) closedPayload.id = closedCell.id;
-          allPayload.push(closedPayload);
-        }
       }
     }
 
