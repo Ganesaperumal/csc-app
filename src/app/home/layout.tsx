@@ -158,7 +158,7 @@ function DashboardNav({ profile }: { profile: any }) {
             Control Center
           </div>
 
-          {isSuperAdmin && (
+          {(isAdmin || isSuperAdmin) && (
             <Link href="/home/admin" className={`${styles.navItem} ${pathname === '/home/admin' ? styles.active : ''}`}>
               <span>⚙️</span> Admin Center
             </Link>
