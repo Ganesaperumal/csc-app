@@ -75,15 +75,10 @@ export default function AdminPage() {
     { job_number: '', quote_value: '' }
   ]);
   const [loadingJobQuote, setLoadingJobQuote] = useState(false);
-  const [csvTargetTable, setCsvTargetTable] = useState<'jobs' | 'job_logs'>('jobs');
   const [csvUploadMode, setCsvUploadMode] = useState<'fill_empty' | 'force_overwrite' | 'full_upsert'>('fill_empty');
   const router = useRouter();
 
   const handleConsolidatedCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (csvTargetTable === 'job_logs') {
-      uploadCSV(e, 'job_logs');
-      return;
-    }
     if (csvUploadMode === 'fill_empty') {
       uploadBulkUpdateCSV(e);
     } else if (csvUploadMode === 'force_overwrite') {
@@ -166,7 +161,7 @@ export default function AdminPage() {
     });
   }, [router, getAccessLevel]);
 
-  const downloadCSV = async (table: 'jobs' | 'job_logs') => {
+  const downloadCSV = async (table: string = 'jobs') => {
     try {
       const { data, error } = await supabase.from(table).select('*');
       if (error) throw error;
@@ -564,112 +559,70 @@ export default function AdminPage() {
 
           <div style={{ background: 'rgba(148, 163, 184, 0.05)', borderRadius: '12px', padding: '1.2rem', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
             
-            {/* Target Table Selector */}
+            {/* Upload Strategy selector */}
             <div>
-              <label style={labelStyle}>Target Table</label>
+              <label style={labelStyle}>Upload Strategy</label>
               <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <button
                   type="button"
-                  onClick={() => setCsvTargetTable('jobs')}
+                  onClick={() => setCsvUploadMode('fill_empty')}
                   style={{
-                    padding: '0.5rem 1rem',
+                    padding: '0.45rem 0.85rem',
                     borderRadius: '8px',
-                    border: csvTargetTable === 'jobs' ? '2px solid #3b82f6' : '1px solid var(--border-color)',
-                    background: csvTargetTable === 'jobs' ? 'rgba(59, 130, 246, 0.1)' : 'var(--surface-color)',
-                    color: csvTargetTable === 'jobs' ? '#3b82f6' : 'var(--text-secondary)',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
+                    border: csvUploadMode === 'fill_empty' ? '2px solid #f59e0b' : '1px solid var(--border-color)',
+                    background: csvUploadMode === 'fill_empty' ? 'rgba(245, 158, 11, 0.1)' : 'var(--surface-color)',
+                    color: csvUploadMode === 'fill_empty' ? '#d97706' : 'var(--text-secondary)',
+                    fontWeight: 600,
+                    fontSize: '0.82rem',
                     cursor: 'pointer'
                   }}
                 >
-                  📋 Jobs Table
+                  🛡️ Fill Empty Fields Only (Preserves existing data)
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setCsvTargetTable('job_logs')}
+                  onClick={() => setCsvUploadMode('force_overwrite')}
                   style={{
-                    padding: '0.5rem 1rem',
+                    padding: '0.45rem 0.85rem',
                     borderRadius: '8px',
-                    border: csvTargetTable === 'job_logs' ? '2px solid #3b82f6' : '1px solid var(--border-color)',
-                    background: csvTargetTable === 'job_logs' ? 'rgba(59, 130, 246, 0.1)' : 'var(--surface-color)',
-                    color: csvTargetTable === 'job_logs' ? '#3b82f6' : 'var(--text-secondary)',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
+                    border: csvUploadMode === 'force_overwrite' ? '2px solid #ef4444' : '1px solid var(--border-color)',
+                    background: csvUploadMode === 'force_overwrite' ? 'rgba(239, 68, 68, 0.1)' : 'var(--surface-color)',
+                    color: csvUploadMode === 'force_overwrite' ? '#dc2626' : 'var(--text-secondary)',
+                    fontWeight: 600,
+                    fontSize: '0.82rem',
                     cursor: 'pointer'
                   }}
                 >
-                  📜 Job Logs Table
+                  ⚡ Force Overwrite (Replaces existing DB values)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setCsvUploadMode('full_upsert')}
+                  style={{
+                    padding: '0.45rem 0.85rem',
+                    borderRadius: '8px',
+                    border: csvUploadMode === 'full_upsert' ? '2px solid #10b981' : '1px solid var(--border-color)',
+                    background: csvUploadMode === 'full_upsert' ? 'rgba(16, 185, 129, 0.1)' : 'var(--surface-color)',
+                    color: csvUploadMode === 'full_upsert' ? '#059669' : 'var(--text-secondary)',
+                    fontWeight: 600,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🔄 Full Row Upsert
                 </button>
               </div>
             </div>
 
-            {/* If Jobs Table is selected, show Upload Strategy selector */}
-            {csvTargetTable === 'jobs' && (
-              <div>
-                <label style={labelStyle}>Upload Strategy</label>
-                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <button
-                    type="button"
-                    onClick={() => setCsvUploadMode('fill_empty')}
-                    style={{
-                      padding: '0.45rem 0.85rem',
-                      borderRadius: '8px',
-                      border: csvUploadMode === 'fill_empty' ? '2px solid #f59e0b' : '1px solid var(--border-color)',
-                      background: csvUploadMode === 'fill_empty' ? 'rgba(245, 158, 11, 0.1)' : 'var(--surface-color)',
-                      color: csvUploadMode === 'fill_empty' ? '#d97706' : 'var(--text-secondary)',
-                      fontWeight: 600,
-                      fontSize: '0.82rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    🛡️ Fill Empty Fields Only (Preserves existing data)
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setCsvUploadMode('force_overwrite')}
-                    style={{
-                      padding: '0.45rem 0.85rem',
-                      borderRadius: '8px',
-                      border: csvUploadMode === 'force_overwrite' ? '2px solid #ef4444' : '1px solid var(--border-color)',
-                      background: csvUploadMode === 'force_overwrite' ? 'rgba(239, 68, 68, 0.1)' : 'var(--surface-color)',
-                      color: csvUploadMode === 'force_overwrite' ? '#dc2626' : 'var(--text-secondary)',
-                      fontWeight: 600,
-                      fontSize: '0.82rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    ⚡ Force Overwrite (Replaces existing DB values)
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setCsvUploadMode('full_upsert')}
-                    style={{
-                      padding: '0.45rem 0.85rem',
-                      borderRadius: '8px',
-                      border: csvUploadMode === 'full_upsert' ? '2px solid #10b981' : '1px solid var(--border-color)',
-                      background: csvUploadMode === 'full_upsert' ? 'rgba(16, 185, 129, 0.1)' : 'var(--surface-color)',
-                      color: csvUploadMode === 'full_upsert' ? '#059669' : 'var(--text-secondary)',
-                      fontWeight: 600,
-                      fontSize: '0.82rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    🔄 Full Row Upsert
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Action Buttons */}
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '0.25rem', flexWrap: 'wrap' }}>
               <button 
-                onClick={() => downloadCSV(csvTargetTable)}
+                onClick={() => downloadCSV('jobs')}
                 style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, boxShadow: '0 4px 12px rgba(59,130,246,0.3)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
               >
-                📥 Download {csvTargetTable === 'jobs' ? 'Jobs' : 'Logs'} CSV
+                📥 Download Jobs CSV
               </button>
               
               <div style={{ position: 'relative' }}>
@@ -687,9 +640,9 @@ export default function AdminPage() {
                     borderRadius: '8px', 
                     background: (loadingJobs || loadingLogs || loadingBulkUpdate || loadingForceUpdate)
                       ? 'var(--border-color)' 
-                      : (csvTargetTable === 'jobs' && csvUploadMode === 'force_overwrite'
+                      : (csvUploadMode === 'force_overwrite'
                           ? 'linear-gradient(135deg, #ef4444, #b91c1c)'
-                          : csvTargetTable === 'jobs' && csvUploadMode === 'fill_empty'
+                          : csvUploadMode === 'fill_empty'
                           ? 'linear-gradient(135deg, #f59e0b, #d97706)'
                           : 'linear-gradient(135deg, #10b981, #059669)'), 
                     color: 'white', 
@@ -705,7 +658,7 @@ export default function AdminPage() {
                   {loadingBulkUpdate ? (bulkUpdateProgress ? `Updating ${bulkUpdateProgress.current}/${bulkUpdateProgress.total}...` : 'Updating...') :
                    loadingForceUpdate ? (forceUpdateProgress ? `Overwriting ${forceUpdateProgress.current}/${forceUpdateProgress.total}...` : 'Overwriting...') :
                    loadingJobs || loadingLogs ? 'Uploading...' :
-                   `📤 Upload ${csvTargetTable === 'jobs' ? 'Jobs' : 'Logs'} CSV`}
+                   '📤 Upload Jobs CSV'}
                 </button>
               </div>
             </div>
