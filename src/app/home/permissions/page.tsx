@@ -153,7 +153,9 @@ export default function PermissionsPage({ isEmbedded }: { isEmbedded?: boolean }
       }
     }
 
-    const { error: saveError } = await supabase.from('role_permissions').upsert(allPayload);
+    const { error: saveError } = await supabase.from('role_permissions').upsert(allPayload, {
+      onConflict: 'category,role,section'
+    });
 
     if (saveError) {
       showToast('Error saving permissions: ' + (saveError.message || JSON.stringify(saveError)), 'error');
