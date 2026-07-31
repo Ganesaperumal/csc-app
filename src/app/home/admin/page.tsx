@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase';
 import Papa from 'papaparse';
 import CustomSelect from '../components/CustomSelect';
 import { useRouter } from 'next/navigation';
+import PermissionsPage from '../permissions/page';
+import UsersPage from '../users/page';
 import BulkPodUploadModal from '../components/BulkPodUploadModal';
 import { usePermissions } from '@/components/PermissionsContext';
 
@@ -531,46 +533,16 @@ export default function AdminPage() {
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '860px', margin: '0 auto', height: '100%', overflowY: 'auto', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
+    <div style={{ padding: '2rem', maxWidth: '1250px', margin: '0 auto', height: '100%', overflowY: 'auto', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
 
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
           ⚙️ Admin Center
         </h1>
       </div>
-      {/* 🛡️ 1. Role Permissions Card (Top) */}
-      <div style={{ ...cardStyle, marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#3b82f6', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ background: 'rgba(59,130,246,0.1)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>🛡️</span>
-              Role Permissions Matrix
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: '0.4rem 0 0 0' }}>
-              Manage access levels (None, View, Edit) for Admin, Manager, Executive, and Viewer roles across all pages and features.
-            </p>
-          </div>
-          <button
-            onClick={() => router.push('/home/permissions')}
-            style={{
-              padding: '0.6rem 1.4rem',
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-              color: 'white',
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: 700,
-              fontSize: '0.88rem',
-              boxShadow: '0 4px 12px rgba(59,130,246,0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              flexShrink: 0
-            }}
-          >
-            🛡️ Role Permissions
-          </button>
-        </div>
+      {/* 🛡️ 1. Full Role Permissions Matrix (Top) */}
+      <div style={{ ...cardStyle, marginBottom: '2.5rem' }}>
+        <PermissionsPage isEmbedded={true} />
       </div>
 
       {/* 📦 2. Bulk Data Management Card (Middle) */}
@@ -826,39 +798,9 @@ export default function AdminPage() {
 
       </div>
 
-      {/* 👥 3. Master User Directory Card (Bottom) */}
+      {/* 👥 3. Full Master User Directory & Account Approvals (Bottom) */}
       <div style={cardStyle}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ background: 'rgba(16,185,129,0.1)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>👥</span>
-              Master User Directory &amp; Account Approvals
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: '0.4rem 0 0 0' }}>
-              View all registered user accounts, approve pending sign-ups, assign category permissions, and edit user roles.
-            </p>
-          </div>
-          <button
-            onClick={() => router.push('/home/users')}
-            style={{
-              padding: '0.6rem 1.4rem',
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, #10b981, #047857)',
-              color: 'white',
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: 700,
-              fontSize: '0.88rem',
-              boxShadow: '0 4px 12px rgba(16,185,129,0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              flexShrink: 0
-            }}
-          >
-            👥 User Directory
-          </button>
-        </div>
+        <UsersPage isEmbedded={true} />
       </div>
 
 

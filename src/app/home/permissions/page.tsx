@@ -74,7 +74,7 @@ function buildMatrix(rows: any[]): Matrix {
   return matrix;
 }
 
-export default function PermissionsPage() {
+export default function PermissionsPage({ isEmbedded }: { isEmbedded?: boolean }) {
   const [matrix, setMatrix] = useState<Matrix>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -196,12 +196,12 @@ export default function PermissionsPage() {
   const sections = UI_TAB_SECTIONS[activeTab] || [];
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1100px', margin: '0 auto' }}>
+    <div style={{ padding: isEmbedded ? '0' : '2rem', maxWidth: isEmbedded ? '100%' : '1100px', margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          🛡️ Role Permissions
-        </h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+        <h2 style={{ fontSize: isEmbedded ? '1.25rem' : '1.8rem', fontWeight: 800, color: '#3b82f6', margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          🛡️ 1. Role Permissions Matrix
+        </h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           {saving && (
             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

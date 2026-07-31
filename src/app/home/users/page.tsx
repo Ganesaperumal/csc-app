@@ -41,7 +41,7 @@ const inputStyle: React.CSSProperties = {
   outline: 'none',
 };
 
-export default function UsersPage() {
+export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
   const { getAccessLevel } = usePermissions();
   const [users, setUsers] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -228,11 +228,11 @@ export default function UsersPage() {
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1300px', margin: '0 auto', fontFamily: "'Outfit', sans-serif" }}>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
-          👥 Categorized User Management & Access Control
-        </h1>
+    <div style={{ padding: isEmbedded ? '0' : '2rem', maxWidth: isEmbedded ? '100%' : '1300px', margin: '0 auto', fontFamily: "'Outfit', sans-serif" }}>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h2 style={{ fontSize: isEmbedded ? '1.25rem' : '1.85rem', fontWeight: 800, color: '#10b981', margin: 0, letterSpacing: '-0.02em' }}>
+          👥 3. Master User Directory &amp; Account Approvals
+        </h2>
       </div>
 
       {/* 📊 Master Users Directory Table */}
