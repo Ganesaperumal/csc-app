@@ -75,16 +75,14 @@ export default function AdminPage() {
     { job_number: '', quote_value: '' }
   ]);
   const [loadingJobQuote, setLoadingJobQuote] = useState(false);
-  const [csvUploadMode, setCsvUploadMode] = useState<'fill_empty' | 'force_overwrite' | 'full_upsert'>('fill_empty');
+  const [csvUploadMode, setCsvUploadMode] = useState<'fill_empty' | 'force_overwrite'>('fill_empty');
   const router = useRouter();
 
   const handleConsolidatedCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (csvUploadMode === 'fill_empty') {
-      uploadBulkUpdateCSV(e);
-    } else if (csvUploadMode === 'force_overwrite') {
+    if (csvUploadMode === 'force_overwrite') {
       uploadForceUpdateCSV(e);
     } else {
-      uploadCSV(e, 'jobs');
+      uploadBulkUpdateCSV(e);
     }
   };
 
@@ -595,23 +593,6 @@ export default function AdminPage() {
                   }}
                 >
                   ⚡ Force Overwrite (Replaces existing DB values)
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setCsvUploadMode('full_upsert')}
-                  style={{
-                    padding: '0.45rem 0.85rem',
-                    borderRadius: '8px',
-                    border: csvUploadMode === 'full_upsert' ? '2px solid #10b981' : '1px solid var(--border-color)',
-                    background: csvUploadMode === 'full_upsert' ? 'rgba(16, 185, 129, 0.1)' : 'var(--surface-color)',
-                    color: csvUploadMode === 'full_upsert' ? '#059669' : 'var(--text-secondary)',
-                    fontWeight: 600,
-                    fontSize: '0.82rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  🔄 Full Row Upsert
                 </button>
               </div>
             </div>
