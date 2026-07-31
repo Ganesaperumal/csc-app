@@ -85,7 +85,6 @@ src/
 | `job_documents` | `job_id`, `doc_type`, `file_name`, `s3_key`, `uploaded_by` | Document records |
 | `job_pods` | `job_id`, `file_name`, `s3_key`, `uploaded_by`, `created_at` | Deprecated (migrated to `documents` JSONB) |
 | `whatsapp_logs` | `job_id`, `stage`, `message`, `sent_by`, `sent_at` | WhatsApp notification log |
-| `enquiry_values` | `enquiry_number`, `quote_value`, `source`, `display_id` | Quote tracking |
 | `unbilled_followups` | `job_number`, `agent_name`, `followup_notes`, `next_followup_date`, `display_id` | Unbilled follow-up notes |
 | `role_permissions` | `category` (CSC/Tracking/Unbilled/Admin), `role_name`, `page_name`, `access_level` (None/View/Edit) | RBAC permission matrix |
 | `ai_settings` | Admin-configurable AI prompt context | AI chatbot config |

@@ -56,30 +56,6 @@ export async function POST(request: Request) {
         }
       }
 
-      // 2. Sync enquiry_values table using service role (bypasses client RLS)
-      if (updatedJobs && updatedJobs.length > 0) {
-        for (const j of updatedJobs) {
-          if (j.enq_number) {
-            const { error: enqErr } = await supabaseAdmin
-              .from('enquiry_values')
-              .upsert({ enquiry_number: j.enq_number, quote_value: quoteVal }, { onConflict: 'enquiry_number' });
-
-            if (enqErr) {
-              console.error(`Error upserting enquiry_values (${j.enq_number}):`, enqErr.message || enqErr);
-            }
-          }
-        }
-      } else {
-        // If cleanJobNum is an enquiry_number directly
-        const { error: enqErr } = await supabaseAdmin
-          .from('enquiry_values')
-          .upsert({ enquiry_number: cleanJobNum, quote_value: quoteVal }, { onConflict: 'enquiry_number' });
-
-        if (enqErr) {
-          console.error(`Error upserting enquiry_values directly (${cleanJobNum}):`, enqErr.message || enqErr);
-        }
-      }
-
       updatedCount++;
     }
 

@@ -197,7 +197,7 @@ function ColumnFilterDropdown({
       case 'job_number': return job.job_number || '—';
       case 'enquiry_number': return enqKey || '—';
       case 'customer_company': return `${job.customer_name || ''} ${job.company || ''}`.trim() || '—';
-      case 'quote_value': return String(enquiryValues[enqKey] || job.quote_value || 0);
+      case 'quote_value': return String(job.quote_value || 0);
       case 'packing_date': return formatDate(job.packing_date);
       case 'actual_delivery': return formatDate(job.actual_delivery);
       case 'goods_track_status': return getDisplayGoodsStatus(job.goods_track_status) || '—';
@@ -218,7 +218,7 @@ function ColumnFilterDropdown({
       case 'job_number': return job.job_number || '';
       case 'enquiry_number': return enqKey;
       case 'customer_company': return `${job.customer_name || ''} ${job.company || ''}`.trim();
-      case 'quote_value': return String(enquiryValues[enqKey] || job.quote_value || 0);
+      case 'quote_value': return String(job.quote_value || 0);
       case 'packing_date': return job.packing_date || '';
       case 'actual_delivery': return job.actual_delivery || '';
       case 'goods_track_status': return getDisplayGoodsStatus(job.goods_track_status) || '';
@@ -393,10 +393,9 @@ export default function UnbilledManagementPage() {
 
     setCurrentUser(session.user);
 
-    // Parallel fetch user profile, enquiry values mapping, and upcoming followups
-    const [profileRes, enqRes, remindersRes] = await Promise.all([
+    // Parallel fetch user profile and upcoming followups
+    const [profileRes, remindersRes] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', session.user.id).single(),
-      supabase.from('enquiry_values').select('enquiry_number, quote_value'),
       supabase.from('unbilled_followups').select('*').not('next_followup_date', 'is', null).order('next_followup_date', { ascending: true })
     ]);
 
@@ -404,16 +403,6 @@ export default function UnbilledManagementPage() {
     if (profile) {
       setUserProfile(profile);
     }
-
-    const enqMap: Record<string, number> = {};
-    if (enqRes.data) {
-      enqRes.data.forEach(item => {
-        if (item.enquiry_number) {
-          enqMap[item.enquiry_number] = Number(item.quote_value) || 0;
-        }
-      });
-    }
-    setEnquiryValues(enqMap);
 
     if (remindersRes.data) {
       setUpcomingReminders(remindersRes.data);
@@ -603,7 +592,7 @@ export default function UnbilledManagementPage() {
         else if (colId === 'job_number') val = j.job_number || '';
         else if (colId === 'enquiry_number') val = j.enq_number || j.enquiry_number || '';
         else if (colId === 'customer_company') val = `${j.customer_name || ''} ${j.company || ''}`.trim();
-        else if (colId === 'quote_value') val = String(enquiryValues[j.enq_number || j.enquiry_number || ''] || j.quote_value || 0);
+        else if (colId === 'quote_value') val = String(j.quote_value || 0);
         else if (colId === 'packing_date') val = j.packing_date || '';
         else if (colId === 'actual_delivery') val = j.actual_delivery || '';
         else if (colId === 'goods_track_status') val = getDisplayGoodsStatus(j.goods_track_status) || '';
@@ -628,8 +617,8 @@ export default function UnbilledManagementPage() {
       let valA: any = '';
       let valB: any = '';
       if (activeSortCol === 'quote_value') {
-        valA = Number(enquiryValues[a.enq_number || a.enquiry_number || ''] || a.quote_value || 0);
-        valB = Number(enquiryValues[b.enq_number || b.enquiry_number || ''] || b.quote_value || 0);
+        valA = Number(a.quote_value || 0);
+        valB = Number(b.quote_value || 0);
       } else if (activeSortCol === 'enquiry_number') {
         valA = a.enq_number || a.enquiry_number || '';
         valB = b.enq_number || b.enquiry_number || '';
@@ -666,7 +655,7 @@ export default function UnbilledManagementPage() {
 
     const exportData = filteredJobs.map(j => {
       const enqKey = j.enq_number || j.enquiry_number || '';
-      const val = enquiryValues[enqKey] || j.quote_value || 0;
+      const val = j.quote_value || 0;
       return {
         'Branch': j.branch || '',
         'Job Date': formatDate(j.job_date),
@@ -711,8 +700,7 @@ export default function UnbilledManagementPage() {
     const list = filteredJobs.filter(predicate);
     const count = list.length;
     const value = list.reduce((sum, j) => {
-      const key = j.enq_number || j.enquiry_number || '';
-      return sum + Number(enquiryValues[key] || j.quote_value || 0);
+      return sum + Number(j.quote_value || 0);
     }, 0);
     return { count, value };
   };
@@ -721,7 +709,7 @@ export default function UnbilledManagementPage() {
   const isPoEmpty = (j: any) => !j.po_status || j.po_status.trim() === '';
   const isGoodsEmpty = (j: any) => !j.goods_track_status || j.goods_track_status.trim() === '';
 
-  const totalKpi = { count: filteredJobs.length, value: filteredJobs.reduce((sum, j) => sum + Number(enquiryValues[j.enq_number || j.enquiry_number || ''] || j.quote_value || 0), 0) };
+  const totalKpi = { count: filteredJobs.length, value: filteredJobs.reduce((sum, j) => sum + Number(j.quote_value || 0), 0) };
 
   // 1. No Details: goods_track_status is empty/null AND po_status is empty/null
   const noDetailsKpi = calcKpi(j => isGoodsEmpty(j) && isPoEmpty(j));
