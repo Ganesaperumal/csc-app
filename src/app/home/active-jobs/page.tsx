@@ -671,7 +671,7 @@ function JobsTable() {
   };
 
   const getTitle = () => {
-    return viewMode === 'completed' ? 'Completed Jobs Dashboard' : 'Active Jobs Dashboard';
+    return viewMode === 'completed' ? 'Completed Jobs Dashboard' : 'Active Jobs';
   };
 
   // Infinite scroll calculations

@@ -182,20 +182,7 @@ export default function ProfilePopup({ user }: { user: any }) {
 
 
 
-  const handleTriggerEnqSync = async () => {
-    try {
-      showToast('Triggering ENQ Sync...', 'info');
-      const res = await fetch('/api/ingest-erp/manual-trigger-enq', { method: 'POST' });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to trigger ENQ Sync via API');
-      }
-      showToast('ENQ Sync triggered successfully! Please check GitHub Actions tab for live logs and completion status.', 'success');
-      setIsOpen(false);
-    } catch (err: any) {
-      showToast(err.message, 'error');
-    }
-  };
+
 
   const AvatarComponent = ({ size = 40, showPencil = false }: { size?: number; showPencil?: boolean }) => (
     <div style={{ position: 'relative', width: size, height: size, borderRadius: '50%', cursor: 'pointer', flexShrink: 0,
@@ -280,30 +267,6 @@ export default function ProfilePopup({ user }: { user: any }) {
               </div>
 
               <div style={{ width: '100%', borderTop: '1px solid var(--border-color)', marginBottom: '1rem' }}></div>
-
-              {profile?.role === 'Admin' && (
-                <div style={{ width: '100%', marginBottom: '1rem' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.5rem', paddingLeft: '0.5rem' }}>
-                    Control Center
-                  </div>
-                  
-                  <Link href="/home/users" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.5rem', borderRadius: '8px', color: 'var(--text-primary)', textDecoration: 'none', fontSize: '0.9rem' }}>
-                    <span style={{ fontSize: '1.2rem' }}>👥</span> User Management
-                  </Link>
-                  
-                  <Link href="/home/admin" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.5rem', borderRadius: '8px', color: 'var(--text-primary)', textDecoration: 'none', fontSize: '0.9rem' }}>
-                    <span style={{ fontSize: '1.2rem' }}>⚙️</span> Admin Center
-                  </Link>
-                  
-                  <Link href="/home/permissions" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.5rem', borderRadius: '8px', color: 'var(--text-primary)', textDecoration: 'none', fontSize: '0.9rem' }}>
-                    <span style={{ fontSize: '1.2rem' }}>🛡️</span> Role Permissions
-                  </Link>
-                  
-                  <button onClick={handleTriggerEnqSync} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.5rem', borderRadius: '8px', color: 'var(--text-primary)', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: '0.9rem', marginTop: '4px' }}>
-                    <span style={{ fontSize: '1.2rem' }}>🌐</span> Run ENQ Scraper (Headless)
-                  </button>
-                </div>
-              )}
 
               <button 
                 onClick={() => supabase.auth.signOut()}

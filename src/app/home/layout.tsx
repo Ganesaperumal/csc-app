@@ -11,7 +11,7 @@ import ProfilePopup from './components/ProfilePopup';
 import SyncERPButton from './components/SyncERPButton';
 import CommandPalette from './components/CommandPalette';
 import AIChatbot from '../components/AIChatbot';
-import GlobalDialogs from '@/components/GlobalDialogs';
+import GlobalDialogs, { showToast } from '@/components/GlobalDialogs';
 import PendingApprovalsReminder from './components/PendingApprovalsReminder';
 
 function DashboardNav({ profile }: { profile: any }) {
@@ -19,19 +19,112 @@ function DashboardNav({ profile }: { profile: any }) {
   const searchParams = useSearchParams();
   const { getAccessLevel } = usePermissions();
 
+  const handleTriggerEnqSync = async () => {
+    try {
+      showToast('Triggering ENQ Sync...', 'info');
+      const res = await fetch('/api/ingest-erp/manual-trigger-enq', { method: 'POST' });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to trigger ENQ Sync via API');
+      }
+      showToast('ENQ Sync triggered successfully! Please check GitHub Actions tab for live logs and completion status.', 'success');
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const isAdmin = profile?.role === 'Admin';
+  const canManageUsers = isAdmin || getAccessLevel('User Management', profile) !== 'None';
+  const canAdminCenter = isAdmin || getAccessLevel('Admin Center', profile) !== 'None';
+  const canPermissions = isAdmin;
+  const canRunEnq = isAdmin;
+
+  const hasControlCenterAccess = canManageUsers || canAdminCenter || canPermissions || canRunEnq;
+
+  const canAccessActive = getAccessLevel('Active Jobs', profile) !== 'None';
+  const canAccessClosed = getAccessLevel('Closed Jobs', profile) !== 'None';
+  const isActiveActive = pathname.startsWith('/home/active-jobs');
+  const isClosedActive = pathname === '/home/closed-jobs';
+
   return (
     <nav className={styles.nav}>
       
-      {getAccessLevel('Active Jobs', profile) !== 'None' && (
-        <Link href="/home/active-jobs" className={`${styles.navItem} ${pathname.startsWith('/home/active-jobs') ? styles.active : ''}`}>
-          <span>📋</span> Active Jobs
-        </Link>
-      )}
+      {(canAccessActive || canAccessClosed) && (
+        <div style={{ marginBottom: '0.4rem' }}>
+          <div style={{
+            fontSize: '0.7rem',
+            fontWeight: 800,
+            color: 'var(--text-secondary)',
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+            paddingLeft: '0.5rem',
+            marginBottom: '0.4rem'
+          }}>
+            Jobs Status
+          </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            backgroundColor: 'rgba(148, 163, 184, 0.12)',
+            borderRadius: '12px',
+            padding: '4px',
+            position: 'relative',
+            border: '1px solid var(--border-color)',
+            gap: '4px'
+          }}>
+            {canAccessActive && (
+              <Link
+                href="/home/active-jobs"
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.35rem',
+                  padding: '0.6rem 0.5rem',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                  color: isActiveActive ? '#ffffff' : 'var(--text-secondary)',
+                  background: isActiveActive
+                    ? 'linear-gradient(135deg, #10b981, #059669)'
+                    : 'transparent',
+                  boxShadow: isActiveActive ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
+                }}
+              >
+                <span>📋</span> Active
+              </Link>
+            )}
 
-      {getAccessLevel('Closed Jobs', profile) !== 'None' && (
-        <Link href="/home/closed-jobs" className={`${styles.navItem} ${pathname === '/home/closed-jobs' ? styles.active : ''}`}>
-          <span>🗃️</span> Closed Jobs
-        </Link>
+            {canAccessClosed && (
+              <Link
+                href="/home/closed-jobs"
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.35rem',
+                  padding: '0.6rem 0.5rem',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                  color: isClosedActive ? '#ffffff' : 'var(--text-secondary)',
+                  background: isClosedActive
+                    ? 'linear-gradient(135deg, #6366f1, #4f46e5)'
+                    : 'transparent',
+                  boxShadow: isClosedActive ? '0 4px 12px rgba(79, 70, 229, 0.35)' : 'none',
+                }}
+              >
+                <span>🗃️</span> Closed
+              </Link>
+            )}
+          </div>
+        </div>
       )}
 
       {getAccessLevel('All Jobs', profile) !== 'None' && (
@@ -64,7 +157,37 @@ function DashboardNav({ profile }: { profile: any }) {
         </Link>
       )}
 
+      {hasControlCenterAccess && (
+        <>
+          <div style={{ marginTop: '0.75rem', marginBottom: '0.25rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)', fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', paddingLeft: '0.5rem' }}>
+            Control Center
+          </div>
 
+          {canManageUsers && (
+            <Link href="/home/users" className={`${styles.navItem} ${pathname === '/home/users' ? styles.active : ''}`}>
+              <span>👥</span> User Management
+            </Link>
+          )}
+
+          {canAdminCenter && (
+            <Link href="/home/admin" className={`${styles.navItem} ${pathname === '/home/admin' ? styles.active : ''}`}>
+              <span>⚙️</span> Admin Center
+            </Link>
+          )}
+
+          {canPermissions && (
+            <Link href="/home/permissions" className={`${styles.navItem} ${pathname === '/home/permissions' ? styles.active : ''}`}>
+              <span>🛡️</span> Role Permissions
+            </Link>
+          )}
+
+          {canRunEnq && (
+            <button onClick={handleTriggerEnqSync} className={styles.navItem} style={{ background: 'transparent', border: 'none', width: '100%', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+              <span>🌐</span> Run ENQ Scraper
+            </button>
+          )}
+        </>
+      )}
 
     </nav>
   );
@@ -139,26 +262,24 @@ export default function DashboardLayout({
         {showSidebar && (
           <aside className={`glass ${styles.sidebar}`} style={{ display: 'flex', flexDirection: 'column', padding: 0, zIndex: 50, height: '100vh', position: 'sticky', top: 0 }}>
             
-            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', flex: 1, overflow: 'visible', minHeight: 0 }}>
+            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0 }}>
               
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1rem', flexShrink: 0 }}>
                 <ProfilePopup user={user} />
                 <h2 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 'bold', backgroundImage: 'linear-gradient(45deg, #059669, #10b981)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', letterSpacing: '-0.02em' }}>Jobs Portal</h2>
               </div>
 
-              <div>
+              <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, paddingRight: '4px' }}>
                 <Suspense fallback={<nav className={styles.nav}>Loading...</nav>}>
                   <DashboardNav profile={profile} />
                 </Suspense>
               </div>
               
-              <div style={{ flex: 1 }}></div>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flexShrink: 0, marginTop: '0.5rem' }}>
                  <GroupChatWrapper user={user} profile={profile} />
               </div>
 
-              <div>
+              <div style={{ flexShrink: 0 }}>
                 <SyncERPWrapper user={user} profile={profile} />
               </div>
             </div>

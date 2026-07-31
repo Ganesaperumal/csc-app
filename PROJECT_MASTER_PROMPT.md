@@ -196,4 +196,4 @@ Users have **one primary role** + **two category roles**:
 - **Always update this file**: Reflect architecture/schema/route changes in sections above
 
 ---
-*Last updated: 2026-07-26 | App: csc-app v0.1.0 | Next.js 16.2.9*
+*Last updated: 2026-07-31 | App: csc-app v0.1.0 | Next.js 16.2.9*

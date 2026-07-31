@@ -61,7 +61,7 @@
   position: relative;
   overflow: hidden;
   flex: 0 0 auto;
-  min-width: 120px;
+  box-sizing: border-box;
 }
 
 .kpiCard::before {

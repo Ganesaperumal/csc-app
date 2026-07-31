@@ -134,6 +134,42 @@ function DateCellInput({ value, onChange, disabled }: { value: string | null; on
   );
 }
 
+function AnimatedNumber({ value, isCurrency = false }: { value: number; isCurrency?: boolean }) {
+  const [displayVal, setDisplayVal] = useState(0);
+
+  useEffect(() => {
+    let startTimestamp: number | null = null;
+    const duration = 1500;
+    const startVal = displayVal;
+    const endVal = value;
+
+    if (startVal === endVal) return;
+
+    let animationFrameId: number;
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      // Petrol pump meter rolling effect: continuous linear motion with smooth start and finish ease
+      const easeInOut = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+      const meterProgress = progress * 0.7 + easeInOut * 0.3;
+      const current = Math.floor(startVal + (endVal - startVal) * meterProgress);
+      setDisplayVal(current);
+      if (progress < 1) {
+        animationFrameId = requestAnimationFrame(step);
+      } else {
+        setDisplayVal(endVal);
+      }
+    };
+    animationFrameId = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [value]);
+
+  if (isCurrency) {
+    return <>₹{displayVal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</>;
+  }
+  return <>{displayVal.toLocaleString('en-IN')}</>;
+}
+
 function ColumnFilterDropdown({
   colId,
   jobs,
@@ -287,7 +323,37 @@ export default function UnbilledManagementPage() {
   const [canExportUnbilled, setCanExportUnbilled] = useState(false);
   const [canSeeReminders, setCanSeeReminders] = useState(false);
 
+  // Show job counts only after 1.5-second value animation completes
+  const [showJobCounts, setShowJobCounts] = useState(false);
+
+  useEffect(() => {
+    if (!loading) {
+      setShowJobCounts(false);
+      const timer = setTimeout(() => {
+        setShowJobCounts(true);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
+
+  // Pagination / DOM slicing state for fast rendering
+  const [visibleCount, setVisibleCount] = useState(80);
+
   const router = useRouter();
+
+  useEffect(() => {
+    setVisibleCount(80);
+  }, [search, selectedBranch, selectedGoodsStatus, selectedPoStatus, selectedSpoc, columnFilters, columnSorts]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
+        setVisibleCount(prev => prev + 60);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     fetchInitialData();
@@ -327,26 +393,21 @@ export default function UnbilledManagementPage() {
 
     setCurrentUser(session.user);
 
-    // Fetch user profile
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single();
+    // Parallel fetch user profile, enquiry values mapping, and upcoming followups
+    const [profileRes, enqRes, remindersRes] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', session.user.id).single(),
+      supabase.from('enquiry_values').select('enquiry_number, quote_value'),
+      supabase.from('unbilled_followups').select('*').not('next_followup_date', 'is', null).order('next_followup_date', { ascending: true })
+    ]);
 
+    const profile = profileRes.data;
     if (profile) {
       setUserProfile(profile);
-      // Access enforcement is handled reactively in the permissionsLoading useEffect above
     }
 
-    // 1. Fetch Enquiry Values mapping from public.enquiry_values
-    const { data: enqData } = await supabase
-      .from('enquiry_values')
-      .select('enquiry_number, quote_value');
-
     const enqMap: Record<string, number> = {};
-    if (enqData) {
-      enqData.forEach(item => {
+    if (enqRes.data) {
+      enqRes.data.forEach(item => {
         if (item.enquiry_number) {
           enqMap[item.enquiry_number] = Number(item.quote_value) || 0;
         }
@@ -354,7 +415,10 @@ export default function UnbilledManagementPage() {
     }
     setEnquiryValues(enqMap);
 
-    // 2. Fetch Unbilled Jobs from public.jobs (where erp_status = 'New Order') & public.legacy_jobs
+    if (remindersRes.data) {
+      setUpcomingReminders(remindersRes.data);
+    }
+
     let jobsQuery = supabase
       .from('jobs')
       .select('*')
@@ -374,7 +438,6 @@ export default function UnbilledManagementPage() {
 
     if (requiresSlicing) {
       if (profile.branches && profile.branches.includes('ALL')) {
-        // Has 'ALL' branches permission, no filtering needed
         legacyBranchesToFetch = ['ALL'];
       } else if (profile.branches && profile.branches.length > 0) {
         jobsQuery = jobsQuery.in('branch', profile.branches);
@@ -408,16 +471,9 @@ export default function UnbilledManagementPage() {
       actual_delivery: j.actual_delivery || null,
       source_table: 'legacy_jobs'
     }));
-    
-    console.log('Unbilled - Fetched jobs:', erpJobsList.length, 'legacy_jobs:', legacyJobsList.length);
 
-    // Combine both tables
     const combinedList = [...erpJobsList, ...legacyJobsList];
     setJobs(combinedList);
-
-    // Fetch upcoming reminders across unbilled jobs
-    fetchUpcomingReminders();
-
     setLoading(false);
   };
 
@@ -708,9 +764,10 @@ export default function UnbilledManagementPage() {
 
   const hasAppliedFilters = Object.keys(columnFilters).length > 0 || search.trim() !== '' || !selectedBranch.includes('All') || !selectedGoodsStatus.includes('All') || !selectedPoStatus.includes('All') || !selectedSpoc.includes('All');
 
-  if (loading) {
-    return <div style={{ padding: '2rem' }}>Loading Unbilled Management Dashboard...</div>;
-  }
+  // Fixed 176px width during counter animation (showJobCounts = false), then content-fit width (width: auto) once animation finishes
+  const kpiCardWidthStyle: React.CSSProperties = showJobCounts 
+    ? { flex: '0 0 auto', width: 'auto', minWidth: 'max-content' } 
+    : { flex: '0 0 176px', width: '176px' };
 
   return (
     <div className={styles.container} onClick={() => setActiveFilterColumn(null)}>
@@ -893,64 +950,64 @@ export default function UnbilledManagementPage() {
         <div className={styles.tableContainer}>
           {/* KPI Metric Cards */}
           <div className={styles.kpiGrid}>
-          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(6,182,212,0.15), rgba(6,182,212,0.02))', borderColor: 'rgba(6,182,212,0.3)' }}>
+          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(6,182,212,0.15), rgba(6,182,212,0.02))', borderColor: 'rgba(6,182,212,0.3)' }}>
             <div className={styles.kpiLabel} style={{ color: '#06b6d4' }}>Total</div>
-            <div className={styles.kpiValue}>₹{totalKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-            <div className={styles.kpiCount} style={{ color: '#06b6d4' }}>{totalKpi.count} Jobs</div>
+            <div className={styles.kpiValue}><AnimatedNumber value={totalKpi.value} isCurrency /></div>
+            <div className={styles.kpiCount} style={{ color: '#06b6d4', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{totalKpi.count} Jobs</div>
           </div>
 
-          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(34,197,94,0.02))', borderColor: 'rgba(34,197,94,0.3)' }}>
+          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(34,197,94,0.02))', borderColor: 'rgba(34,197,94,0.3)' }}>
             <div className={styles.kpiLabel} style={{ color: '#22c55e' }}>Billable</div>
-            <div className={styles.kpiValue}>₹{billableKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-            <div className={styles.kpiCount} style={{ color: '#22c55e' }}>{billableKpi.count} Jobs</div>
+            <div className={styles.kpiValue}><AnimatedNumber value={billableKpi.value} isCurrency /></div>
+            <div className={styles.kpiCount} style={{ color: '#22c55e', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{billableKpi.count} Jobs</div>
           </div>
 
-          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.02))', borderColor: 'rgba(239,68,68,0.3)' }}>
+          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.02))', borderColor: 'rgba(239,68,68,0.3)' }}>
             <div className={styles.kpiLabel} style={{ color: '#ef4444' }}>No Details</div>
-            <div className={styles.kpiValue}>₹{noDetailsKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-            <div className={styles.kpiCount} style={{ color: '#ef4444' }}>{noDetailsKpi.count} Jobs</div>
+            <div className={styles.kpiValue}><AnimatedNumber value={noDetailsKpi.value} isCurrency /></div>
+            <div className={styles.kpiCount} style={{ color: '#ef4444', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{noDetailsKpi.count} Jobs</div>
           </div>
 
-          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.02))', borderColor: 'rgba(245,158,11,0.3)' }}>
+          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.02))', borderColor: 'rgba(245,158,11,0.3)' }}>
             <div className={styles.kpiLabel} style={{ color: '#f59e0b' }}>PO&PI Pending</div>
-            <div className={styles.kpiValue}>₹{poPiPendingKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-            <div className={styles.kpiCount} style={{ color: '#f59e0b' }}>{poPiPendingKpi.count} Jobs</div>
+            <div className={styles.kpiValue}><AnimatedNumber value={poPiPendingKpi.value} isCurrency /></div>
+            <div className={styles.kpiCount} style={{ color: '#f59e0b', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{poPiPendingKpi.count} Jobs</div>
           </div>
 
-          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.02))', borderColor: 'rgba(59,130,246,0.3)' }}>
+          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.02))', borderColor: 'rgba(59,130,246,0.3)' }}>
             <div className={styles.kpiLabel} style={{ color: '#3b82f6' }}>Job Completed</div>
-            <div className={styles.kpiValue}>₹{jobCompletedKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-            <div className={styles.kpiCount} style={{ color: '#3b82f6' }}>{jobCompletedKpi.count} Jobs</div>
+            <div className={styles.kpiValue}><AnimatedNumber value={jobCompletedKpi.value} isCurrency /></div>
+            <div className={styles.kpiCount} style={{ color: '#3b82f6', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{jobCompletedKpi.count} Jobs</div>
           </div>
 
-          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(220,38,38,0.15), rgba(220,38,38,0.02))', borderColor: 'rgba(220,38,38,0.3)' }}>
+          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(220,38,38,0.15), rgba(220,38,38,0.02))', borderColor: 'rgba(220,38,38,0.3)' }}>
             <div className={styles.kpiLabel} style={{ color: '#dc2626' }}>Damages</div>
-            <div className={styles.kpiValue}>₹{damagesKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-            <div className={styles.kpiCount} style={{ color: '#dc2626' }}>{damagesKpi.count} Jobs</div>
+            <div className={styles.kpiValue}><AnimatedNumber value={damagesKpi.value} isCurrency /></div>
+            <div className={styles.kpiCount} style={{ color: '#dc2626', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{damagesKpi.count} Jobs</div>
           </div>
 
-          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.02))', borderColor: 'rgba(139,92,246,0.3)' }}>
+          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.02))', borderColor: 'rgba(139,92,246,0.3)' }}>
             <div className={styles.kpiLabel} style={{ color: '#8b5cf6' }}>Storage</div>
-            <div className={styles.kpiValue}>₹{storageKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-            <div className={styles.kpiCount} style={{ color: '#8b5cf6' }}>{storageKpi.count} Jobs</div>
+            <div className={styles.kpiValue}><AnimatedNumber value={storageKpi.value} isCurrency /></div>
+            <div className={styles.kpiCount} style={{ color: '#8b5cf6', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{storageKpi.count} Jobs</div>
           </div>
 
-          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.02))', borderColor: 'rgba(16,185,129,0.3)' }}>
+          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.02))', borderColor: 'rgba(16,185,129,0.3)' }}>
             <div className={styles.kpiLabel} style={{ color: '#10b981' }}>Ready for Billing</div>
-            <div className={styles.kpiValue}>₹{readyForBillingKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-            <div className={styles.kpiCount} style={{ color: '#10b981' }}>{readyForBillingKpi.count} Jobs</div>
+            <div className={styles.kpiValue}><AnimatedNumber value={readyForBillingKpi.value} isCurrency /></div>
+            <div className={styles.kpiCount} style={{ color: '#10b981', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{readyForBillingKpi.count} Jobs</div>
           </div>
 
-          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(153,27,27,0.15), rgba(153,27,27,0.02))', borderColor: 'rgba(153,27,27,0.3)' }}>
+          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(153,27,27,0.15), rgba(153,27,27,0.02))', borderColor: 'rgba(153,27,27,0.3)' }}>
             <div className={styles.kpiLabel} style={{ color: '#991b1b' }}>To Be Cancelled</div>
-            <div className={styles.kpiValue}>₹{toBeCancelledKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-            <div className={styles.kpiCount} style={{ color: '#991b1b' }}>{toBeCancelledKpi.count} Jobs</div>
+            <div className={styles.kpiValue}><AnimatedNumber value={toBeCancelledKpi.value} isCurrency /></div>
+            <div className={styles.kpiCount} style={{ color: '#991b1b', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{toBeCancelledKpi.count} Jobs</div>
           </div>
 
-          <div className={styles.kpiCard} style={{ background: 'linear-gradient(135deg, rgba(100,116,139,0.15), rgba(100,116,139,0.02))', borderColor: 'rgba(100,116,139,0.3)' }}>
+          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(100,116,139,0.15), rgba(100,116,139,0.02))', borderColor: 'rgba(100,116,139,0.3)' }}>
             <div className={styles.kpiLabel} style={{ color: '#64748b' }}>Execution Pending</div>
-            <div className={styles.kpiValue}>₹{executionPendingKpi.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-            <div className={styles.kpiCount} style={{ color: '#64748b' }}>{executionPendingKpi.count} Jobs</div>
+            <div className={styles.kpiValue}><AnimatedNumber value={executionPendingKpi.value} isCurrency /></div>
+            <div className={styles.kpiCount} style={{ color: '#64748b', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{executionPendingKpi.count} Jobs</div>
           </div>
         </div>
 
@@ -1008,7 +1065,23 @@ export default function UnbilledManagementPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredJobs.map((j, idx) => {
+              {loading ? (
+                <tr>
+                  <td colSpan={ALL_UNBILLED_COLUMNS.length} style={{ textAlign: 'center', padding: '3.5rem 1rem', color: 'var(--text-secondary)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{ width: '28px', height: '28px', border: '3px solid var(--border-color)', borderTopColor: '#4f46e5', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                      <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>Loading unbilled jobs...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredJobs.length === 0 ? (
+                <tr>
+                  <td colSpan={ALL_UNBILLED_COLUMNS.length} style={{ textAlign: 'center', padding: '3.5rem 1rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    No matching unbilled jobs found.
+                  </td>
+                </tr>
+              ) : (
+                filteredJobs.slice(0, visibleCount).map((j, idx) => {
                 const enqKey = j.enq_number || j.enquiry_number || '';
                 const quoteVal = enquiryValues[enqKey] || j.quote_value || 0;
                 const uniqueKey = j.id ? `${j.source_table || 'job'}-${j.id}` : `job-${j.job_number}-${idx}`;
@@ -1159,15 +1232,9 @@ export default function UnbilledManagementPage() {
                     </td>
                   </tr>
                 );
-              })}
-              {filteredJobs.length === 0 && (
-                <tr>
-                  <td colSpan={15} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                    No unbilled jobs found matching your filters.
-                  </td>
-                </tr>
-              )}
-            </tbody>
+              })
+            )}
+          </tbody>
           </table>
         </div>
       </div>
