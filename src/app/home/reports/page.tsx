@@ -1936,7 +1936,7 @@ export default function ReportsPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid rgba(148, 163, 184, 0.2)' }}>
-                    {['Time', 'Job Number', 'User', 'Field Changed', 'Old Value', 'New Value'].map(col => (
+                    {['Time', 'Job Number', 'Username', 'Field Changed', 'Old Value', 'New Value'].map(col => (
                       <th key={col} style={{ padding: '0.65rem 0.9rem 0.65rem 0', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                         {col}
                       </th>

@@ -539,7 +539,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           .single();
           
         if (profile) {
-          setAgentName(profile.name || profile.username || data.user.email?.split('@')[0] || 'Agent');
+          setAgentName(profile.username || profile.name || data.user.email?.split('@')[0] || 'User');
           setProfileRoles(profile);
         } else {
           setAgentName(data.user.email?.split('@')[0] || 'Agent');
@@ -751,20 +751,22 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           
         if (error) throw error;
 
-        // Write to audit_logs for every field change
-        for (const [key, val] of Object.entries(updates)) {
-          const oldV = job?.[key];
-          const oldStr = oldV === null || oldV === undefined ? '' : String(oldV);
-          const newStr = val === null || val === undefined ? '' : String(val);
-          if (oldStr !== newStr) {
-            await supabase.from('audit_logs').insert({
-              job_number: decodedId,
-              agent_name: agentName,
-              field_changed: key,
-              old_value: oldStr || null,
-              new_value: newStr || null,
-              changed_at: new Date().toISOString(),
-            });
+        // Write to audit_logs for every field change (Skip Admin updates)
+        if (profileRoles?.role !== 'Admin') {
+          for (const [key, val] of Object.entries(updates)) {
+            const oldV = job?.[key];
+            const oldStr = oldV === null || oldV === undefined ? '' : String(oldV);
+            const newStr = val === null || val === undefined ? '' : String(val);
+            if (oldStr !== newStr) {
+              await supabase.from('audit_logs').insert({
+                job_number: decodedId,
+                agent_name: agentName,
+                field_changed: key,
+                old_value: oldStr || null,
+                new_value: newStr || null,
+                changed_at: new Date().toISOString(),
+              });
+            }
           }
         }
       } catch (err: any) {

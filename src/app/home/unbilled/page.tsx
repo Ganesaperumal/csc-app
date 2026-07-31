@@ -485,12 +485,32 @@ export default function UnbilledManagementPage() {
   const handleUpdateJobField = async (job: any, field: string, value: any) => {
     try {
       const table = job.source_table || 'jobs';
+      const oldV = job[field];
+
       const { error } = await supabase
         .from(table)
         .update({ [field]: value })
         .eq('job_number', job.job_number);
 
       if (error) throw error;
+
+      // Log edit activity to audit_logs if non-admin user
+      if (userProfile?.role !== 'Admin') {
+        const username = userProfile?.username || userProfile?.name || currentUser?.email?.split('@')[0] || 'User';
+        const oldStr = oldV === null || oldV === undefined ? '' : String(oldV);
+        const newStr = value === null || value === undefined ? '' : String(value);
+
+        if (oldStr !== newStr) {
+          await supabase.from('audit_logs').insert({
+            job_number: job.job_number,
+            agent_name: username,
+            field_changed: field,
+            old_value: oldStr || null,
+            new_value: newStr || null,
+            changed_at: new Date().toISOString()
+          });
+        }
+      }
 
       setJobs(prev => prev.map(j => j.job_number === job.job_number ? { ...j, [field]: value } : j));
       showToast(`Updated ${field.replace(/_/g, ' ')}`, 'success');
