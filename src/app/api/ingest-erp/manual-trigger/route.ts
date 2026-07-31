@@ -5,24 +5,28 @@ export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
     const username = body.username || 'Server';
+    const type = body.type || body.workflow;
 
-    const { data, error } = await supabase.from('sync_lock').select('*').eq('id', 1).single();
-    if (error || data?.is_syncing) {
-      return NextResponse.json({ error: 'Sync already in progress.' }, { status: 400 });
+    const GITHUB_WORKFLOW_ID = type === 'enq' ? 'sync-erp-enq.yml' : 'sync-erp.yml';
+
+    if (type !== 'enq') {
+      const { data, error } = await supabase.from('sync_lock').select('*').eq('id', 1).single();
+      if (error || data?.is_syncing) {
+        return NextResponse.json({ error: 'Sync already in progress.' }, { status: 400 });
+      }
+
+      // Set the lock
+      await supabase.from('sync_lock').update({ 
+        is_syncing: true, 
+        started_by: username, 
+        started_at: new Date().toISOString() 
+      }).eq('id', 1);
     }
-
-    // Set the lock
-    await supabase.from('sync_lock').update({ 
-      is_syncing: true, 
-      started_by: username, 
-      started_at: new Date().toISOString() 
-    }).eq('id', 1);
 
     // Ping GitHub Actions to trigger the workflow
     const GITHUB_PAT = process.env.GITHUB_PAT;
-    const GITHUB_OWNER = process.env.GITHUB_OWNER || 'Ganesaperumal'; // Defaulting based on gh CLI
+    const GITHUB_OWNER = process.env.GITHUB_OWNER || 'Ganesaperumal';
     const GITHUB_REPO = process.env.GITHUB_REPO || 'csc-app';
-    const GITHUB_WORKFLOW_ID = 'sync-erp.yml';
 
     if (!GITHUB_PAT) {
       console.warn('GITHUB_PAT not set. We would normally trigger the GitHub Action here.');

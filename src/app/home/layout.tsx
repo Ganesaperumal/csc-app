@@ -21,7 +21,11 @@ function DashboardNav({ profile }: { profile: any }) {
   const handleTriggerEnqSync = async () => {
     try {
       showToast('Triggering ENQ Sync...', 'info');
-      const res = await fetch('/api/ingest-erp/manual-trigger-enq', { method: 'POST' });
+      const res = await fetch('/api/ingest-erp/manual-trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'enq' })
+      });
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to trigger ENQ Sync via API');
