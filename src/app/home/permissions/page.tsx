@@ -137,31 +137,37 @@ export default function PermissionsPage({ isEmbedded }: { isEmbedded?: boolean }
   const handleSave = async () => {
     setSaving(true);
     
-    const toUpdate: any[] = [];
-    const toInsert: any[] = [];
+    const allPayload: any[] = [];
 
     for (const { section: sec, category: cat } of ALL_SECTIONS) {
       for (const role of ROLES) {
         const cell = matrix[cat]?.[sec]?.[role];
-        if (cell?.id) {
-          toUpdate.push({ id: cell.id, category: cat, section: sec, role, access: cell.access });
-        } else if (cell?.access && cell.access !== 'None') {
-          toInsert.push({ category: cat, section: sec, role, access: cell.access });
+        const payloadItem: any = {
+          category: cat,
+          section: sec,
+          role,
+          access: cell?.access || 'None'
+        };
+        if (cell?.id) payloadItem.id = cell.id;
+        allPayload.push(payloadItem);
+
+        // Sync legacy Active Jobs & Closed Jobs sections when CSC Jobs is updated
+        if (sec === 'CSC Jobs') {
+          const activeCell = matrix[cat]?.['Active Jobs']?.[role];
+          const closedCell = matrix[cat]?.['Closed Jobs']?.[role];
+          
+          const activePayload: any = { category: cat, section: 'Active Jobs', role, access: cell?.access || 'None' };
+          if (activeCell?.id) activePayload.id = activeCell.id;
+          allPayload.push(activePayload);
+
+          const closedPayload: any = { category: cat, section: 'Closed Jobs', role, access: cell?.access || 'None' };
+          if (closedCell?.id) closedPayload.id = closedCell.id;
+          allPayload.push(closedPayload);
         }
       }
     }
 
-    let saveError = null;
-
-    if (toUpdate.length > 0) {
-      const { error } = await supabase.from('role_permissions').upsert(toUpdate);
-      if (error) saveError = error;
-    }
-    
-    if (toInsert.length > 0 && !saveError) {
-      const { error } = await supabase.from('role_permissions').insert(toInsert);
-      if (error) saveError = error;
-    }
+    const { error: saveError } = await supabase.from('role_permissions').upsert(allPayload);
 
     if (saveError) {
       showToast('Error saving permissions: ' + (saveError.message || JSON.stringify(saveError)), 'error');

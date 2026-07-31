@@ -54,10 +54,21 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
     if (!userRoles) return 'None';
 
     let maxAccess: AccessLevel = 'None';
-    const targetSection = (pageName === 'Active Jobs' || pageName === 'Closed Jobs') ? 'CSC Jobs' : pageName;
+    const isCSCGroup = pageName === 'Active Jobs' || pageName === 'Closed Jobs' || pageName === 'CSC Jobs';
 
     permissions.forEach(perm => {
-      if (perm.section === pageName || perm.section === targetSection) {
+      let isMatch = perm.section === pageName;
+      if (isCSCGroup) {
+        // If a CSC Jobs entry exists, prefer CSC Jobs over legacy Active/Closed entries
+        const hasCSCJobsRow = permissions.some(p => p.section === 'CSC Jobs' && p.role === (perm.category === 'CSC' ? (userRoles.csc_role || userRoles.role) : userRoles.role));
+        if (hasCSCJobsRow) {
+          isMatch = perm.section === 'CSC Jobs';
+        } else {
+          isMatch = perm.section === 'CSC Jobs' || perm.section === pageName;
+        }
+      }
+
+      if (isMatch) {
         // Prevent orphaned Unbilled category permissions from overriding Activity Log
         if (pageName === 'Activity Log' && perm.category === 'Unbilled') return;
 
@@ -72,11 +83,8 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
 
         // Only grant access if the applicable role matches the permission's role
         if (applicableRole === perm.role && applicableRole !== 'None') {
-          if (perm.access === 'Edit') {
-            maxAccess = 'Edit';
-          } else if (perm.access === 'View' && maxAccess === 'None') {
-            maxAccess = 'View';
-          }
+          const rawAccess = perm.access as string;
+          maxAccess = (rawAccess === 'Read' ? 'View' : perm.access) as AccessLevel || 'None';
         }
       }
     });
