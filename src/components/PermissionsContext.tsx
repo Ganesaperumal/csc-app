@@ -54,9 +54,10 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
     if (!userRoles) return 'None';
 
     let maxAccess: AccessLevel = 'None';
+    const targetSection = (pageName === 'Active Jobs' || pageName === 'Closed Jobs') ? 'CSC Jobs' : pageName;
 
     permissions.forEach(perm => {
-      if (perm.section === pageName) {
+      if (perm.section === pageName || perm.section === targetSection) {
         // Prevent orphaned Unbilled category permissions from overriding Activity Log
         if (pageName === 'Activity Log' && perm.category === 'Unbilled') return;
 

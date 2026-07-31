@@ -8,18 +8,17 @@ const ROLES = ['Admin', 'Manager', 'Executive', 'Viewer'];
 const UI_TABS = ['Pages', 'Features'];
 const UI_TAB_SECTIONS: Record<string, { section: string; category: string }[]> = {
   'Pages': [
-    { section: 'Active Jobs', category: 'CSC' },
-    { section: 'Closed Jobs', category: 'CSC' },
+    { section: 'CSC Jobs', category: 'CSC' },
     { section: 'All Jobs', category: 'CSC' },
     { section: 'Follow-ups', category: 'CSC' },
     { section: 'Reports', category: 'CSC' },
-    { section: 'Unbilled', category: 'Unbilled' },
-    { section: 'Activity Log', category: 'CSC' }
+    { section: 'Unbilled', category: 'Unbilled' }
   ],
   'Features': [
     { section: 'Sync ERP', category: 'CSC' },
     { section: 'CSC Call Alerts', category: 'CSC' },
     { section: 'Export Jobs', category: 'CSC' },
+    { section: 'Activity Log', category: 'CSC' },
     { section: 'Unbilled Followup', category: 'Unbilled' },
     { section: 'Export Unbilled', category: 'Unbilled' }
   ]
