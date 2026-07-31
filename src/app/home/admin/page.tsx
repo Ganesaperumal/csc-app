@@ -72,7 +72,82 @@ export default function AdminPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [syncingPods, setSyncingPods] = useState(false);
+  const [jobQuoteRows, setJobQuoteRows] = useState<{ job_number: string; quote_value: string }[]>([
+    { job_number: '', quote_value: '' },
+    { job_number: '', quote_value: '' }
+  ]);
+  const [loadingJobQuote, setLoadingJobQuote] = useState(false);
+  const [csvTargetTable, setCsvTargetTable] = useState<'jobs' | 'job_logs'>('jobs');
+  const [csvUploadMode, setCsvUploadMode] = useState<'fill_empty' | 'force_overwrite' | 'full_upsert'>('fill_empty');
   const router = useRouter();
+
+  const handleConsolidatedCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (csvTargetTable === 'job_logs') {
+      uploadCSV(e, 'job_logs');
+      return;
+    }
+    if (csvUploadMode === 'fill_empty') {
+      uploadBulkUpdateCSV(e);
+    } else if (csvUploadMode === 'force_overwrite') {
+      uploadForceUpdateCSV(e);
+    } else {
+      uploadCSV(e, 'jobs');
+    }
+  };
+
+  const handleAddJobQuoteRow = () => {
+    setJobQuoteRows(prev => [...prev, { job_number: '', quote_value: '' }]);
+  };
+
+  const handleRemoveJobQuoteRow = (index: number) => {
+    if (jobQuoteRows.length <= 1) return;
+    setJobQuoteRows(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleJobQuoteRowChange = (index: number, field: 'job_number' | 'quote_value', value: string) => {
+    setJobQuoteRows(prev => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  };
+
+  const handleUpdateJobQuoteValues = async () => {
+    const validRows = jobQuoteRows.filter(r => r.job_number.trim() !== '');
+    if (validRows.length === 0) {
+      showToast('Please enter at least one Job Number before updating.', 'error');
+      return;
+    }
+
+    const confirmed = await customConfirm(
+      `Are you sure you want to forcibly update quote values for ${validRows.length} Job number(s)?`
+    );
+    if (!confirmed) return;
+
+    setLoadingJobQuote(true);
+    try {
+      const res = await fetch('/api/admin/update-quote-values', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows: validRows })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to update quote values');
+      }
+
+      showToast(`Successfully updated ${data.updatedCount} Job quote value(s)!`, 'success');
+      setJobQuoteRows([
+        { job_number: '', quote_value: '' },
+        { job_number: '', quote_value: '' }
+      ]);
+    } catch (err: any) {
+      showToast(`Failed to update Job quote values: ${err.message}`, 'error');
+    } finally {
+      setLoadingJobQuote(false);
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -501,12 +576,321 @@ export default function AdminPage() {
         <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
           ⚙️ Admin Center
         </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.35rem' }}>
-          Manage team members, roles, and bulk data operations.
-        </p>
       </div>
 
-      {/* AI Settings Card */}
+      {/* Bulk Data Management Card */}
+      <div style={cardStyle}>
+        <h2 style={{ margin: '0 0 1.5rem', fontSize: '1.25rem', fontWeight: 800, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ background: 'rgba(245,158,11,0.1)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>📦</span>
+          Bulk Data Management
+        </h2>
+        
+        {/* 1. CSV Data Export & Import Center */}
+        <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span>📊</span> 1. CSV Data Import &amp; Export
+          </h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+            Download or bulk update system tables using CSV files. Choose your target table and upload strategy below.
+          </p>
+
+          <div style={{ background: 'rgba(148, 163, 184, 0.05)', borderRadius: '12px', padding: '1.2rem', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+            
+            {/* Target Table Selector */}
+            <div>
+              <label style={labelStyle}>Target Table</label>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setCsvTargetTable('jobs')}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    borderRadius: '8px',
+                    border: csvTargetTable === 'jobs' ? '2px solid #3b82f6' : '1px solid var(--border-color)',
+                    background: csvTargetTable === 'jobs' ? 'rgba(59, 130, 246, 0.1)' : 'var(--surface-color)',
+                    color: csvTargetTable === 'jobs' ? '#3b82f6' : 'var(--text-secondary)',
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  📋 Jobs Table
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setCsvTargetTable('job_logs')}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    borderRadius: '8px',
+                    border: csvTargetTable === 'job_logs' ? '2px solid #3b82f6' : '1px solid var(--border-color)',
+                    background: csvTargetTable === 'job_logs' ? 'rgba(59, 130, 246, 0.1)' : 'var(--surface-color)',
+                    color: csvTargetTable === 'job_logs' ? '#3b82f6' : 'var(--text-secondary)',
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  📜 Job Logs Table
+                </button>
+              </div>
+            </div>
+
+            {/* If Jobs Table is selected, show Upload Strategy selector */}
+            {csvTargetTable === 'jobs' && (
+              <div>
+                <label style={labelStyle}>Upload Strategy</label>
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setCsvUploadMode('fill_empty')}
+                    style={{
+                      padding: '0.45rem 0.85rem',
+                      borderRadius: '8px',
+                      border: csvUploadMode === 'fill_empty' ? '2px solid #f59e0b' : '1px solid var(--border-color)',
+                      background: csvUploadMode === 'fill_empty' ? 'rgba(245, 158, 11, 0.1)' : 'var(--surface-color)',
+                      color: csvUploadMode === 'fill_empty' ? '#d97706' : 'var(--text-secondary)',
+                      fontWeight: 600,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🛡️ Fill Empty Fields Only (Preserves existing data)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCsvUploadMode('force_overwrite')}
+                    style={{
+                      padding: '0.45rem 0.85rem',
+                      borderRadius: '8px',
+                      border: csvUploadMode === 'force_overwrite' ? '2px solid #ef4444' : '1px solid var(--border-color)',
+                      background: csvUploadMode === 'force_overwrite' ? 'rgba(239, 68, 68, 0.1)' : 'var(--surface-color)',
+                      color: csvUploadMode === 'force_overwrite' ? '#dc2626' : 'var(--text-secondary)',
+                      fontWeight: 600,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ⚡ Force Overwrite (Replaces existing DB values)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCsvUploadMode('full_upsert')}
+                    style={{
+                      padding: '0.45rem 0.85rem',
+                      borderRadius: '8px',
+                      border: csvUploadMode === 'full_upsert' ? '2px solid #10b981' : '1px solid var(--border-color)',
+                      background: csvUploadMode === 'full_upsert' ? 'rgba(16, 185, 129, 0.1)' : 'var(--surface-color)',
+                      color: csvUploadMode === 'full_upsert' ? '#059669' : 'var(--text-secondary)',
+                      fontWeight: 600,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🔄 Full Row Upsert
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+              <button 
+                onClick={() => downloadCSV(csvTargetTable)}
+                style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, boxShadow: '0 4px 12px rgba(59,130,246,0.3)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                📥 Download {csvTargetTable === 'jobs' ? 'Jobs' : 'Logs'} CSV
+              </button>
+              
+              <div style={{ position: 'relative' }}>
+                <input 
+                  type="file" 
+                  accept=".csv"
+                  onChange={handleConsolidatedCsvUpload}
+                  style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
+                  disabled={loadingJobs || loadingLogs || loadingBulkUpdate || loadingForceUpdate}
+                />
+                <button 
+                  disabled={loadingJobs || loadingLogs || loadingBulkUpdate || loadingForceUpdate}
+                  style={{ 
+                    padding: '0.6rem 1.2rem', 
+                    borderRadius: '8px', 
+                    background: (loadingJobs || loadingLogs || loadingBulkUpdate || loadingForceUpdate)
+                      ? 'var(--border-color)' 
+                      : (csvTargetTable === 'jobs' && csvUploadMode === 'force_overwrite'
+                          ? 'linear-gradient(135deg, #ef4444, #b91c1c)'
+                          : csvTargetTable === 'jobs' && csvUploadMode === 'fill_empty'
+                          ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+                          : 'linear-gradient(135deg, #10b981, #059669)'), 
+                    color: 'white', 
+                    border: 'none', 
+                    pointerEvents: 'none', 
+                    fontWeight: 600, 
+                    boxShadow: '0 4px 12px rgba(16,185,129,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem'
+                  }}
+                >
+                  {loadingBulkUpdate ? (bulkUpdateProgress ? `Updating ${bulkUpdateProgress.current}/${bulkUpdateProgress.total}...` : 'Updating...') :
+                   loadingForceUpdate ? (forceUpdateProgress ? `Overwriting ${forceUpdateProgress.current}/${forceUpdateProgress.total}...` : 'Overwriting...') :
+                   loadingJobs || loadingLogs ? 'Uploading...' :
+                   `📤 Upload ${csvTargetTable === 'jobs' ? 'Jobs' : 'Logs'} CSV`}
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* 2. Job Quote Value Quick Editor */}
+        <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem', gap: '1rem', flexWrap: 'wrap' }}>
+            <div>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span>💰</span> 2. Job Quote Values Quick Editor
+              </h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0.25rem 0 0 0' }}>
+                Add row(s) to enter Job Number and Quote Value. Click <strong>Update</strong> at top right to forcibly update database values (or set null if left empty).
+              </p>
+            </div>
+
+            <button
+              onClick={handleUpdateJobQuoteValues}
+              disabled={loadingJobQuote}
+              style={{
+                padding: '0.6rem 1.4rem',
+                borderRadius: '8px',
+                background: loadingJobQuote ? 'var(--border-color)' : 'linear-gradient(135deg, #10b981, #059669)',
+                color: 'white',
+                border: 'none',
+                cursor: loadingJobQuote ? 'not-allowed' : 'pointer',
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                flexShrink: 0
+              }}
+            >
+              {loadingJobQuote ? 'Updating...' : '⚡ Update'}
+            </button>
+          </div>
+
+          <div style={{ background: 'rgba(148, 163, 184, 0.05)', borderRadius: '12px', padding: '1rem', border: '1px solid var(--border-color)', marginTop: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 1fr 40px', gap: '0.75rem', fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', paddingLeft: '0.25rem' }}>
+                <div>#</div>
+                <div>Job Number / ENQ</div>
+                <div>Quote Value (₹)</div>
+                <div></div>
+              </div>
+
+              {jobQuoteRows.map((row, index) => (
+                <div key={index} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 1fr 40px', gap: '0.75rem', alignItems: 'center' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', paddingLeft: '0.25rem' }}>
+                    #{index + 1}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="e.g. TI-2024-001 or ENQ123"
+                    value={row.job_number}
+                    onChange={(e) => handleJobQuoteRowChange(index, 'job_number', e.target.value)}
+                    style={{
+                      padding: '0.55rem 0.8rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      background: 'var(--surface-color)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.85rem'
+                    }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Quote value (or empty for null)"
+                    value={row.quote_value}
+                    onChange={(e) => handleJobQuoteRowChange(index, 'quote_value', e.target.value)}
+                    style={{
+                      padding: '0.55rem 0.8rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      background: 'var(--surface-color)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.85rem'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveJobQuoteRow(index)}
+                    disabled={jobQuoteRows.length <= 1}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: jobQuoteRows.length <= 1 ? 'var(--border-color)' : '#ef4444',
+                      cursor: jobQuoteRows.length <= 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '1.1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0.4rem'
+                    }}
+                    title="Remove Row"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))}
+
+              <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={handleAddJobQuoteRow}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    borderRadius: '8px',
+                    border: '1px dashed var(--primary-color)',
+                    background: 'rgba(79, 70, 229, 0.05)',
+                    color: '#4f46e5',
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem'
+                  }}
+                >
+                  ➕ Add Row
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Bulk Document Upload (Cloudflare R2) */}
+        <div>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span>📁</span> 3. Bulk Document &amp; POD Upload
+          </h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+            Upload PODs and job attachments directly to Cloudflare R2 cloud storage.
+          </p>
+          
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <button 
+              onClick={() => setShowBulkUpload(true)}
+              style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, boxShadow: '0 4px 12px rgba(59,130,246,0.3)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              📄 Bulk Upload Documents
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      {/* AI Settings Card (Under Bulk Data Management) */}
       <div style={cardStyle}>
         <h2 style={{ margin: '0 0 1rem', fontSize: '1.25rem', fontWeight: 800, color: '#8b5cf6', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ background: 'rgba(139,92,246,0.1)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>🤖</span>
@@ -538,151 +922,6 @@ export default function AdminPage() {
           >
             {savingAi ? 'Saving...' : '💾 Save AI Instructions'}
           </button>
-        </div>
-      </div>
-
-      {/* Bulk Data Management Card */}
-      <div style={cardStyle}>
-        <h2 style={{ margin: '0 0 1.5rem', fontSize: '1.25rem', fontWeight: 800, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ background: 'rgba(245,158,11,0.1)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>📦</span>
-          Bulk Data Management:
-        </h2>
-        
-        {/* Jobs Section */}
-        <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Jobs Table</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-            Download the current jobs as a CSV file, edit it, and upload it back. Uses <strong>job_number</strong> as the unique identifier for updates (UPSERT).
-          </p>
-          
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <button 
-              onClick={() => downloadCSV('jobs')}
-              style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}
-            >
-              Download Jobs CSV
-            </button>
-            
-            <div style={{ position: 'relative' }}>
-              <input 
-                type="file" 
-                accept=".csv"
-                onChange={(e) => uploadCSV(e, 'jobs')}
-                style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
-                disabled={loadingJobs}
-              />
-              <button 
-                disabled={loadingJobs}
-                style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: loadingJobs ? 'var(--border-color)' : 'linear-gradient(135deg, #10b981, #059669)', color: 'white', border: 'none', pointerEvents: 'none', fontWeight: 600, boxShadow: '0 4px 12px rgba(16,185,129,0.3)' }}
-              >
-                {loadingJobs ? 'Uploading...' : 'Upload Jobs CSV'}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Bulk Update Section */}
-        <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Bulk Update Jobs (Multi-Column)</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-            Upload a CSV with <strong>Job_number</strong> and one or more columns to update. This will ONLY update existing jobs, and will ONLY fill in empty (null) values in the database, preserving any existing data.
-          </p>
-          
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <div style={{ position: 'relative' }}>
-              <input 
-                type="file" 
-                accept=".csv"
-                onChange={uploadBulkUpdateCSV}
-                style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
-                disabled={loadingBulkUpdate}
-              />
-              <button 
-                disabled={loadingBulkUpdate}
-                style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: loadingBulkUpdate ? 'var(--border-color)' : 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white', border: 'none', pointerEvents: 'none', fontWeight: 600, boxShadow: '0 4px 12px rgba(245,158,11,0.3)' }}
-              >
-                {loadingBulkUpdate ? (bulkUpdateProgress ? `Updating ${bulkUpdateProgress.current} of ${bulkUpdateProgress.total}...` : 'Updating...') : 'Upload Bulk Update CSV'}
-              </button>
-         
-            </div>
-          </div>
-        </div>
-
-        {/* Force Update Section */}
-        <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Force Update Jobs (Multi-Column)</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-            Upload a CSV with <strong>Job_number</strong> and columns to update. This will <strong>OVERWRITE</strong> existing data in the database with the values from your CSV. (Empty CSV cells are ignored).
-          </p>
-          
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <div style={{ position: 'relative' }}>
-              <input 
-                type="file" 
-                accept=".csv"
-                onChange={uploadForceUpdateCSV}
-                style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
-                disabled={loadingForceUpdate}
-              />
-              <button 
-                disabled={loadingForceUpdate}
-                style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: loadingForceUpdate ? 'var(--border-color)' : 'linear-gradient(135deg, #ef4444, #b91c1c)', color: 'white', border: 'none', pointerEvents: 'none', fontWeight: 600, boxShadow: '0 4px 12px rgba(239,68,68,0.3)' }}
-              >
-                {loadingForceUpdate ? (forceUpdateProgress ? `Updating ${forceUpdateProgress.current} of ${forceUpdateProgress.total}...` : 'Updating...') : 'Upload Force Update CSV'}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Bulk Document Upload Section */}
-        <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Bulk Upload Documents</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-            Bulk upload Documents to Cloudflare R2.
-          </p>
-          
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <button 
-              onClick={() => setShowBulkUpload(true)}
-              style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}
-            >
-              📄 Bulk Upload Documents
-            </button>
-          </div>
-        </div>
-
-
-        {/* Job Logs Section */}
-        <div>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Job Logs Table</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-            Download and bulk upload job logs. If you are adding new logs, leave the <strong>id</strong> column blank. Must include <strong>job_number</strong> to map correctly.
-          </p>
-          
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <button 
-              onClick={() => downloadCSV('job_logs')}
-              style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600, boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}
-            >
-              Download Logs CSV
-            </button>
-            
-            <div style={{ position: 'relative' }}>
-              <input 
-                type="file" 
-                accept=".csv"
-                onChange={(e) => uploadCSV(e, 'job_logs')}
-                style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
-                disabled={loadingLogs}
-              />
-              <button 
-                disabled={loadingLogs}
-                style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: loadingLogs ? 'var(--border-color)' : 'linear-gradient(135deg, #10b981, #059669)', color: 'white', border: 'none', pointerEvents: 'none', fontWeight: 600, boxShadow: '0 4px 12px rgba(16,185,129,0.3)' }}
-              >
-                {loadingLogs ? 'Uploading...' : 'Upload Logs CSV'}
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 

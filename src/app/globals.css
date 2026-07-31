@@ -337,8 +337,34 @@ select option {
   border-radius: 50%;
   background: rgba(255,255,255,0.12);
 }
+@keyframes kpiPopIn {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.85);
+    filter: blur(3px);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translateY(-2px) scale(1.05);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0px);
+  }
+}
+
 .kpi-card .kpi-icon { font-size: 1.6rem; line-height: 1; }
-.kpi-card .kpi-value { font-size: 2rem; font-weight: 800; color: #fff; letter-spacing: -0.04em; line-height: 1; }
+.kpi-card .kpi-value, .kpi-value { 
+  font-size: 2rem; 
+  font-weight: 800; 
+  color: #fff; 
+  letter-spacing: -0.04em; 
+  line-height: 1; 
+  display: inline-block;
+  animation: kpiPopIn 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
 .kpi-card .kpi-label { font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.75); text-transform: uppercase; letter-spacing: 0.06em; }
 
 /* ═══ STATUS BADGE PILLS ═══ */

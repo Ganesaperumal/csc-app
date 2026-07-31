@@ -340,7 +340,7 @@ export default function FollowUpsPage() {
             </span>
           </h1>
           <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            {isAdmin ? `Admin Dashboard — Managing follow-ups for all active coordinators` : `Coordinator Portal — Managing follow-up reminders for ${agentName}`}
+            {isAdmin ? `Managing follow-ups for all active coordinators` : `Managing follow-up reminders for ${agentName}`}
           </p>
         </div>
 

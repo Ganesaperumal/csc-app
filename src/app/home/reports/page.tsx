@@ -24,6 +24,41 @@ const CHART_COLORS = [
   '#84cc16', // Lime
 ];
 
+const FIELD_LABELS: Record<string, string> = {
+  goods_track_status: 'Goods Track Status',
+  car_track_status: 'Car Track Status',
+  follow_up_date: 'Follow-Up Date',
+  dispatch_date: 'Dispatch Date',
+  expected_to_reach_dest: 'Expected Reaching Date',
+  reached_destination: 'Reached Destination Date',
+  transit_days: 'Transit Days',
+  deviation: 'Deviation',
+  deviation_reason: 'Deviation Reason',
+  planned_delivery: 'Planned Delivery Date',
+  actual_delivery: 'Actual Delivery Date',
+  dest_supervisor: 'Destination Supervisor',
+  dest_floor: 'Destination Floor',
+  dest_service_lift: 'Dest Service Lift',
+  dest_parking: 'Dest Parking',
+  dest_instructions: 'Dest Instructions',
+  incidents: 'Incidents',
+  jtr_percentage: 'JTR %',
+  google_review_taken: 'Google Review',
+  referrals: 'Referrals',
+  packing_date: 'Packing Date',
+  packing_team_supervisor: 'Packing Supervisor',
+  heavy_items: 'Heavy Items',
+  car_included: 'Car Included',
+  car_pickup_date: 'Car Pickup Date',
+  car_delivery_date: 'Car Delivery Date',
+  spoc_name: 'SPOC',
+  operation_by: 'Operation By',
+  customer_name: 'Customer Name',
+  customer_phone: 'Contact',
+  origin: 'Origin',
+  destination: 'Destination',
+};
+
 // Helper to format date
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
@@ -503,7 +538,13 @@ export default function ReportsPage() {
   const router = useRouter();
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<'jobs' | 'agents' | 'unbilled' | 'branch_users'>('jobs');
+  const [activeTab, setActiveTab] = useState<'jobs' | 'agents' | 'unbilled' | 'branch_users' | 'activity_log'>('jobs');
+  
+  // Activity Log Tab Filters
+  const [logSearch, setLogSearch] = useState('');
+  const [logAgentFilter, setLogAgentFilter] = useState('');
+  const [logFieldFilter, setLogFieldFilter] = useState('');
+  const [logDateFilter, setLogDateFilter] = useState('');
   
   // Loading and Raw Data States
   const [loading, setLoading] = useState(true);
@@ -531,6 +572,16 @@ export default function ReportsPage() {
   // Sorting for Active Jobs table
   const [jobsSortField, setJobsSortField] = useState('job_date');
   const [jobsSortOrder, setJobsSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (tabParam === 'activity_log' || tabParam === 'jobs' || tabParam === 'unbilled' || tabParam === 'agents' || tabParam === 'branch_users') {
+        setActiveTab(tabParam as any);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     // Check authentication and load data
@@ -1051,6 +1102,41 @@ export default function ReportsPage() {
     };
   }, [jobs, activeJobsRaw, comms, notes, auditLogs]);
 
+  // Activity Log tab filtering & unique lists
+  const filteredAuditLogs = useMemo(() => {
+    const nonTriggerLogs = (auditLogs || []).filter((log: any) => {
+      if (log.field_changed === 'goods_track_status') {
+        const match = log.changed_at?.match(/\.(\d+)/);
+        if (match && match[1].length > 3) return false;
+      }
+      return true;
+    });
+
+    return nonTriggerLogs.filter((log: any) => {
+      const matchSearch = !logSearch ||
+        log.job_number?.toLowerCase().includes(logSearch.toLowerCase()) ||
+        log.agent_name?.toLowerCase().includes(logSearch.toLowerCase()) ||
+        log.field_changed?.toLowerCase().includes(logSearch.toLowerCase()) ||
+        log.new_value?.toLowerCase().includes(logSearch.toLowerCase());
+      const matchAgent = !logAgentFilter || log.agent_name === logAgentFilter;
+      const matchField = !logFieldFilter || log.field_changed === logFieldFilter;
+      let matchDate = true;
+      if (logDateFilter && log.changed_at) {
+        const logDate = new Date(log.changed_at).toISOString().split('T')[0];
+        matchDate = logDate === logDateFilter;
+      }
+      return matchSearch && matchAgent && matchField && matchDate;
+    });
+  }, [auditLogs, logSearch, logAgentFilter, logFieldFilter, logDateFilter]);
+
+  const uniqueLogAgents = useMemo(() => {
+    return Array.from(new Set((auditLogs || []).map((l: any) => l.agent_name).filter(Boolean))).sort() as string[];
+  }, [auditLogs]);
+
+  const uniqueLogFields = useMemo(() => {
+    return Array.from(new Set((auditLogs || []).map((l: any) => l.field_changed).filter(Boolean))).sort() as string[];
+  }, [auditLogs]);
+
   // Sorting Handler for jobs table
   const handleJobsSort = (field: string) => {
     if (jobsSortField === field) {
@@ -1098,9 +1184,6 @@ export default function ReportsPage() {
               Reports & Analytics
             </h1>
           </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.4rem', fontWeight: 500 }}>
-            360° Operations Dashboard · Real-time metrics and Agent activity oversight
-          </p>
         </div>
 
         {/* Global Refresh Button */}
@@ -1160,7 +1243,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)', paddingBottom: '0.25rem' }}>
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)', paddingBottom: '0.25rem', overflowX: 'auto' }}>
         <button
           onClick={() => setActiveTab('jobs')}
           style={{
@@ -1175,7 +1258,8 @@ export default function ReportsPage() {
             transition: 'all 0.2s',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem'
+            gap: '0.5rem',
+            whiteSpace: 'nowrap'
           }}
         >
           📋 Active Jobs Report
@@ -1194,7 +1278,8 @@ export default function ReportsPage() {
             transition: 'all 0.2s',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem'
+            gap: '0.5rem',
+            whiteSpace: 'nowrap'
           }}
         >
           💰 Unbilled Report
@@ -1213,7 +1298,8 @@ export default function ReportsPage() {
             transition: 'all 0.2s',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem'
+            gap: '0.5rem',
+            whiteSpace: 'nowrap'
           }}
         >
           👥 Agent Activity Oversight
@@ -1232,10 +1318,31 @@ export default function ReportsPage() {
             transition: 'all 0.2s',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem'
+            gap: '0.5rem',
+            whiteSpace: 'nowrap'
           }}
         >
           🏢 Branch Users Reports
+        </button>
+        <button
+          onClick={() => setActiveTab('activity_log')}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            padding: '0.75rem 1rem',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            borderBottom: activeTab === 'activity_log' ? '3px solid #8b5cf6' : '3px solid transparent',
+            color: activeTab === 'activity_log' ? '#8b5cf6' : 'var(--text-secondary)',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          📜 Activity Log
         </button>
       </div>
 
@@ -1719,6 +1826,177 @@ export default function ReportsPage() {
             <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-primary)' }}>Branch Users Reports</h3>
             <p>Detailed branch-level user performance metrics will be displayed here.</p>
           </div>
+        </div>
+      )}
+
+      {/* --- ACTIVITY LOG TAB --- */}
+      {activeTab === 'activity_log' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          
+          {/* Header & Filter Card */}
+          <div className="glass" style={{ padding: '1.25rem 1.5rem', borderRadius: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span>📜</span> Activity Log &amp; Audit Trail
+                </h3>
+                <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+                  Detailed history of field changes and updates across all job records ({filteredAuditLogs.length} matching logs)
+                </p>
+              </div>
+              
+              <button
+                onClick={loadAllAnalyticsData}
+                style={{
+                  padding: '0.45rem 1rem',
+                  borderRadius: '99px',
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--surface-color)',
+                  color: '#4f46e5',
+                  fontWeight: 700,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  transition: 'all 0.2s'
+                }}
+              >
+                🔄 Refresh
+              </button>
+            </div>
+
+            {/* Filters Row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.85rem', alignItems: 'center' }}>
+              <input
+                type="text"
+                placeholder="🔍 Search job #, agent, field, value..."
+                value={logSearch}
+                onChange={e => setLogSearch(e.target.value)}
+                style={{
+                  padding: '0.6rem 0.85rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--surface-color)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.85rem'
+                }}
+              />
+
+              <CustomSelect
+                placeholder="All Users"
+                value={logAgentFilter}
+                onChange={(val) => setLogAgentFilter(val)}
+                options={[
+                  { value: '', label: 'All Users' },
+                  ...uniqueLogAgents.map(a => ({ value: a, label: userMap[a.toLowerCase()] || a }))
+                ]}
+              />
+
+              <CustomSelect
+                placeholder="All Fields"
+                value={logFieldFilter}
+                onChange={(val) => setLogFieldFilter(val)}
+                options={[
+                  { value: '', label: 'All Fields' },
+                  ...uniqueLogFields.map(f => ({ value: f, label: FIELD_LABELS[f] || f }))
+                ]}
+              />
+
+              <input
+                type="date"
+                value={logDateFilter}
+                onChange={e => setLogDateFilter(e.target.value)}
+                style={{
+                  padding: '0.6rem 0.85rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--surface-color)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.85rem'
+                }}
+              />
+
+              {(logSearch || logAgentFilter || logFieldFilter || logDateFilter) && (
+                <button
+                  onClick={() => { setLogSearch(''); setLogAgentFilter(''); setLogFieldFilter(''); setLogDateFilter(''); }}
+                  style={{
+                    padding: '0.55rem 0.85rem',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    background: 'rgba(239, 68, 68, 0.08)',
+                    color: '#dc2626',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  ✕ Clear Filters
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Activity Log Table */}
+          <div className="glass" style={{ padding: '1.25rem 1.5rem', borderRadius: '16px', overflowX: 'auto' }}>
+            {filteredAuditLogs.length === 0 ? (
+              <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                No activity logs found matching the filter criteria.
+              </div>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid rgba(148, 163, 184, 0.2)' }}>
+                    {['Time', 'Job Number', 'User', 'Field Changed', 'Old Value', 'New Value'].map(col => (
+                      <th key={col} style={{ padding: '0.65rem 0.9rem 0.65rem 0', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                        {col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAuditLogs.slice(0, 500).map((log, idx) => (
+                    <tr
+                      key={log.id || idx}
+                      style={{ borderBottom: '1px solid rgba(148,163,184,0.1)', transition: 'background 0.15s', cursor: 'pointer' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-hover)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      onClick={() => log.job_number && router.push(`/home/job/${encodeURIComponent(log.job_number)}`)}
+                    >
+                      <td style={{ padding: '0.7rem 0.9rem 0.7rem 0', color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontSize: '0.78rem' }}>
+                        {log.changed_at ? new Date(log.changed_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                      </td>
+                      <td style={{ padding: '0.7rem 0.9rem 0.7rem 0', fontWeight: 700, color: '#4f46e5' }}>
+                        {log.job_number || '—'}
+                      </td>
+                      <td style={{ padding: '0.7rem 0.9rem 0.7rem 0' }}>
+                        <span style={{
+                          background: getUserColor(userMap[log.agent_name?.toLowerCase()] || log.agent_name).bg,
+                          color: getUserColor(userMap[log.agent_name?.toLowerCase()] || log.agent_name).text,
+                          padding: '0.2rem 0.6rem',
+                          borderRadius: '99px',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                        }}>
+                          {userMap[log.agent_name?.toLowerCase()] || log.agent_name || 'Unknown'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.7rem 0.9rem 0.7rem 0', color: 'var(--text-primary)', fontWeight: 600 }}>
+                        {FIELD_LABELS[log.field_changed] || log.field_changed || '—'}
+                      </td>
+                      <td style={{ padding: '0.7rem 0.9rem 0.7rem 0', color: '#dc2626', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {log.old_value || <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>empty</span>}
+                      </td>
+                      <td style={{ padding: '0.7rem 0 0.7rem 0', color: '#059669', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {log.new_value || <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>empty</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
         </div>
       )}
 

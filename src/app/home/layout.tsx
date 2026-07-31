@@ -151,11 +151,6 @@ function DashboardNav({ profile }: { profile: any }) {
         </Link>
       )}
 
-      {getAccessLevel('Activity Log', profile) !== 'None' && (
-        <Link href="/home/activity-log" className={`${styles.navItem} ${pathname === '/home/activity-log' ? styles.active : ''}`}>
-          <span>📜</span> Activity Log
-        </Link>
-      )}
 
       {hasControlCenterAccess && (
         <>

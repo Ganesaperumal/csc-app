@@ -233,12 +233,7 @@ export default function UsersPage() {
         <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
           👥 Categorized User Management & Access Control
         </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.35rem' }}>
-          Manage user accounts, assign category permissions (CSC, Unbilled), approve pending sign-ups, and control branch access.
-        </p>
       </div>
-
-
 
       {/* 📊 Master Users Directory Table */}
       <div style={cardStyle}>
@@ -247,7 +242,6 @@ export default function UsersPage() {
             <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase' }}>
               Master User Directory ({filteredUsers.length})
             </h3>
-            <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Click any user row to open details modal and edit photo or category permissions.</p>
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>

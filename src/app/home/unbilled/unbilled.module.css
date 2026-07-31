@@ -96,6 +96,8 @@
   color: var(--text-primary);
   margin-bottom: 0.15rem;
   line-height: 1.1;
+  display: inline-block;
+  animation: kpiPopIn 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .kpiCount {
