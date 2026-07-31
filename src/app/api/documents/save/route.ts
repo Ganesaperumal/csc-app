@@ -55,6 +55,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'DB Error updating job with document: ' + updateError.message }, { status: 500 });
     }
 
+    // Log document upload to audit_logs
+    try {
+      const uploadedBy = req.headers.get('x-user-name') || 'User';
+      await supabaseAdmin.from('audit_logs').insert({
+        job_number: job_number,
+        agent_name: uploadedBy,
+        field_changed: 'documents',
+        old_value: null,
+        new_value: `Uploaded ${document_type}: ${filename || 'file'}`,
+        changed_at: new Date().toISOString()
+      });
+    } catch (err) {
+      console.error('Error writing audit_logs for doc:', err);
+    }
+
     return NextResponse.json({ success: true, pod: updated });
   } catch (error: any) {
     console.error('Error in POD upload:', error);
