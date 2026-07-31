@@ -538,9 +538,43 @@ export default function AdminPage() {
           ⚙️ Admin Center
         </h1>
       </div>
+      {/* 🛡️ 1. Role Permissions Card (Top) */}
+      <div style={{ ...cardStyle, marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#3b82f6', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ background: 'rgba(59,130,246,0.1)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>🛡️</span>
+              Role Permissions Matrix
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: '0.4rem 0 0 0' }}>
+              Manage access levels (None, View, Edit) for Admin, Manager, Executive, and Viewer roles across all pages and features.
+            </p>
+          </div>
+          <button
+            onClick={() => router.push('/home/permissions')}
+            style={{
+              padding: '0.6rem 1.4rem',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: 700,
+              fontSize: '0.88rem',
+              boxShadow: '0 4px 12px rgba(59,130,246,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              flexShrink: 0
+            }}
+          >
+            🛡️ Role Permissions
+          </button>
+        </div>
+      </div>
 
-      {/* Bulk Data Management Card */}
-      <div style={cardStyle}>
+      {/* 📦 2. Bulk Data Management Card (Middle) */}
+      <div style={{ ...cardStyle, marginBottom: '2rem' }}>
         <h2 style={{ margin: '0 0 1.5rem', fontSize: '1.25rem', fontWeight: 800, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ background: 'rgba(245,158,11,0.1)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>📦</span>
           Bulk Data Management
@@ -790,6 +824,41 @@ export default function AdminPage() {
           </div>
         </div>
 
+      </div>
+
+      {/* 👥 3. Master User Directory Card (Bottom) */}
+      <div style={cardStyle}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ background: 'rgba(16,185,129,0.1)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>👥</span>
+              Master User Directory &amp; Account Approvals
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: '0.4rem 0 0 0' }}>
+              View all registered user accounts, approve pending sign-ups, assign category permissions, and edit user roles.
+            </p>
+          </div>
+          <button
+            onClick={() => router.push('/home/users')}
+            style={{
+              padding: '0.6rem 1.4rem',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #10b981, #047857)',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: 700,
+              fontSize: '0.88rem',
+              boxShadow: '0 4px 12px rgba(16,185,129,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              flexShrink: 0
+            }}
+          >
+            👥 User Directory
+          </button>
+        </div>
       </div>
 
 
