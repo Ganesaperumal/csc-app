@@ -62,8 +62,6 @@ export default function AdminPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [loadingLogs, setLoadingLogs] = useState(false);
-  const [aiPrompt, setAiPrompt] = useState('');
-  const [savingAi, setSavingAi] = useState(false);
   const [loadingBulkUpdate, setLoadingBulkUpdate] = useState(false);
   const [bulkUpdateProgress, setBulkUpdateProgress] = useState<{ current: number, total: number } | null>(null);
   const [loadingForceUpdate, setLoadingForceUpdate] = useState(false);
@@ -163,7 +161,6 @@ export default function AdminPage() {
             if (level === 'None') { router.push('/home'); return; }
             setUserRole(profile.role);
             setCheckingAuth(false);
-            fetchAiSettings();
           }
         });
     });
@@ -456,36 +453,7 @@ export default function AdminPage() {
     });
   };
 
-  const fetchAiSettings = async () => {
-    try {
-      const res = await fetch('/api/admin/ai-settings');
-      const data = await res.json();
-      if (data.system_prompt) setAiPrompt(data.system_prompt);
-    } catch (err) {
-      console.error('Failed to fetch AI settings', err);
-    }
-  };
 
-  const handleSaveAiSettings = async () => {
-    setSavingAi(true);
-    try {
-      const res = await fetch('/api/admin/ai-settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ system_prompt: aiPrompt })
-      });
-      if (res.ok) {
-        showToast('✅ AI System Instructions updated successfully!', 'success');
-      } else {
-        const data = await res.json();
-        showToast(`❌ Failed: ${data.error}`, 'error');
-      }
-    } catch (err: any) {
-      showToast(`❌ Error: ${err.message}`, 'error');
-    } finally {
-      setSavingAi(false);
-    }
-  };
 
   const handleDeleteAllJobs = async () => {
     if (!await customConfirm('🚨 DANGER! Are you absolutely sure you want to delete EVERY job? This cannot be undone!')) return;

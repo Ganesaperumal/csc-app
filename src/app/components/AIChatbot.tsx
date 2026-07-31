@@ -45,7 +45,7 @@ export default function AIChatbot() {
         })
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       
       if (res.status === 429) {
         setMessages(prev => [...prev, { role: 'ai', text: data.message || 'I am currently processing a high volume of requests. Please give me a minute and try again!' }]);
