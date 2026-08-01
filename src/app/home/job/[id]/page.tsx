@@ -753,8 +753,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
       // audit_logs writing removed
     } catch (err: any) {
-      console.error('Failed to auto-save job:', err);
-      showToast(err.message || 'Failed to save changes to job', 'error');
+      const errMsg = err?.message || err?.details || err?.hint || (typeof err === 'object' ? JSON.stringify(err) : String(err));
+      console.error('Failed to auto-save job:', errMsg, err);
+      showToast(errMsg || 'Failed to save changes to job', 'error');
     } finally {
       setSaving(false);
     }
