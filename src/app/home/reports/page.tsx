@@ -616,13 +616,8 @@ export default function ReportsPage() {
       const { data: jData } = await supabase.from('jobs').select('*');
       setJobs(jData || []);
 
-      // 3. Fetch Audit Logs (limit to 2000 for efficiency)
-      const { data: aData } = await supabase
-        .from('audit_logs')
-        .select('*')
-        .order('changed_at', { ascending: false })
-        .limit(2000);
-      setAuditLogs(aData || []);
+      // 3. Audit logs scrapped/bypassed
+      setAuditLogs([]);
 
       // 4. Fetch Job Communications
       const { data: cData } = await supabase.from('job_communications').select('*');

@@ -510,24 +510,7 @@ export default function UnbilledManagementPage() {
 
       if (error) throw error;
 
-      /* Audit log disabled temporarily per user request
-      if (userProfile?.role !== 'Admin') {
-        const username = userProfile?.username || userProfile?.name || currentUser?.email?.split('@')[0] || 'User';
-        const oldStr = oldV === null || oldV === undefined ? '' : String(oldV);
-        const newStr = value === null || value === undefined ? '' : String(value);
 
-        if (oldStr !== newStr) {
-          await supabase.from('audit_logs').insert({
-            job_number: job.job_number,
-            agent_name: username,
-            field_changed: field,
-            old_value: oldStr || null,
-            new_value: newStr || null,
-            changed_at: new Date().toISOString()
-          });
-        }
-      }
-      */
 
       setJobs(prev => prev.map(j => j.job_number === job.job_number ? { ...j, [field]: value } : j));
       showToast(`Updated ${field.replace(/_/g, ' ')}`, 'success');

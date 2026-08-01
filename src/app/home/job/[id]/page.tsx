@@ -751,26 +751,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
       if (error) throw error;
 
-      /* Audit log disabled temporarily per user request
-      if (profileRoles?.role !== 'Admin') {
-        const currentJob = jobRef.current;
-        for (const [key, val] of Object.entries(toSave)) {
-          const oldV = currentJob?.[key];
-          const oldStr = oldV === null || oldV === undefined ? '' : String(oldV);
-          const newStr = val === null || val === undefined ? '' : String(val);
-          if (oldStr !== newStr) {
-            await supabase.from('audit_logs').insert({
-              job_number: decodedId,
-              agent_name: agentName,
-              field_changed: key,
-              old_value: oldStr || null,
-              new_value: newStr || null,
-              changed_at: new Date().toISOString(),
-            });
-          }
-        }
-      }
-      */
+      // audit_logs writing removed
     } catch (err: any) {
       console.error('Failed to auto-save job:', err);
       showToast(err.message || 'Failed to save changes to job', 'error');
