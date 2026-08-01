@@ -1086,40 +1086,7 @@ export default function ReportsPage() {
     };
   }, [jobs, activeJobsRaw, comms, notes, auditLogs]);
 
-  // Activity Log tab filtering & unique lists
-  const filteredAuditLogs = useMemo(() => {
-    const nonTriggerLogs = (auditLogs || []).filter((log: any) => {
-      if (log.field_changed === 'goods_track_status') {
-        const match = log.changed_at?.match(/\.(\d+)/);
-        if (match && match[1].length > 3) return false;
-      }
-      return true;
-    });
 
-    return nonTriggerLogs.filter((log: any) => {
-      const matchSearch = !logSearch ||
-        log.job_number?.toLowerCase().includes(logSearch.toLowerCase()) ||
-        log.agent_name?.toLowerCase().includes(logSearch.toLowerCase()) ||
-        log.field_changed?.toLowerCase().includes(logSearch.toLowerCase()) ||
-        log.new_value?.toLowerCase().includes(logSearch.toLowerCase());
-      const matchAgent = !logAgentFilter || log.agent_name === logAgentFilter;
-      const matchField = !logFieldFilter || log.field_changed === logFieldFilter;
-      let matchDate = true;
-      if (logDateFilter && log.changed_at) {
-        const logDate = new Date(log.changed_at).toISOString().split('T')[0];
-        matchDate = logDate === logDateFilter;
-      }
-      return matchSearch && matchAgent && matchField && matchDate;
-    });
-  }, [auditLogs, logSearch, logAgentFilter, logFieldFilter, logDateFilter]);
-
-  const uniqueLogAgents = useMemo(() => {
-    return Array.from(new Set((auditLogs || []).map((l: any) => l.agent_name).filter(Boolean))).sort() as string[];
-  }, [auditLogs]);
-
-  const uniqueLogFields = useMemo(() => {
-    return Array.from(new Set((auditLogs || []).map((l: any) => l.field_changed).filter(Boolean))).sort() as string[];
-  }, [auditLogs]);
 
   // Sorting Handler for jobs table
   const handleJobsSort = (field: string) => {
@@ -1202,7 +1169,7 @@ export default function ReportsPage() {
           { label: 'Total Jobs Created', val: globalStats.totalJobs, color: '#4f46e5', icon: '📦' },
           { label: 'Active Jobs', val: globalStats.activeJobs, color: '#f59e0b', icon: '⚡' },
           { label: 'Completed Jobs', val: globalStats.closedJobs, color: '#10b981', icon: '✅' },
-          { label: 'Agent Audit Trails', val: globalStats.totalEdits, color: '#8b5cf6', icon: '📝' },
+
           { label: 'Comm Logs Stored', val: globalStats.totalComms, color: '#ec4899', icon: '💬' },
         ].map(card => (
           <div key={card.label} className="glass" style={{
