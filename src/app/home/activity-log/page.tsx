@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 export default function ActivityLogPage() {
   const router = useRouter();
   useEffect(() => {
-    router.replace('/home/reports?tab=activity_log');
+    router.replace('/home/reports');
   }, [router]);
 
   return (

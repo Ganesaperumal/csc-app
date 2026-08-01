@@ -18,7 +18,6 @@ const UI_TAB_SECTIONS: Record<string, { section: string; category: string }[]> =
     { section: 'Sync ERP', category: 'CSC' },
     { section: 'CSC Call Alerts', category: 'CSC' },
     { section: 'Export Jobs', category: 'CSC' },
-    { section: 'Activity Log', category: 'CSC' },
     { section: 'Unbilled Followup', category: 'Unbilled' },
     { section: 'Export Unbilled', category: 'Unbilled' }
   ]
