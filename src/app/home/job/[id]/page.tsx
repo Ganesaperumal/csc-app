@@ -720,61 +720,102 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
     }
   };
 
+  const pendingUpdatesRef = useRef<Record<string, any>>({});
   const saveTimeout = useRef<NodeJS.Timeout | null>(null);
+  const jobRef = useRef<any>(null);
 
-  const handleFieldChange = (name: string, value: any) => {
+  // Keep jobRef in sync with job state
+  useEffect(() => {
+    jobRef.current = job;
+  }, [job]);
+
+  const flushPendingUpdates = async () => {
+    if (saveTimeout.current) {
+      clearTimeout(saveTimeout.current);
+      saveTimeout.current = null;
+    }
+
+    const toSave = { ...pendingUpdatesRef.current };
+    if (Object.keys(toSave).length === 0) {
+      setSaving(false);
+      return;
+    }
+    pendingUpdatesRef.current = {};
+
+    try {
+      setSaving(true);
+      const { error } = await supabase
+        .from('jobs')
+        .update(toSave)
+        .eq('job_number', decodedId);
+
+      if (error) throw error;
+
+      // Write to audit_logs for every field change (Skip Admin updates)
+      if (profileRoles?.role !== 'Admin') {
+        const currentJob = jobRef.current;
+        for (const [key, val] of Object.entries(toSave)) {
+          const oldV = currentJob?.[key];
+          const oldStr = oldV === null || oldV === undefined ? '' : String(oldV);
+          const newStr = val === null || val === undefined ? '' : String(val);
+          if (oldStr !== newStr) {
+            await supabase.from('audit_logs').insert({
+              job_number: decodedId,
+              agent_name: agentName,
+              field_changed: key,
+              old_value: oldStr || null,
+              new_value: newStr || null,
+              changed_at: new Date().toISOString(),
+            });
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to auto-save job:', err);
+      showToast(err.message || 'Failed to save changes to job', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Flush on unmount if any pending updates remain
+  useEffect(() => {
+    return () => {
+      if (Object.keys(pendingUpdatesRef.current).length > 0) {
+        flushPendingUpdates();
+      }
+    };
+  }, [decodedId, agentName, profileRoles]);
+
+  const handleFieldChange = (name: string, value: any, immediate = false) => {
     if (isViewer) return;
     if (name === 'jtr_percentage' || name === 'transit_days' || name === 'due_days') {
       value = value === '' ? null : Number(value);
     }
 
     const updates: any = { [name]: value };
-    
+
     // If goods_type is changed and includes "vehicle", automatically toggle car on
     if (name === 'goods_type' && typeof value === 'string' && value.toLowerCase().includes('vehicle')) {
       updates.car_included = true;
     }
 
-    const newJob = { ...job, ...updates };
-    setJob(newJob);
+    pendingUpdatesRef.current = { ...pendingUpdatesRef.current, ...updates };
+    setJob((prev: any) => ({ ...prev, ...updates }));
+    setSaving(true);
 
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    
-    setSaving(true);
-    saveTimeout.current = setTimeout(async () => {
-      try {
-        // Save the new values to jobs table
-        const { error } = await supabase
-          .from('jobs')
-          .update(updates)
-          .eq('job_number', decodedId);
-          
-        if (error) throw error;
 
-        // Write to audit_logs for every field change (Skip Admin updates)
-        if (profileRoles?.role !== 'Admin') {
-          for (const [key, val] of Object.entries(updates)) {
-            const oldV = job?.[key];
-            const oldStr = oldV === null || oldV === undefined ? '' : String(oldV);
-            const newStr = val === null || val === undefined ? '' : String(val);
-            if (oldStr !== newStr) {
-              await supabase.from('audit_logs').insert({
-                job_number: decodedId,
-                agent_name: agentName,
-                field_changed: key,
-                old_value: oldStr || null,
-                new_value: newStr || null,
-                changed_at: new Date().toISOString(),
-              });
-            }
-          }
-        }
-      } catch (err: any) {
-        console.error('Failed to auto-save job:', err);
-      } finally {
-        setSaving(false);
-      }
-    }, 1000);
+    // Status fields (goods_track_status, car_track_status) or immediate flags save immediately to DB
+    const isStatusField = name === 'goods_track_status' || name === 'car_track_status' || immediate;
+
+    if (isStatusField) {
+      flushPendingUpdates();
+    } else {
+      saveTimeout.current = setTimeout(() => {
+        flushPendingUpdates();
+      }, 800);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
