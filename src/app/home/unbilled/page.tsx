@@ -73,27 +73,46 @@ const formatDate = (dateStr: string | null) => {
   if (isNaN(date.getTime())) return dateStr;
   const day = date.getDate().toString().padStart(2, '0');
   const month = date.toLocaleString('en-US', { month: 'short' });
-  return `${day}-${month}`;
+  const year = date.getFullYear().toString().slice(-2);
+  return `${day}-${month}-${year}`;
 };
 
 function DateCellInput({ value, onChange, disabled }: { value: string | null; onChange: (val: string) => void; disabled?: boolean }) {
   const [isEditing, setIsEditing] = useState(false);
+  const [draftValue, setDraftValue] = useState(value || '');
   const formatted = formatDate(value);
+
+  const handleStartEditing = () => {
+    if (disabled) return;
+    setDraftValue(value || '');
+    setIsEditing(true);
+  };
+
+  const handleCommit = (valToCommit: string) => {
+    setIsEditing(false);
+    if (valToCommit !== (value || '')) {
+      onChange(valToCommit);
+    }
+  };
 
   if (isEditing && !disabled) {
     return (
       <input
         type="date"
         autoFocus
-        value={value || ''}
-        onChange={(e) => {
-          onChange(e.target.value);
-          setIsEditing(false);
+        value={draftValue}
+        onChange={(e) => setDraftValue(e.target.value)}
+        onBlur={(e) => handleCommit(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            handleCommit(draftValue);
+          } else if (e.key === 'Escape') {
+            setIsEditing(false);
+          }
         }}
-        onBlur={() => setIsEditing(false)}
         style={{
           padding: '0.2rem 0.4rem',
-          width: '95px',
+          width: '105px',
           height: '28px',
           borderRadius: '6px',
           border: '1px solid #4f46e5',
@@ -109,10 +128,10 @@ function DateCellInput({ value, onChange, disabled }: { value: string | null; on
 
   return (
     <div
-      onClick={() => { if (!disabled) setIsEditing(true); }}
+      onClick={handleStartEditing}
       style={{
         padding: '0.2rem 0.4rem',
-        width: '95px',
+        width: '105px',
         height: '28px',
         borderRadius: '6px',
         border: '1px solid var(--border-color)',
@@ -129,7 +148,7 @@ function DateCellInput({ value, onChange, disabled }: { value: string | null; on
       onMouseOver={(e) => { if (!disabled) e.currentTarget.style.borderColor = '#4f46e5'; }}
       onMouseOut={(e) => { if (!disabled) e.currentTarget.style.borderColor = 'var(--border-color)'; }}
     >
-      {formatted}
+      {formatted || <span style={{ opacity: 0.4, fontWeight: 400 }}>- Select -</span>}
     </div>
   );
 }
@@ -345,15 +364,12 @@ export default function UnbilledManagementPage() {
     setVisibleCount(80);
   }, [search, selectedBranch, selectedGoodsStatus, selectedPoStatus, selectedSpoc, columnFilters, columnSorts]);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
-        setVisibleCount(prev => prev + 60);
-      }
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const handleTableScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    if (target.scrollHeight - target.scrollTop - target.clientHeight <= 500) {
+      setVisibleCount(prev => (prev < filteredJobs.length ? prev + 60 : prev));
+    }
+  };
 
   useEffect(() => {
     fetchInitialData();
@@ -948,6 +964,11 @@ export default function UnbilledManagementPage() {
             </button>
           </div>
           )}
+
+          {/* Showing row count indicator */}
+          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', background: 'var(--surface-color)', padding: '0.35rem 0.65rem', borderRadius: '6px', border: '1px solid var(--border-color)', whiteSpace: 'nowrap' }}>
+            Showing {Math.min(visibleCount, filteredJobs.length)} of {filteredJobs.length} jobs
+          </div>
         </div>
       </div>
 
@@ -955,7 +976,7 @@ export default function UnbilledManagementPage() {
       {/* Unbilled Data Table and Controls */}
       <div className={styles.tableCard}>
         
-        <div className={styles.tableContainer}>
+        <div className={styles.tableContainer} onScroll={handleTableScroll}>
           {/* KPI Metric Cards */}
           <div className={styles.kpiGrid}>
           <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(6,182,212,0.15), rgba(6,182,212,0.02))', borderColor: 'rgba(6,182,212,0.3)' }}>
