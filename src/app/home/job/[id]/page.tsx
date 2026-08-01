@@ -751,7 +751,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
       if (error) throw error;
 
-      // Write to audit_logs for every field change (Skip Admin updates)
+      /* Audit log disabled temporarily per user request
       if (profileRoles?.role !== 'Admin') {
         const currentJob = jobRef.current;
         for (const [key, val] of Object.entries(toSave)) {
@@ -770,6 +770,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           }
         }
       }
+      */
     } catch (err: any) {
       console.error('Failed to auto-save job:', err);
       showToast(err.message || 'Failed to save changes to job', 'error');

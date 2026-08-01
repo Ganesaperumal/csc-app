@@ -510,7 +510,7 @@ export default function UnbilledManagementPage() {
 
       if (error) throw error;
 
-      // Log edit activity to audit_logs if non-admin user
+      /* Audit log disabled temporarily per user request
       if (userProfile?.role !== 'Admin') {
         const username = userProfile?.username || userProfile?.name || currentUser?.email?.split('@')[0] || 'User';
         const oldStr = oldV === null || oldV === undefined ? '' : String(oldV);
@@ -527,6 +527,7 @@ export default function UnbilledManagementPage() {
           });
         }
       }
+      */
 
       setJobs(prev => prev.map(j => j.job_number === job.job_number ? { ...j, [field]: value } : j));
       showToast(`Updated ${field.replace(/_/g, ' ')}`, 'success');

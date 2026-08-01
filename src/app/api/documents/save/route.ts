@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'DB Error updating job with document: ' + updateError.message }, { status: 500 });
     }
 
-    // Log document upload to audit_logs
+    /* Audit log disabled temporarily per user request
     try {
       const uploadedBy = req.headers.get('x-user-name') || 'User';
       await supabaseAdmin.from('audit_logs').insert({
@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       console.error('Error writing audit_logs for doc:', err);
     }
+    */
 
     return NextResponse.json({ success: true, pod: updated });
   } catch (error: any) {
