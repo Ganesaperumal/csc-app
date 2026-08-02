@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CustomSelect from '../components/CustomSelect';
+import { customConfirm } from '@/components/GlobalDialogs';
 
 const ROLE_OPTIONS = [
   { value: 'None', label: 'None' },
@@ -22,6 +23,16 @@ interface UserDetailsModalProps {
 
 export default function UserDetailsModal({ user, onClose, onSave, onDelete }: UserDetailsModalProps) {
   const isCreate = !user || !user.id;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const [name, setName] = useState(user?.name || '');
   const [username, setUsername] = useState(user?.username || '');
@@ -44,39 +55,10 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
   const [selectedBranches, setSelectedBranches] = useState<string[]>(user?.branches && user?.branches.length > 0 ? user?.branches : ['ALL']);
   const [isApproved, setIsApproved] = useState<boolean>(user?.is_approved !== false);
   const [photo, setPhoto] = useState<string | null>(user?.photo || null);
+  const [hasChanges, setHasChanges] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const toggleBranch = (code: string) => {
-    if (code === 'ALL') {
-      if (selectedBranches.includes('ALL')) {
-        setSelectedBranches([]);
-      } else {
-        setSelectedBranches(['ALL']);
-      }
-    } else {
-      let updated = selectedBranches.filter(b => b !== 'ALL');
-      if (updated.includes(code)) {
-        updated = updated.filter(b => b !== code);
-      } else {
-        updated.push(code);
-      }
-      setSelectedBranches(updated);
-    }
-  };
-
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhoto(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveData = async () => {
     setSaving(true);
     await onSave({
       userId: user?.id,
@@ -93,23 +75,60 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
       photo
     });
     setSaving(false);
+    setHasChanges(false);
+  };
+
+  const toggleBranch = (code: string) => {
+    setHasChanges(true);
+    let updated: string[];
+    if (code === 'ALL') {
+      if (selectedBranches.includes('ALL')) {
+        updated = [];
+      } else {
+        updated = ['ALL'];
+      }
+    } else {
+      updated = selectedBranches.filter(b => b !== 'ALL');
+      if (updated.includes(code)) {
+        updated = updated.filter(b => b !== code);
+      } else {
+        updated.push(code);
+      }
+    }
+    setSelectedBranches(updated);
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setHasChanges(true);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhoto(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await handleSaveData();
   };
 
   const isSuperAdmin = user?.username === 'ganesh' || user?.name?.includes('Ganesaperumal');
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex', justifyContent: 'flex-end' }}>
-      <div style={{ width: '550px', maxWidth: '100vw', height: '100vh', background: '#ffffff', color: '#0f172a', borderLeft: '1px solid #cbd5e1', boxShadow: '-10px 0 40px rgba(0,0,0,0.35)', padding: '2rem', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex', justifyContent: 'flex-end' }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: '560px', maxWidth: '100vw', height: '100vh', background: '#ffffff', color: '#0f172a', borderLeft: '1px solid #cbd5e1', boxShadow: '-10px 0 40px rgba(0,0,0,0.35)', padding: '2rem', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
         
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem' }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
-              {isCreate ? '➕ Create New User Account' : `⚙️ User Profile (${user?.name || user?.username})`}
+        {isCreate && (
+          <div style={{ marginBottom: '1.25rem' }}>
+            <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>
+              ➕ Create New User Account
             </h2>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', fontSize: '1.25rem', color: '#64748b', cursor: 'pointer' }}>✕</button>
-        </div>
+        )}
 
         <form onSubmit={handleSubmit} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           
@@ -125,150 +144,158 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
               <input id="photo-upload" type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
             </div>
 
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: '1rem', color: '#0f172a' }}>{name || 'New User Profile'}</div>
-              <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{email || 'john@transworldintl.com'}</div>
-              {isSuperAdmin && (
-                <span style={{ display: 'inline-block', marginTop: '0.25rem', padding: '0.15rem 0.5rem', borderRadius: '4px', background: 'rgba(245,158,11,0.2)', color: '#f59e0b', fontSize: '0.7rem', fontWeight: 800 }}>
-                  👑 SUPER ADMIN (Ganesaperumal)
+            <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '1rem', color: '#0f172a' }}>{name || 'New User Profile'}</div>
+                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{email || 'john@transworldintl.com'}</div>
+              </div>
+
+              {/* Right end of Name line: Approved label & checkbox */}
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: isSuperAdmin ? 'not-allowed' : 'pointer' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: isApproved ? '#059669' : '#dc2626' }}>
+                  Approved
                 </span>
-              )}
+                <input
+                  type="checkbox"
+                  disabled={isSuperAdmin}
+                  checked={isApproved}
+                  onChange={(e) => {
+                    setIsApproved(e.target.checked);
+                    setHasChanges(true);
+                  }}
+                  style={{ width: '18px', height: '18px', cursor: isSuperAdmin ? 'not-allowed' : 'pointer' }}
+                />
+              </label>
             </div>
           </div>
 
-          {/* Account Details Inputs */}
-          <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Full Name *</label>
-            <input required type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe" style={{ width: '100%', padding: '0.55rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', fontSize: '0.875rem' }} />
-          </div>
-
+          {/* Row 1: Full Name * (Left) | Username * (Right) */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Full Name *</label>
+              <input required type="text" value={name} onChange={(e) => { setName(e.target.value); setHasChanges(true); }} placeholder="John Doe" style={{ width: '100%', padding: '0.55rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', fontSize: '0.875rem' }} />
+            </div>
+
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Username *</label>
               <input required type="text" value={username} onChange={(e) => {
                 const u = e.target.value.toLowerCase();
                 setUsername(u);
+                setHasChanges(true);
                 if (isCreate) setEmail(`${u}@transworldintl.com`);
               }} placeholder="john" style={{ width: '100%', padding: '0.55rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', fontSize: '0.875rem' }} />
             </div>
+          </div>
+
+          {/* Row 2: Email Address * (Left) | Phone Number (Right) */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Email Address *</label>
-              <input required type="email" value={email} onChange={(e) => setEmail(e.target.value.toLowerCase())} placeholder="john@transworldintl.com" style={{ width: '100%', padding: '0.55rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', fontSize: '0.875rem' }} />
+              <input required type="email" value={email} onChange={(e) => { setEmail(e.target.value.toLowerCase()); setHasChanges(true); }} placeholder="john@transworldintl.com" style={{ width: '100%', padding: '0.55rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', fontSize: '0.875rem' }} />
             </div>
-          </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: isCreate ? '1fr 1fr' : '1fr', gap: '1rem' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Phone Number</label>
-              <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 9876543210" style={{ width: '100%', padding: '0.55rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', fontSize: '0.875rem' }} />
+              <input type="text" value={phone} onChange={(e) => { setPhone(e.target.value); setHasChanges(true); }} placeholder="e.g. 9876543210" style={{ width: '100%', padding: '0.55rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', fontSize: '0.875rem' }} />
             </div>
-            {isCreate && (
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Password *</label>
-                <input required type="password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min. 6 characters" style={{ width: '100%', padding: '0.55rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', fontSize: '0.875rem' }} />
-              </div>
-            )}
           </div>
 
-          {/* Approval Toggle */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isApproved ? '#ecfdf5' : '#fef2f2', padding: '0.85rem 1rem', borderRadius: '10px', border: `1px solid ${isApproved ? '#a7f3d0' : '#fecaca'}` }}>
+          {/* Password (if creating new account) */}
+          {isCreate && (
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.85rem', color: isApproved ? '#059669' : '#dc2626' }}>
-                {isApproved ? '✅ Account Status: Approved & Active' : '⏳ Account Status: Pending Admin Approval'}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Toggle to enable or block user login access.</div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Password *</label>
+              <input required type="password" minLength={6} value={password} onChange={(e) => { setPassword(e.target.value); setHasChanges(true); }} placeholder="Min. 6 characters" style={{ width: '100%', padding: '0.55rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', fontSize: '0.875rem' }} />
             </div>
-            <input
-              type="checkbox"
-              disabled={isSuperAdmin}
-              checked={isApproved}
-              onChange={(e) => setIsApproved(e.target.checked)}
-              style={{ width: '20px', height: '20px', cursor: isSuperAdmin ? 'not-allowed' : 'pointer' }}
-            />
+          )}
+
+          {/* Module Access 2-Column Row: CSC Portal Access (Left) | Unbilled Management Access (Right) */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#4f46e5', marginBottom: '0.4rem' }}>📋 CSC Portal Access</label>
+              <CustomSelect
+                value={cscRole}
+                onChange={(val) => {
+                  setCscRole(val);
+                  setHasChanges(true);
+                }}
+                options={ROLE_OPTIONS}
+              />
+            </div>
+
+            <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#10b981', marginBottom: '0.4rem' }}>🧾 Unbilled Management Access</label>
+              <CustomSelect
+                value={unbilledRole}
+                onChange={(val) => {
+                  setUnbilledRole(val);
+                  setHasChanges(true);
+                }}
+                options={ROLE_OPTIONS}
+              />
+            </div>
           </div>
 
-          {/* Module Permissions Matrix */}
-          <h3 style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', fontWeight: 800, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            🔐 Module Access Control Matrix
-          </h3>
-
-          {/* 1. CSC Portal Access */}
-          <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#4f46e5', marginBottom: '0.4rem' }}>📋 1. CSC Portal Access</label>
-            <CustomSelect
-              value={cscRole}
-              onChange={(val) => setCscRole(val)}
-              options={ROLE_OPTIONS}
-            />
-          </div>
-
-
-          {/* 3. Unbilled Management Access */}
-          <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#10b981', marginBottom: '0.4rem' }}>💰 3. Unbilled Management Access</label>
-            <CustomSelect
-              value={unbilledRole}
-              onChange={(val) => setUnbilledRole(val)}
-              options={ROLE_OPTIONS}
-            />
-
-            {/* Branch Multi-Select Pills */}
-            {unbilledRole !== 'None' && (
-              <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid #e2e8f0' }}>
-                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
-                  📍 Assigned Unbilled Branches:
-                </label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                  {BRANCH_CODES.map(code => {
-                    const isSelected = selectedBranches.includes(code);
-                    return (
-                      <div
-                        key={code}
-                        onClick={() => toggleBranch(code)}
-                        style={{
-                          padding: '0.25rem 0.6rem',
-                          borderRadius: '16px',
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          border: `1px solid ${isSelected ? '#10b981' : '#cbd5e1'}`,
-                          background: isSelected ? 'rgba(16,185,129,0.15)' : '#ffffff',
-                          color: isSelected ? '#10b981' : '#475569'
-                        }}
-                      >
-                        {isSelected ? '✓ ' : '+ '} {code}
-                      </div>
-                    );
-                  })}
-                </div>
+          {/* Branch Multi-Select Pills (Below) */}
+          {unbilledRole !== 'None' && (
+            <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                📍 Assigned Unbilled Branches:
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {BRANCH_CODES.map(code => {
+                  const isSelected = selectedBranches.includes(code);
+                  return (
+                    <div
+                      key={code}
+                      onClick={() => toggleBranch(code)}
+                      style={{
+                        padding: '0.25rem 0.6rem',
+                        borderRadius: '16px',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        border: `1px solid ${isSelected ? '#10b981' : '#cbd5e1'}`,
+                        background: isSelected ? 'rgba(16,185,129,0.15)' : '#ffffff',
+                        color: isSelected ? '#10b981' : '#475569'
+                      }}
+                    >
+                      {isSelected ? '✓ ' : '+ '} {code}
+                    </div>
+                  );
+                })}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Action Buttons */}
+          {/* Footer Actions */}
           <div style={{ marginTop: 'auto', paddingTop: '1.25rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button
-                type="button"
-                onClick={onClose}
-                style={{ flex: 1, padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', fontWeight: 700, cursor: 'pointer' }}
-              >
-                Cancel
-              </button>
+            {isCreate ? (
               <button
                 type="submit"
                 disabled={saving}
-                style={{ flex: 1, padding: '0.65rem', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: 'white', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: 'white', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}
               >
-                {saving ? 'Saving...' : '💾 Save Profile & Permissions'}
+                {saving ? 'Creating...' : '➕ Create User Account'}
               </button>
-            </div>
+            ) : (
+              hasChanges && (
+                <button
+                  type="button"
+                  onClick={handleSaveData}
+                  disabled={saving}
+                  style={{ width: '100%', padding: '0.7rem', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: 'white', fontWeight: 700, fontSize: '0.88rem', cursor: saving ? 'not-allowed' : 'pointer', boxShadow: '0 4px 14px rgba(79,70,229,0.3)' }}
+                >
+                  {saving ? 'Saving Changes...' : '💾 Save Profile & Permissions'}
+                </button>
+              )
+            )}
 
-            {!isSuperAdmin && onDelete && (
+            {!isCreate && !isSuperAdmin && onDelete && (
               <button
                 type="button"
                 onClick={async () => {
-                  if (confirm(`⚠️ Are you sure you want to permanently delete user "${name || username}"?`)) {
+                  const confirmed = await customConfirm(`⚠️ Are you sure you want to permanently delete user account "${name || username}"?\nThis action cannot be undone.`);
+                  if (confirmed) {
                     await onDelete(user.id);
                   }
                 }}
@@ -278,6 +305,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
               </button>
             )}
           </div>
+
         </form>
       </div>
     </div>

@@ -14,8 +14,8 @@ export default function SyncERPButton({ user: initialUser, profile: initialProfi
   useEffect(() => {
     // Derive viewer status from permission matrix
     const resolveAccess = (profile: any) => {
-      const level = getAccessLevel('Sync ERP', profile);
-      setIsViewer(level !== 'Edit');
+      const isAllowed = profile?.role === 'Admin' || ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(profile?.csc_role || '');
+      setIsViewer(!isAllowed);
     };
 
     if (initialProfile) {

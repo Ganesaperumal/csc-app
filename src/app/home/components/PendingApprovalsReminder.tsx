@@ -9,27 +9,52 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [activeModalUser, setActiveModalUser] = useState<any | null>(null);
-  const { getAccessLevel } = usePermissions();
 
-  const alertAccess = profile ? getAccessLevel('CSC Call Alerts', profile) : 'None';
-  const canManageUsers = profile ? getAccessLevel('User Management', profile) : 'None';
+  // Sealed Role-Based Access for Alerts:
+  // - Admin: Can see all alerts across all branches
+  // - Viewer: Cannot see anything (returns null)
+  // - Manager & Executive: Can see only their own (filtered by assigned branch/coordinator)
+  const isSuperAdmin = profile?.role === 'Admin';
+  const cscRole = profile?.csc_role || profile?.role || 'Viewer';
+  const isViewer = !profile || cscRole === 'Viewer' || (profile?.role === 'Viewer' && cscRole !== 'Admin' && cscRole !== 'Manager' && cscRole !== 'Executive');
+  const isAdmin = isSuperAdmin || cscRole === 'Admin';
+  const isManagerOrExec = !isViewer && !isAdmin && (cscRole === 'Manager' || cscRole === 'Executive');
+
+  const canManageUsers = isAdmin || isManagerOrExec;
 
   useEffect(() => {
-    if (alertAccess === 'None') return;
+    if (isViewer) return;
 
     fetchPendingUsers();
 
     // Check periodically every 30 seconds for new signups
     const interval = setInterval(fetchPendingUsers, 30000);
     return () => clearInterval(interval);
-  }, [alertAccess]);
+  }, [isViewer, profile]);
 
   const fetchPendingUsers = async () => {
     try {
       const res = await fetch('/api/admin/users', { cache: 'no-store' });
       const data = await res.json();
       if (data.users) {
-        const pending = data.users.filter((u: any) => u.is_approved === false);
+        let pending = data.users.filter((u: any) => u.is_approved === false);
+
+        // Manager & Executive: Filter to only see their own branch/coordinator pending users
+        if (isManagerOrExec) {
+          const userBranches: string[] = Array.isArray(profile?.branches) ? profile.branches : [];
+          const hasAllBranches = userBranches.includes('ALL');
+          const userName = profile?.name || profile?.username;
+
+          if (!hasAllBranches) {
+            pending = pending.filter((u: any) => {
+              const targetBranches: string[] = Array.isArray(u.branches) ? u.branches : [];
+              const branchMatch = targetBranches.some(b => userBranches.includes(b));
+              const coordinatorMatch = u.csc_coordinator === userName || u.name === userName || u.username === userName;
+              return branchMatch || coordinatorMatch;
+            });
+          }
+        }
+
         setPendingUsers(pending);
       }
     } catch (err) {
@@ -52,7 +77,7 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
     }
   };
 
-  if (alertAccess === 'None' || pendingUsers.length === 0) return null;
+  if (isViewer || pendingUsers.length === 0) return null;
 
   return (
     <>
@@ -165,7 +190,7 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
                   </div>
 
                   {/* Actions — only shown if user can manage users */}
-                  {canManageUsers !== 'None' && (
+                  {canManageUsers && (
                   <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.4rem', justifyContent: 'flex-end' }}>
                     <button
                       onClick={() => setActiveModalUser(pu)}

@@ -6,8 +6,6 @@ import { supabase } from '@/lib/supabase';
 import Papa from 'papaparse';
 import CustomSelect from '../components/CustomSelect';
 import { useRouter } from 'next/navigation';
-import PermissionsPage from '../permissions/page';
-import UsersPage from '../users/page';
 import BulkPodUploadModal from '../components/BulkPodUploadModal';
 import { usePermissions } from '@/components/PermissionsContext';
 
@@ -395,12 +393,12 @@ export default function AdminPage() {
     });
   };
 
-  const uploadCSV = (e: React.ChangeEvent<HTMLInputElement>, table: 'jobs' | 'job_logs') => {
+  const uploadCSV = (e: React.ChangeEvent<HTMLInputElement>, table: 'jobs' | 'audit_logs') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (table === 'jobs') setLoadingJobs(true);
-    if (table === 'job_logs') setLoadingLogs(true);
+    if (table === 'audit_logs') setLoadingLogs(true);
     setMessage(null);
 
     Papa.parse(file, {
@@ -428,7 +426,7 @@ export default function AdminPage() {
           if (table === 'jobs') {
             res = await supabase.from('jobs').upsert(cleanedData, { onConflict: 'job_number' });
           } else {
-            res = await supabase.from('job_logs').upsert(cleanedData);
+            res = await supabase.from('audit_logs').upsert(cleanedData);
           }
 
           if (res.error) throw res.error;
@@ -438,14 +436,14 @@ export default function AdminPage() {
           setMessage({ type: 'error', text: `Failed to upload ${table}: ${err.message}` });
         } finally {
           if (table === 'jobs') setLoadingJobs(false);
-          if (table === 'job_logs') setLoadingLogs(false);
+          if (table === 'audit_logs') setLoadingLogs(false);
           e.target.value = '';
         }
       },
       error: (error) => {
         setMessage({ type: 'error', text: `CSV Parse Error: ${error.message}` });
         if (table === 'jobs') setLoadingJobs(false);
-        if (table === 'job_logs') setLoadingLogs(false);
+        if (table === 'audit_logs') setLoadingLogs(false);
         e.target.value = '';
       }
     });
@@ -538,17 +536,8 @@ export default function AdminPage() {
   return (
     <div style={{ padding: '2rem', maxWidth: '1250px', margin: '0 auto', height: '100%', overflowY: 'auto', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
 
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
-          ⚙️ Admin Center
-        </h1>
-      </div>
-      {/* 🛡️ 1. Full Role Permissions Matrix (Top) */}
-      <div style={{ ...cardStyle, marginBottom: '2.5rem' }}>
-        <PermissionsPage isEmbedded={true} />
-      </div>
 
-      {/* 📦 2. Bulk Data Management Card (Middle) */}
+      {/* 📦 Bulk Data Management Card */}
       <div style={{ ...cardStyle, marginBottom: '2rem' }}>
         <h2 style={{ margin: '0 0 1.5rem', fontSize: '1.25rem', fontWeight: 800, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ background: 'rgba(245,158,11,0.1)', borderRadius: '8px', padding: '0.4rem 0.6rem' }}>📦</span>
@@ -801,10 +790,7 @@ export default function AdminPage() {
 
       </div>
 
-      {/* 👥 3. Full Master User Directory & Account Approvals (Bottom) */}
-      <div style={cardStyle}>
-        <UsersPage isEmbedded={true} />
-      </div>
+
 
 
 

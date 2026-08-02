@@ -5,32 +5,14 @@ import { supabase } from '@/lib/supabase';
 import { showToast } from '@/components/GlobalDialogs';
 
 const ROLES = ['Admin', 'Manager', 'Executive', 'Viewer'];
-const UI_TABS = ['Pages', 'Features'];
-const UI_TAB_SECTIONS: Record<string, { section: string; category: string }[]> = {
-  'Pages': [
-    { section: 'CSC Jobs', category: 'CSC' },
-    { section: 'All Jobs', category: 'CSC' },
-    { section: 'Follow-ups', category: 'CSC' },
-    { section: 'Reports', category: 'CSC' },
-    { section: 'Unbilled', category: 'Unbilled' }
-  ],
-  'Features': [
-    { section: 'Sync ERP', category: 'CSC' },
-    { section: 'CSC Call Alerts', category: 'CSC' },
-    { section: 'Export Jobs', category: 'CSC' },
-    { section: 'Unbilled Followup', category: 'Unbilled' },
-    { section: 'Export Unbilled', category: 'Unbilled' }
-  ]
-};
 
-const ALL_SECTIONS = [...UI_TAB_SECTIONS['Pages'], ...UI_TAB_SECTIONS['Features']];
+const ALL_SECTIONS: { section: string; category: string }[] = [
+  { section: 'CSC Jobs', category: 'CSC' },
+  { section: 'All Jobs', category: 'CSC' },
+  { section: 'Unbilled', category: 'Unbilled' },
+];
 
 const ACCESS_LEVELS = ['None', 'View', 'Edit'];
-
-const TAB_ICONS: Record<string, string> = {
-  Pages: '📄',
-  Features: '✨',
-};
 
 const ACCESS_CONFIG: Record<string, { label: string; bg: string; color: string; border: string }> = {
   None:  { label: 'None',  bg: 'transparent',            color: 'var(--text-secondary)', border: '1px solid var(--border-color)' },
@@ -77,15 +59,10 @@ export default function PermissionsPage({ isEmbedded }: { isEmbedded?: boolean }
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
-  const [activeTab, setActiveTab] = useState('Pages');
 
   useEffect(() => {
-    if (!isEmbedded) {
-      window.location.href = '/home/admin';
-      return;
-    }
     fetchPermissions();
-  }, [isEmbedded]);
+  }, []);
 
   const fetchPermissions = async () => {
     setLoading(true);
@@ -102,7 +79,6 @@ export default function PermissionsPage({ isEmbedded }: { isEmbedded?: boolean }
     setMatrix(prev => {
       const current = prev[category]?.[section]?.[role]?.access || 'None';
       const idx = ACCESS_LEVELS.indexOf(current);
-      // Fallback to None if not found
       const nextIdx = idx === -1 ? 1 : (idx + 1) % ACCESS_LEVELS.length;
       const nextAccess = ACCESS_LEVELS[nextIdx];
       return {
@@ -174,7 +150,7 @@ export default function PermissionsPage({ isEmbedded }: { isEmbedded?: boolean }
     );
   }
 
-  const sections = UI_TAB_SECTIONS[activeTab] || [];
+  const sections = ALL_SECTIONS;
 
   return (
     <div style={{ padding: isEmbedded ? '0' : '2rem', maxWidth: isEmbedded ? '100%' : '1100px', margin: '0 auto' }}>
@@ -190,64 +166,32 @@ export default function PermissionsPage({ isEmbedded }: { isEmbedded?: boolean }
               Saving...
             </span>
           )}
-          {hasChanges && !saving && (
-            <button
-              onClick={handleSave}
-              style={{
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                color: 'white',
-                border: 'none',
-                padding: '0.6rem 1.2rem',
-                borderRadius: '8px',
-                fontWeight: 700,
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(99,102,241,0.2)',
-                transition: 'all 0.2s',
-              }}
-            >
-              Save Changes
-            </button>
-          )}
+          <button
+            onClick={handleSave}
+            disabled={!hasChanges || saving}
+            style={{
+              background: hasChanges && !saving
+                ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
+                : '#334155',
+              color: hasChanges && !saving ? 'white' : '#94a3b8',
+              border: 'none',
+              padding: '0.6rem 1.2rem',
+              borderRadius: '8px',
+              fontWeight: 700,
+              fontSize: '0.9rem',
+              cursor: hasChanges && !saving ? 'pointer' : 'not-allowed',
+              opacity: hasChanges && !saving ? 1 : 0.6,
+              boxShadow: hasChanges && !saving ? '0 4px 12px rgba(99,102,241,0.2)' : 'none',
+              transition: 'all 0.2s',
+            }}
+          >
+            Save Changes
+          </button>
         </div>
       </div>
 
-
-
-      {/* Category Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '2px solid var(--border-color)', paddingBottom: '0' }}>
-        {UI_TABS.map(tab => {
-          const isActive = tab === activeTab;
-          return (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              style={{
-                padding: '0.65rem 1.4rem',
-                border: 'none',
-                background: isActive ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'transparent',
-                color: isActive ? 'white' : 'var(--text-secondary)',
-                borderRadius: '8px 8px 0 0',
-                fontWeight: 700,
-                fontSize: '0.88rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                transition: 'all 0.2s',
-                position: 'relative',
-                bottom: '-2px',
-                boxShadow: isActive ? '0 -3px 10px rgba(99,102,241,0.2)' : 'none',
-              }}
-            >
-              {TAB_ICONS[tab]} {tab}
-            </button>
-          );
-        })}
-      </div>
-
       {/* Permission Matrix */}
-      <div style={{ background: 'var(--surface-color)', borderRadius: '0 12px 12px 12px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--surface-color)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
         {/* Matrix Header Row */}
         <div style={{
           display: 'grid',
@@ -261,15 +205,12 @@ export default function PermissionsPage({ isEmbedded }: { isEmbedded?: boolean }
           {ROLES.map(role => {
             const rc = ROLE_COLORS[role];
             return (
-              <div key={role} style={{ padding: '0.9rem 0.5rem', textAlign: 'center' }}>
+              <div key={role} style={{ padding: '0.9rem 0.5rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span style={{
-                  display: 'inline-block',
-                  padding: '0.3rem 0.9rem',
-                  borderRadius: '20px',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  background: rc.bg,
+                  fontSize: '0.88rem',
+                  fontWeight: 800,
                   color: rc.color,
+                  letterSpacing: '0.02em'
                 }}>
                   {role}
                 </span>

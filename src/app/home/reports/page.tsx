@@ -538,7 +538,7 @@ export default function ReportsPage() {
   const router = useRouter();
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<'jobs' | 'agents' | 'unbilled' | 'branch_users' | 'activity_log'>('jobs');
+  const [activeTab, setActiveTab] = useState<'unbilled' | 'jobs' | 'agents' | 'branch_users' | 'activity_log'>('unbilled');
   
   // Activity Log Tab Filters
   const [logSearch, setLogSearch] = useState('');
@@ -583,6 +583,20 @@ export default function ReportsPage() {
     }
   }, []);
 
+  // Current User Profile for Role Access
+  const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
+
+  const canAccessCsc = useMemo(() => {
+    if (!currentUserProfile) return false;
+    return ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(currentUserProfile.csc_role || '') || 
+           ['Admin', 'Manager', 'Executive'].includes(currentUserProfile.role || '');
+  }, [currentUserProfile]);
+
+  const canAccessUnbilled = useMemo(() => {
+    if (!currentUserProfile) return false;
+    return ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(currentUserProfile.unbilled_role || '');
+  }, [currentUserProfile]);
+
   useEffect(() => {
     // Check authentication and load data
     const initPage = async () => {
@@ -595,9 +609,30 @@ export default function ReportsPage() {
       const { data: profileData } = await supabase
         .from('profiles').select('*').eq('id', session.user.id).single();
       if (!profileData) { router.push('/home'); return; }
-      const level = getAccessLevel('Reports', profileData);
-      if (level === 'None') { router.push('/home'); return; }
-      // Note: Reports is view-only by nature (analytics), so View = Edit for reports
+      
+      const hasCsc = ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(profileData.csc_role || '') || 
+                     ['Admin', 'Manager', 'Executive'].includes(profileData.role || '');
+      const hasUnbilled = ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(profileData.unbilled_role || '');
+
+      if (!hasCsc && !hasUnbilled) {
+        router.push('/home');
+        return;
+      }
+
+      setCurrentUserProfile(profileData);
+
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+
+      if (tabParam === 'unbilled' && hasUnbilled) {
+        setActiveTab('unbilled');
+      } else if ((tabParam === 'jobs' || tabParam === 'agents') && hasCsc) {
+        setActiveTab(tabParam as any);
+      } else if (hasUnbilled) {
+        setActiveTab('unbilled');
+      } else if (hasCsc) {
+        setActiveTab('jobs');
+      }
 
       await loadAllAnalyticsData();
     };
@@ -816,71 +851,130 @@ export default function ReportsPage() {
     };
   }, [filteredActiveJobs]);
 
-  const unbilledMatrix = useMemo(() => {
+  const buildUnbilledMatrixData = (jobList: any[]) => {
     const isPoEmpty = (j: any) => !j.po_status || j.po_status.trim() === '';
     const isGoodsEmpty = (j: any) => !j.goods_track_status || j.goods_track_status.trim() === '';
+    const getDisplayStatus = (status: string | null) => status || '';
 
     const categories = [
-      'No Details', 'PO&PI Pending', 'Job Completed', 'Damage',
-      'Storage', 'Ready for Billing', 'To Be Cancelled', 'Execution Pending'
+      { id: 'Billable', line1: 'Billable', line2: '', color: '#047857' },
+      { id: 'No Details', line1: 'No', line2: 'Details', color: '#ef4444' },
+      { id: 'PO & PI Pending', line1: 'PO & PI', line2: 'Pending', color: '#be185d' },
+      { id: 'Job Completed', line1: 'Job', line2: 'Completed', color: '#1d4ed8' },
+      { id: 'Damages', line1: 'Damages', line2: '', color: '#b91c1c' },
+      { id: 'Storage', line1: 'Storage', line2: '', color: '#c2410c' },
+      { id: 'Ready for Billing', line1: 'Ready for', line2: 'Billing', color: '#059669' },
+      { id: 'To Be Cancelled', line1: 'To Be', line2: 'Cancelled', color: '#991b1b' },
+      { id: 'Execution Pending', line1: 'Execution', line2: 'Pending', color: '#6d28d9' }
     ];
-    
+
     const branchSet = new Set(['BLR', 'DEL', 'BOM', 'MAA', 'HYD', 'PNQ', 'AMD', 'COK', 'KOL', 'OSS']);
     const matrix: Record<string, Record<string, number>> = {};
-    Array.from(branchSet).forEach(b => {
-      matrix[b] = {};
-      categories.forEach(c => matrix[b][c] = 0);
-      matrix[b]['Total'] = 0;
-    });
 
-    const getCat = (j: any) => {
-      const g = j.goods_track_status || '';
-      const p = j.po_status || '';
-      if (isGoodsEmpty(j) && isPoEmpty(j)) return 'No Details';
-      if (p === 'PO Pending' || p === 'PI Pending') return 'PO&PI Pending';
-      if (g.includes('22. Job Completed') && isPoEmpty(j)) return 'Job Completed';
-      if (g.includes('17. Damages')) return 'Damage';
-      if (g.includes('21. Storage') && isPoEmpty(j)) return 'Storage';
-      if (g.includes('27. Billing Pending') || g.includes('26. Billing Pending') || g.includes('27. Month End Billing') || g.includes('23. Job # taken for Billing')) return 'Ready for Billing';
-      if (g.includes('28. Free Job') || g.includes('25. Job # to be Cancelled')) return 'To Be Cancelled';
-      if (g.includes('00. Execution Pending') && !isGoodsEmpty(j) && isPoEmpty(j)) return 'Execution Pending';
-      return null;
+    const initBranch = (br: string) => {
+      matrix[br] = { Total: 0 };
+      categories.forEach(c => { matrix[br][c.id] = 0; });
     };
 
-    // Combine jobs (New Order only) with legacyJobs
-    const erpUnbilled = jobs.filter(j => j.erp_status === 'New Order');
-    const allUnbilledJobs = [...erpUnbilled, ...legacyJobs];
+    Array.from(branchSet).forEach(initBranch);
 
-    allUnbilledJobs.forEach(j => {
-      const cat = getCat(j);
-      if (!cat) return;
-      
+    jobList.forEach(j => {
       const br = j.branch?.toUpperCase() || 'UNKNOWN';
       if (!matrix[br]) {
-         branchSet.add(br);
-         matrix[br] = {};
-         categories.forEach(c => matrix[br][c] = 0);
-         matrix[br]['Total'] = 0;
+        branchSet.add(br);
+        initBranch(br);
       }
-      
+
       const val = Number(enquiryValues[j.enq_number || j.enquiry_number || ''] || j.quote_value || 0);
-      matrix[br][cat] += val;
       matrix[br]['Total'] += val;
+
+      const g = getDisplayStatus(j.goods_track_status);
+      const p = getDisplayStatus(j.po_status);
+      const poEmpty = isPoEmpty(j);
+      const goodsEmpty = isGoodsEmpty(j);
+
+      // 1. Billable: po_status not empty OR goods_track_status empty OR goods_track_status in [21. Storage, 22. Job Completed, 23. Job # taken for Billing, 26. Billing Pending, 27. Billing Pending, 27. Month End Billing]
+      if (!poEmpty || goodsEmpty || ['21. Storage', '22. Job Completed', '23. Job # taken for Billing', '26. Billing Pending', '27. Billing Pending', '27. Month End Billing'].some(s => g.includes(s))) {
+        matrix[br]['Billable'] += val;
+      }
+
+      // 2. No Details: goods_track_status empty/null AND po_status empty/null
+      if (goodsEmpty && poEmpty) {
+        matrix[br]['No Details'] += val;
+      }
+
+      // 3. PO & PI Pending: po_status is 'PO Pending' OR 'PI Pending'
+      if (p === 'PO Pending' || p === 'PI Pending') {
+        matrix[br]['PO & PI Pending'] += val;
+      }
+
+      // 4. Job Completed: goods_track_status is '22. Job Completed' AND po_status empty/null
+      if (g.includes('22. Job Completed') && poEmpty) {
+        matrix[br]['Job Completed'] += val;
+      }
+
+      // 5. Damages: goods_track_status is '17. Damages'
+      if (g.includes('17. Damages')) {
+        matrix[br]['Damages'] += val;
+      }
+
+      // 6. Storage: goods_track_status is '21. Storage' AND po_status empty/null
+      if (g.includes('21. Storage') && poEmpty) {
+        matrix[br]['Storage'] += val;
+      }
+
+      // 7. Ready for Billing: goods_track_status in [26. Billing Pending, 27. Billing Pending, 27. Month End Billing, 23. Job # taken for Billing]
+      if (g.includes('27. Billing Pending') || g.includes('26. Billing Pending') || g.includes('27. Month End Billing') || g.includes('23. Job # taken for Billing')) {
+        matrix[br]['Ready for Billing'] += val;
+      }
+
+      // 8. To Be Cancelled: goods_track_status in [28. Free Job, 25. Job # to be Cancelled]
+      if (g.includes('28. Free Job') || g.includes('25. Job # to be Cancelled')) {
+        matrix[br]['To Be Cancelled'] += val;
+      }
+
+      // 9. Execution Pending: goods_track_status is '00. Execution Pending' AND not goodsEmpty AND poEmpty
+      if (g.includes('00. Execution Pending') && !goodsEmpty && poEmpty) {
+        matrix[br]['Execution Pending'] += val;
+      }
     });
 
     const branchList = Array.from(branchSet);
     const data: any[] = branchList.map(br => ({ branch: br, ...matrix[br] }));
-    
-    const totals: Record<string, number> = { branch: 'TOTAL' as any };
+
+    const totals: Record<string, number> = { Total: 0 };
     categories.forEach(c => {
-      totals[c] = data.reduce((sum, row) => sum + ((row as any)[c] as number || 0), 0);
+      totals[c.id] = data.reduce((sum, row) => sum + ((row as any)[c.id] as number || 0), 0);
     });
     totals['Total'] = data.reduce((sum, row) => sum + ((row as any)['Total'] as number || 0), 0);
-    
-    // Prepare Donut chart data for branch distribution (using total unbilled)
+
     const branchChart = data.filter(d => d.Total > 0).map(d => ({ label: d.branch as string, value: d.Total }));
-    
+
     return { data, totals, categories, branchChart, grandTotal: totals['Total'] };
+  };
+
+  const currentFyUnbilledMatrix = useMemo(() => {
+    const erpUnbilled = jobs.filter(j => j.erp_status === 'New Order');
+    const allUnbilledJobs = [...erpUnbilled, ...legacyJobs];
+    const currentFyJobs = allUnbilledJobs.filter(j => {
+      const dStr = j.job_date || j.packing_date || j.created_at;
+      if (!dStr) return false;
+      const d = new Date(dStr);
+      return !isNaN(d.getTime()) && d >= new Date('2026-04-01T00:00:00');
+    });
+    return buildUnbilledMatrixData(currentFyJobs);
+  }, [jobs, legacyJobs, enquiryValues]);
+
+  const previousFyUnbilledMatrix = useMemo(() => {
+    const erpUnbilled = jobs.filter(j => j.erp_status === 'New Order');
+    const allUnbilledJobs = [...erpUnbilled, ...legacyJobs];
+    const previousFyJobs = allUnbilledJobs.filter(j => {
+      const dStr = j.job_date || j.packing_date || j.created_at;
+      if (!dStr) return true; // Default undated jobs to previous FY
+      const d = new Date(dStr);
+      return isNaN(d.getTime()) || d < new Date('2026-04-01T00:00:00');
+    });
+    return buildUnbilledMatrixData(previousFyJobs);
   }, [jobs, legacyJobs, enquiryValues]);
 
   // --- 2. AGENTS DATA PROCESSING ---
@@ -1117,169 +1211,109 @@ export default function ReportsPage() {
   return (
     <div style={{ padding: '2rem', maxWidth: '1440px', margin: '0 auto', height: '100%', overflowY: 'auto', fontFamily: "'Outfit', 'Inter', sans-serif", boxSizing: 'border-box' }}>
       
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '2rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ fontSize: '2.5rem' }}>📊</span>
-            <h1 style={{ 
-              fontSize: '2.4rem', 
-              fontWeight: 800, 
-              background: 'linear-gradient(135deg, #4f46e5 0%, #d946ef 50%, #06b6d4 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              letterSpacing: '-0.02em',
-              margin: 0,
-              filter: 'drop-shadow(0 2px 4px rgba(79, 70, 229, 0.1))'
-            }}>
-              Reports & Analytics
-            </h1>
-          </div>
+      {/* Top Report Tabs (First Line) */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)', paddingBottom: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', alignItems: 'center' }}>
+          {canAccessUnbilled && (
+            <button
+              onClick={() => setActiveTab('unbilled')}
+              style={{
+                background: activeTab === 'unbilled' ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0.6rem 1.1rem',
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                borderBottom: activeTab === 'unbilled' ? '3px solid #10b981' : '3px solid transparent',
+                color: activeTab === 'unbilled' ? '#10b981' : 'var(--text-secondary)',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              🧾 Unbilled Report
+            </button>
+          )}
+
+          {canAccessCsc && (
+            <button
+              onClick={() => setActiveTab('jobs')}
+              style={{
+                background: activeTab === 'jobs' ? 'rgba(79, 70, 229, 0.12)' : 'transparent',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0.6rem 1.1rem',
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                borderBottom: activeTab === 'jobs' ? '3px solid #4f46e5' : '3px solid transparent',
+                color: activeTab === 'jobs' ? '#4f46e5' : 'var(--text-secondary)',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              📋 Active Jobs Report
+            </button>
+          )}
+
+          {canAccessCsc && (
+            <button
+              onClick={() => setActiveTab('agents')}
+              style={{
+                background: activeTab === 'agents' ? 'rgba(244, 63, 94, 0.12)' : 'transparent',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0.6rem 1.1rem',
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                borderBottom: activeTab === 'agents' ? '3px solid #f43f5e' : '3px solid transparent',
+                color: activeTab === 'agents' ? '#f43f5e' : 'var(--text-secondary)',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              👥 Agent Activity Oversight
+            </button>
+          )}
         </div>
 
-        {/* Global Refresh Button */}
+        {/* Sync Fresh Data Action */}
         <button
           onClick={loadAllAnalyticsData}
           style={{
-            padding: '0.6rem 1.4rem',
-            borderRadius: '99px',
+            padding: '0.5rem 1.1rem',
+            borderRadius: '8px',
             border: 'none',
-            background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)', color: '#ffffff',
+            background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)',
+            color: '#ffffff',
             fontWeight: 700,
-            fontSize: '0.85rem',
+            fontSize: '0.82rem',
             cursor: 'pointer',
             fontFamily: "'Outfit', sans-serif",
-            transition: 'all 0.25s ease',
-            boxShadow: '0 2px 8px rgba(79, 70, 229, 0.15)',
+            transition: 'all 0.2s ease',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.4rem'
+            gap: '0.4rem',
+            whiteSpace: 'nowrap'
           }}
-          onMouseOver={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #a78bfa 0%, #e879f9 100%)'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)'; }}
-          onMouseOut={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.15)'; }}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
-          Sync Fresh Data
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
+          Sync Data
         </button>
       </div>
 
-      {/* Global Stat Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
-        {[
-          { label: 'Total Jobs Created', val: globalStats.totalJobs, color: '#4f46e5', icon: '📦' },
-          { label: 'Active Jobs', val: globalStats.activeJobs, color: '#f59e0b', icon: '⚡' },
-          { label: 'Completed Jobs', val: globalStats.closedJobs, color: '#10b981', icon: '✅' },
-
-          { label: 'Comm Logs Stored', val: globalStats.totalComms, color: '#ec4899', icon: '💬' },
-        ].map(card => (
-          <div key={card.label} className="glass" style={{
-            padding: '1.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-          }}>
-            <div style={{ fontSize: '2rem', padding: '0.5rem', background: `${card.color}10`, borderRadius: '12px' }}>
-              {card.icon}
-            </div>
-            <div>
-              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                {card.label}
-              </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.2rem' }}>
-                {card.val}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)', paddingBottom: '0.25rem', overflowX: 'auto' }}>
-        <button
-          onClick={() => setActiveTab('jobs')}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            padding: '0.75rem 1rem',
-            fontWeight: 700,
-            fontSize: '0.9rem',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'jobs' ? '3px solid #4f46e5' : '3px solid transparent',
-            color: activeTab === 'jobs' ? '#4f46e5' : 'var(--text-secondary)',
-            transition: 'all 0.2s',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          📋 Active Jobs Report
-        </button>
-        <button
-          onClick={() => setActiveTab('unbilled')}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            padding: '0.75rem 1rem',
-            fontWeight: 700,
-            fontSize: '0.9rem',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'unbilled' ? '3px solid #10b981' : '3px solid transparent',
-            color: activeTab === 'unbilled' ? '#10b981' : 'var(--text-secondary)',
-            transition: 'all 0.2s',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          💰 Unbilled Report
-        </button>
-        <button
-          onClick={() => setActiveTab('agents')}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            padding: '0.75rem 1rem',
-            fontWeight: 700,
-            fontSize: '0.9rem',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'agents' ? '3px solid #f43f5e' : '3px solid transparent',
-            color: activeTab === 'agents' ? '#f43f5e' : 'var(--text-secondary)',
-            transition: 'all 0.2s',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          👥 Agent Activity Oversight
-        </button>
-        <button
-          onClick={() => setActiveTab('branch_users')}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            padding: '0.75rem 1rem',
-            fontWeight: 700,
-            fontSize: '0.9rem',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'branch_users' ? '3px solid #f59e0b' : '3px solid transparent',
-            color: activeTab === 'branch_users' ? '#f59e0b' : 'var(--text-secondary)',
-            transition: 'all 0.2s',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          🏢 Branch Users Reports
-        </button>
-
-      </div>
-
-      {/* TAB 1: ACTIVE JOBS REPORTS */}
-      {activeTab === 'jobs' && (
+      {/* --- ACTIVE JOBS REPORT TAB --- */}
+      {activeTab === 'jobs' && canAccessCsc && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
           {/* 360-Degree Filter Panel */}
@@ -1508,8 +1542,8 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* TAB 2: AGENT ACTIVITY OVERVIEW */}
-      {activeTab === 'agents' && (
+      {/* --- AGENT ACTIVITY OVERSIGHT TAB --- */}
+      {activeTab === 'agents' && canAccessCsc && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
           {/* Agent activity grouped bar chart */}
@@ -1690,76 +1724,163 @@ export default function ReportsPage() {
       )}
 
       {/* --- UNBILLED REPORT TAB --- */}
-      {activeTab === 'unbilled' && (
+      {activeTab === 'unbilled' && canAccessUnbilled && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           
+          {/* Table 1: Current FY */}
           <div className="glass" style={{ padding: '1.5rem', overflowX: 'auto', borderRadius: '16px' }}>
-            <h3 style={{ margin: '0 0 1.5rem 0', color: 'var(--text-primary)', fontSize: '1.2rem', fontWeight: 800 }}>Unbilled Jobs Matrix (Value)</h3>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', fontSize: '0.85rem' }}>
+            <div style={{ marginBottom: '1.25rem' }}>
+              <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.25rem', fontWeight: 800 }}>
+                Unbilled Reports Current FY
+              </h3>
+            </div>
+
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', fontSize: '0.88rem', border: '1px solid var(--table-border-color)' }}>
               <thead>
                 <tr>
-                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', textAlign: 'center', fontWeight: 800, position: 'sticky', left: 0, zIndex: 10 }}>Branch</th>
-                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: '#000000', color: '#ffffff', textAlign: 'center', fontWeight: 800 }}>No Details</th>
-                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: '#fce7f3', color: '#be185d', textAlign: 'center', fontWeight: 800 }}>PO&PI Pending</th>
-                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: '#dbeafe', color: '#1d4ed8', textAlign: 'center', fontWeight: 800 }}>Job Completed</th>
-                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: '#fee2e2', color: '#b91c1c', textAlign: 'center', fontWeight: 800 }}>Damage</th>
-                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: '#ffedd5', color: '#c2410c', textAlign: 'center', fontWeight: 800 }}>Storage</th>
-                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: '#d1fae5', color: '#047857', textAlign: 'center', fontWeight: 800 }}>Ready for Billing</th>
-                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: '#ffffff', color: '#000000', textAlign: 'center', fontWeight: 800 }}>To Be Cancelled</th>
-                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: '#ede9fe', color: '#6d28d9', textAlign: 'center', fontWeight: 800 }}>Execution Pending</th>
-                  <th style={{ padding: '0.75rem', border: '1px solid var(--border-color)', background: '#fef3c7', color: '#b45309', textAlign: 'center', fontWeight: 800 }}>Total</th>
+                  <th style={{ padding: '0.75rem', border: '1px solid var(--table-border-color)', background: 'var(--table-header-bg)', color: 'var(--text-primary)', textAlign: 'center', fontWeight: 800, position: 'sticky', left: 0, zIndex: 10 }}>
+                    Branch
+                  </th>
+                  {currentFyUnbilledMatrix.categories.map(c => (
+                    <th key={c.id} style={{ padding: '0.65rem 0.4rem', border: '1px solid var(--table-border-color)', background: 'var(--table-header-bg)', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'normal', lineHeight: 1.2 }}>
+                      <div style={{
+                        display: 'inline-flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0.35rem 0.5rem',
+                        borderRadius: '8px',
+                        background: `${c.color}15`,
+                        color: c.color,
+                        fontWeight: 800,
+                        fontSize: '0.82rem',
+                        boxShadow: `0 1px 2px ${c.color}15`
+                      }}>
+                        <span>{c.line1}</span>
+                        {c.line2 ? <span style={{ fontSize: '0.76rem', opacity: 0.95 }}>{c.line2}</span> : null}
+                      </div>
+                    </th>
+                  ))}
+                  <th style={{ padding: '0.65rem 0.5rem', border: '1px solid var(--table-border-color)', background: 'var(--table-header-bg)', textAlign: 'center', verticalAlign: 'middle' }}>
+                    <div style={{ display: 'inline-flex', padding: '0.35rem 0.65rem', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.12)', color: '#b45309', fontWeight: 800, fontSize: '0.82rem' }}>
+                      Total
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {unbilledMatrix.data.map((row: any) => (
+                {currentFyUnbilledMatrix.data.map((row: any) => (
                   <tr key={row.branch} style={{ background: 'var(--bg-color)', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-color)'}>
-                    <td style={{ padding: '0.6rem 0.8rem', border: '1px solid var(--border-color)', fontWeight: 800, textAlign: 'center', position: 'sticky', left: 0, background: 'var(--bg-color)', zIndex: 5, color: 'var(--text-primary)' }}>{row.branch}</td>
-                    {unbilledMatrix.categories.map(c => (
-                      <td key={c} style={{ padding: '0.6rem 0.8rem', border: '1px solid var(--border-color)', color: row[c] ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: row[c] ? 600 : 400 }}>
-                        {row[c] ? row[c].toLocaleString('en-IN', { maximumFractionDigits: 0 }) : ''}
+                    <td style={{ padding: '0.6rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 800, textAlign: 'center', position: 'sticky', left: 0, background: 'var(--bg-color)', zIndex: 5 }}>
+                      <span style={{ display: 'inline-block', padding: '0.2rem 0.5rem', borderRadius: '6px', background: 'rgba(99, 102, 241, 0.1)', color: '#4f46e5', fontSize: '0.84rem', letterSpacing: '0.03em', fontWeight: 800 }}>
+                        {row.branch}
+                      </span>
+                    </td>
+                    {currentFyUnbilledMatrix.categories.map(c => (
+                      <td key={c.id} style={{ padding: '0.65rem 0.8rem', border: '1px solid var(--table-border-color)', color: row[c.id] ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: row[c.id] ? 700 : 400, fontFamily: row[c.id] ? 'var(--font-mono)' : 'inherit', fontSize: '0.86rem' }}>
+                        {row[c.id] ? row[c.id].toLocaleString('en-IN', { maximumFractionDigits: 0 }) : <span style={{ opacity: 0.25 }}>—</span>}
                       </td>
                     ))}
-                    <td style={{ padding: '0.6rem 0.8rem', border: '1px solid var(--border-color)', fontWeight: 800, background: 'rgba(245, 158, 11, 0.05)', color: 'var(--text-primary)' }}>
-                      {row.Total ? row.Total.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : ''}
+                    <td style={{ padding: '0.65rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 800, color: row.Total ? '#d97706' : 'var(--text-secondary)', background: 'rgba(245, 158, 11, 0.04)', fontSize: '0.88rem', fontFamily: 'var(--font-mono)' }}>
+                      {row.Total ? row.Total.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : <span style={{ opacity: 0.25 }}>—</span>}
                     </td>
                   </tr>
                 ))}
                 {/* Grand Total Row */}
-                <tr style={{ background: '#f8fafc' }}>
-                  <td style={{ padding: '0.8rem', border: '1px solid var(--border-color)', fontWeight: 800, textAlign: 'center', position: 'sticky', left: 0, background: '#f8fafc', zIndex: 5, color: 'var(--text-primary)' }}>TOTAL</td>
-                  {unbilledMatrix.categories.map(c => (
-                    <td key={c} style={{ padding: '0.8rem', border: '1px solid var(--border-color)', fontWeight: 800, color: unbilledMatrix.totals[c] ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                      {unbilledMatrix.totals[c] ? unbilledMatrix.totals[c].toLocaleString('en-IN', { maximumFractionDigits: 0 }) : 0}
+                <tr style={{ background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.06), rgba(245, 158, 11, 0.06))' }}>
+                  <td style={{ padding: '0.85rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 900, textAlign: 'center', position: 'sticky', left: 0, background: 'var(--surface-color)', zIndex: 5, color: 'var(--text-primary)', letterSpacing: '0.05em' }}>TOTAL</td>
+                  {currentFyUnbilledMatrix.categories.map(c => (
+                    <td key={c.id} style={{ padding: '0.85rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 800, color: currentFyUnbilledMatrix.totals[c.id] ? c.color : 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}>
+                      {currentFyUnbilledMatrix.totals[c.id] ? currentFyUnbilledMatrix.totals[c.id].toLocaleString('en-IN', { maximumFractionDigits: 0 }) : 0}
                     </td>
                   ))}
-                  <td style={{ padding: '0.8rem', border: '1px solid var(--border-color)', fontWeight: 800, background: '#fef3c7', color: '#b45309', fontSize: '0.9rem' }}>
-                    {unbilledMatrix.grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  <td style={{ padding: '0.85rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 900, background: 'rgba(245, 158, 11, 0.15)', color: '#b45309', fontSize: '0.98rem', fontFamily: 'var(--font-mono)' }}>
+                    {currentFyUnbilledMatrix.grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-            <div className="glass" style={{ padding: '1.5rem', flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Total Unbilled Value</span>
-              <span style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--text-primary)' }}>₹{unbilledMatrix.grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+          {/* Table 2: Previous FY */}
+          <div className="glass" style={{ padding: '1.5rem', overflowX: 'auto', borderRadius: '16px' }}>
+            <div style={{ marginBottom: '1.25rem' }}>
+              <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.25rem', fontWeight: 800 }}>
+                Unbilled Reports Previous FY
+              </h3>
             </div>
-            <DonutChart data={unbilledMatrix.branchChart} title="Unbilled Value by Branch" />
+
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', fontSize: '0.88rem', border: '1px solid var(--table-border-color)' }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: '0.75rem', border: '1px solid var(--table-border-color)', background: 'var(--table-header-bg)', color: 'var(--text-primary)', textAlign: 'center', fontWeight: 800, position: 'sticky', left: 0, zIndex: 10 }}>
+                    Branch
+                  </th>
+                  {previousFyUnbilledMatrix.categories.map(c => (
+                    <th key={c.id} style={{ padding: '0.65rem 0.4rem', border: '1px solid var(--table-border-color)', background: 'var(--table-header-bg)', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'normal', lineHeight: 1.2 }}>
+                      <div style={{
+                        display: 'inline-flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0.35rem 0.5rem',
+                        borderRadius: '8px',
+                        background: `${c.color}15`,
+                        color: c.color,
+                        fontWeight: 800,
+                        fontSize: '0.82rem',
+                        boxShadow: `0 1px 2px ${c.color}15`
+                      }}>
+                        <span>{c.line1}</span>
+                        {c.line2 ? <span style={{ fontSize: '0.76rem', opacity: 0.95 }}>{c.line2}</span> : null}
+                      </div>
+                    </th>
+                  ))}
+                  <th style={{ padding: '0.65rem 0.5rem', border: '1px solid var(--table-border-color)', background: 'var(--table-header-bg)', textAlign: 'center', verticalAlign: 'middle' }}>
+                    <div style={{ display: 'inline-flex', padding: '0.35rem 0.65rem', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.12)', color: '#b45309', fontWeight: 800, fontSize: '0.82rem' }}>
+                      Total
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {previousFyUnbilledMatrix.data.map((row: any) => (
+                  <tr key={row.branch} style={{ background: 'var(--bg-color)', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-color)'}>
+                    <td style={{ padding: '0.6rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 800, textAlign: 'center', position: 'sticky', left: 0, background: 'var(--bg-color)', zIndex: 5 }}>
+                      <span style={{ display: 'inline-block', padding: '0.2rem 0.5rem', borderRadius: '6px', background: 'rgba(99, 102, 241, 0.1)', color: '#4f46e5', fontSize: '0.84rem', letterSpacing: '0.03em', fontWeight: 800 }}>
+                        {row.branch}
+                      </span>
+                    </td>
+                    {previousFyUnbilledMatrix.categories.map(c => (
+                      <td key={c.id} style={{ padding: '0.65rem 0.8rem', border: '1px solid var(--table-border-color)', color: row[c.id] ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: row[c.id] ? 700 : 400, fontFamily: row[c.id] ? 'var(--font-mono)' : 'inherit', fontSize: '0.86rem' }}>
+                        {row[c.id] ? row[c.id].toLocaleString('en-IN', { maximumFractionDigits: 0 }) : <span style={{ opacity: 0.25 }}>—</span>}
+                      </td>
+                    ))}
+                    <td style={{ padding: '0.65rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 800, color: row.Total ? '#d97706' : 'var(--text-secondary)', background: 'rgba(245, 158, 11, 0.04)', fontSize: '0.88rem', fontFamily: 'var(--font-mono)' }}>
+                      {row.Total ? row.Total.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : <span style={{ opacity: 0.25 }}>—</span>}
+                    </td>
+                  </tr>
+                ))}
+                {/* Grand Total Row */}
+                <tr style={{ background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.06), rgba(245, 158, 11, 0.06))' }}>
+                  <td style={{ padding: '0.85rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 900, textAlign: 'center', position: 'sticky', left: 0, background: 'var(--surface-color)', zIndex: 5, color: 'var(--text-primary)', letterSpacing: '0.05em' }}>TOTAL</td>
+                  {previousFyUnbilledMatrix.categories.map(c => (
+                    <td key={c.id} style={{ padding: '0.85rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 800, color: previousFyUnbilledMatrix.totals[c.id] ? c.color : 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}>
+                      {previousFyUnbilledMatrix.totals[c.id] ? previousFyUnbilledMatrix.totals[c.id].toLocaleString('en-IN', { maximumFractionDigits: 0 }) : 0}
+                    </td>
+                  ))}
+                  <td style={{ padding: '0.85rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 900, background: 'rgba(245, 158, 11, 0.15)', color: '#b45309', fontSize: '0.98rem', fontFamily: 'var(--font-mono)' }}>
+                    {previousFyUnbilledMatrix.grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
+
 
         </div>
       )}
 
-      {/* --- BRANCH USERS REPORTS TAB --- */}
-      {activeTab === 'branch_users' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div className="glass" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-            <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-primary)' }}>Branch Users Reports</h3>
-            <p>Detailed branch-level user performance metrics will be displayed here.</p>
-          </div>
-        </div>
-      )}
 
 
 

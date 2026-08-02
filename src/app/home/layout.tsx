@@ -13,41 +13,30 @@ import AIChatbot from '../components/AIChatbot';
 import GlobalDialogs, { showToast } from '@/components/GlobalDialogs';
 import PendingApprovalsReminder from './components/PendingApprovalsReminder';
 
-function DashboardNav({ profile }: { profile: any }) {
+function DashboardNav({ profile, user }: { profile: any; user: any }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { getAccessLevel } = usePermissions();
 
-  const handleTriggerEnqSync = async () => {
-    try {
-      showToast('Triggering ENQ Sync...', 'info');
-      const res = await fetch('/api/ingest-erp/manual-trigger', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'enq' })
-      });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to trigger ENQ Sync via API');
-      }
-      showToast('ENQ Sync triggered successfully! Please check GitHub Actions tab for live logs and completion status.', 'success');
-    } catch (err: any) {
-      showToast(err.message, 'error');
-    }
-  };
-
-  const isSuperAdmin = profile?.email?.toLowerCase() === 'gp@transworldintl.com';
+  const userEmail = (user?.email || profile?.email || (profile?.username ? `${profile.username}@transworldintl.com` : '')).toLowerCase();
+  const isSuperAdmin = userEmail === 'gp@transworldintl.com' || profile?.username === 'gp' || profile?.username === 'ganesh' || profile?.name?.includes('Ganesaperumal');
   const isAdmin = profile?.role === 'Admin';
-  const canRunEnq = isAdmin || isSuperAdmin;
-  const hasControlCenterAccess = isSuperAdmin || canRunEnq;
+  const hasControlCenterAccess = isSuperAdmin || isAdmin;
 
   const canAccessActive = getAccessLevel('Active Jobs', profile) !== 'None';
   const canAccessClosed = getAccessLevel('Closed Jobs', profile) !== 'None';
   const isActiveActive = pathname.startsWith('/home/active-jobs');
   const isClosedActive = pathname === '/home/closed-jobs';
 
+  const cscAccessLevel = getAccessLevel('CSC Jobs', profile);
+  const isCscViewer = profile?.csc_role === 'Viewer' || (profile?.role === 'Viewer' && profile?.csc_role !== 'Admin' && profile?.csc_role !== 'Manager' && profile?.csc_role !== 'Executive') || (cscAccessLevel === 'View' && !isAdmin && profile?.csc_role !== 'Admin');
+  const canAccessFollowUps = cscAccessLevel !== 'None' && !isCscViewer;
+  const canCscReports = ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(profile?.csc_role || '') || ['Admin', 'Manager', 'Executive'].includes(profile?.role || '');
+  const canUnbilledReports = ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(profile?.unbilled_role || '');
+  const canAccessReports = canCscReports || canUnbilledReports;
+
   return (
-    <nav className={styles.nav}>
+    <nav className={styles.nav} style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', gap: '0.35rem' }}>
       
       {(canAccessActive || canAccessClosed) && (
         <div style={{ marginBottom: '0.4rem' }}>
@@ -127,49 +116,101 @@ function DashboardNav({ profile }: { profile: any }) {
         </div>
       )}
 
+      {canAccessFollowUps && (
+        <Link href="/home/follow-ups" className={`${styles.navItem} ${pathname === '/home/follow-ups' ? styles.active : ''}`}>
+          <span>⏰</span> Follow-ups
+        </Link>
+      )}
+
       {getAccessLevel('All Jobs', profile) !== 'None' && (
         <Link href="/home/all-jobs" className={`${styles.navItem} ${pathname === '/home/all-jobs' ? styles.active : ''}`}>
           <span>📁</span> All Jobs
         </Link>
       )}
 
-      {getAccessLevel('Follow-ups', profile) !== 'None' && (
-        <Link href="/home/follow-ups" className={`${styles.navItem} ${pathname === '/home/follow-ups' ? styles.active : ''}`}>
-          <span>⏰</span> Follow-ups
-        </Link>
-      )}
-
-      {getAccessLevel('Reports', profile) !== 'None' && (
-        <Link href="/home/reports" className={`${styles.navItem} ${pathname === '/home/reports' ? styles.active : ''}`}>
-          <span>📊</span> Reports &amp; Analytics
-        </Link>
-      )}
-
       {getAccessLevel('Unbilled', profile) !== 'None' && (
         <Link href="/home/unbilled" className={`${styles.navItem} ${pathname.startsWith('/home/unbilled') ? styles.active : ''}`}>
-          <span>💰</span> Unbilled
+          <span>🧾</span> Unbilled
+        </Link>
+      )}
+
+      {canAccessReports && (
+        <Link href="/home/reports" className={`${styles.navItem} ${pathname === '/home/reports' ? styles.active : ''}`}>
+          <span>📊</span> Reports
         </Link>
       )}
 
 
       {hasControlCenterAccess && (
-        <>
-          <div style={{ marginTop: '0.75rem', marginBottom: '0.25rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)', fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', paddingLeft: '0.5rem' }}>
-            Control Center
-          </div>
-
+        <div style={{ marginTop: 'auto', paddingTop: '0.75rem' }}>
           {(isAdmin || isSuperAdmin) && (
             <Link href="/home/admin" className={`${styles.navItem} ${pathname === '/home/admin' ? styles.active : ''}`}>
-              <span>⚙️</span> Admin Center
+              <span>⚙️</span> Admin
             </Link>
           )}
 
-          {canRunEnq && (
-            <button onClick={handleTriggerEnqSync} className={styles.navItem} style={{ background: 'transparent', border: 'none', width: '100%', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
-              <span>🌐</span> Run ENQ Scraper
-            </button>
+          {isSuperAdmin && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: 'rgba(148, 163, 184, 0.12)',
+              borderRadius: '12px',
+              padding: '4px',
+              position: 'relative',
+              border: '1px solid var(--border-color)',
+              gap: '4px',
+              marginTop: '0.4rem'
+            }}>
+              <Link
+                href="/home/permissions"
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.35rem',
+                  padding: '0.6rem 0.5rem',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                  color: pathname === '/home/permissions' ? '#ffffff' : 'var(--text-secondary)',
+                  background: pathname === '/home/permissions'
+                    ? 'linear-gradient(135deg, #6366f1, #4f46e5)'
+                    : 'transparent',
+                  boxShadow: pathname === '/home/permissions' ? '0 4px 12px rgba(99, 102, 241, 0.35)' : 'none',
+                }}
+              >
+                <span>🛡️</span> Roles
+              </Link>
+
+              <Link
+                href="/home/users"
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.35rem',
+                  padding: '0.6rem 0.5rem',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                  color: pathname === '/home/users' ? '#ffffff' : 'var(--text-secondary)',
+                  background: pathname === '/home/users'
+                    ? 'linear-gradient(135deg, #10b981, #059669)'
+                    : 'transparent',
+                  boxShadow: pathname === '/home/users' ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
+                }}
+              >
+                <span>👥</span> Users
+              </Link>
+            </div>
           )}
-        </>
+        </div>
       )}
 
     </nav>
@@ -252,9 +293,9 @@ export default function DashboardLayout({
                 <h2 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 'bold', backgroundImage: 'linear-gradient(45deg, #059669, #10b981)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', letterSpacing: '-0.02em' }}>Jobs Portal</h2>
               </div>
 
-              <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, paddingRight: '4px' }}>
+              <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, paddingRight: '4px', display: 'flex', flexDirection: 'column' }}>
                 <Suspense fallback={<nav className={styles.nav}>Loading...</nav>}>
-                  <DashboardNav profile={profile} />
+                  <DashboardNav profile={profile} user={user} />
                 </Suspense>
               </div>
               
@@ -277,7 +318,7 @@ export default function DashboardLayout({
 }
 
 function SyncERPWrapper({ user, profile }: { user: any, profile: any }) {
-  const { getAccessLevel } = usePermissions();
-  if (getAccessLevel('Sync ERP', profile) === 'None') return null;
+  const isAllowed = profile?.role === 'Admin' || ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(profile?.csc_role || '');
+  if (!isAllowed) return null;
   return <SyncERPButton user={user} profile={profile} />;
 }

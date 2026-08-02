@@ -7,21 +7,19 @@ export async function POST(request: Request) {
     const username = body.username || 'Server';
     const type = body.type || body.workflow;
 
-    const GITHUB_WORKFLOW_ID = type === 'enq' ? 'sync-erp-enq.yml' : 'sync-erp.yml';
+    const GITHUB_WORKFLOW_ID = 'sync-erp.yml';
 
-    if (type !== 'enq') {
-      const { data, error } = await supabase.from('sync_lock').select('*').eq('id', 1).single();
-      if (error || data?.is_syncing) {
-        return NextResponse.json({ error: 'Sync already in progress.' }, { status: 400 });
-      }
-
-      // Set the lock
-      await supabase.from('sync_lock').update({ 
-        is_syncing: true, 
-        started_by: username, 
-        started_at: new Date().toISOString() 
-      }).eq('id', 1);
+    const { data, error } = await supabase.from('sync_lock').select('*').eq('id', 1).single();
+    if (error || data?.is_syncing) {
+      return NextResponse.json({ error: 'Sync already in progress.' }, { status: 400 });
     }
+
+    // Set the lock
+    await supabase.from('sync_lock').update({ 
+      is_syncing: true, 
+      started_by: username, 
+      started_at: new Date().toISOString() 
+    }).eq('id', 1);
 
     // Ping GitHub Actions to trigger the workflow
     const GITHUB_PAT = process.env.GITHUB_PAT;

@@ -67,13 +67,9 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isEmbedded) {
-      window.location.href = '/home/admin';
-      return;
-    }
     setCheckingAuth(false);
     fetchUsers();
-  }, [isEmbedded]);
+  }, []);
 
   const fetchUsers = async () => {
     try {
@@ -198,56 +194,51 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
   };
 
   const pendingUsers = users.filter(u => u.is_approved === false);
-  const filteredUsers = users.filter(u => {
-    const q = searchQuery.toLowerCase();
-    const matchSearch = !searchQuery || (
-      (u.name && u.name.toLowerCase().includes(q)) ||
-      (u.username && u.username.toLowerCase().includes(q))
-    );
-    const matchRole = filterRole === 'All' || u.csc_role === filterRole || u.tracking_role === filterRole || u.unbilled_role === filterRole;
-    return matchSearch && matchRole;
-  });
+  const filteredUsers = users
+    .filter(u => {
+      const q = searchQuery.toLowerCase();
+      const matchSearch = !searchQuery || (
+        (u.name && u.name.toLowerCase().includes(q)) ||
+        (u.username && u.username.toLowerCase().includes(q))
+      );
+      const matchRole = filterRole === 'All' || u.csc_role === filterRole || u.tracking_role === filterRole || u.unbilled_role === filterRole;
+      return matchSearch && matchRole;
+    })
+    .sort((a, b) => ((a.name || a.username) || '').localeCompare((b.name || b.username) || ''));
 
   if (checkingAuth) {
     return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Verifying admin authorization...</div>;
   }
 
   return (
-    <div style={{ padding: isEmbedded ? '0' : '2rem', maxWidth: isEmbedded ? '100%' : '1300px', margin: '0 auto', fontFamily: "'Outfit', sans-serif" }}>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: isEmbedded ? '1.25rem' : '1.85rem', fontWeight: 800, color: '#10b981', margin: 0, letterSpacing: '-0.02em' }}>
-          👥 3. Master User Directory &amp; Account Approvals
+    <div style={{ padding: isEmbedded ? '0' : '2rem', maxWidth: isEmbedded ? '100%' : '100%', margin: '0 auto', fontFamily: "'Outfit', sans-serif" }}>
+      {/* Header Bar: Title on Left, Search & Add User on Right */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <h2 style={{ fontSize: isEmbedded ? '1.25rem' : '1.75rem', fontWeight: 800, color: '#10b981', margin: 0, letterSpacing: '-0.02em' }}>
+          👥 User Directory
         </h2>
+
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <input
+            type="text"
+            placeholder="Search by name, username..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ ...inputStyle, width: '240px' }}
+          />
+          {!isViewerMode && (
+          <button
+            onClick={() => setActiveModalUser({})}
+            style={{ padding: '0.65rem 1.25rem', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: 'white', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            ➕ Add New User
+          </button>
+          )}
+        </div>
       </div>
 
-      {/* 📊 Master Users Directory Table */}
-      <div style={cardStyle}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase' }}>
-              Master User Directory ({filteredUsers.length})
-            </h3>
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-            <input
-              type="text"
-              placeholder="Search by name, username..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ ...inputStyle, width: '220px' }}
-            />
-            {!isViewerMode && (
-            <button
-              onClick={() => setActiveModalUser({})}
-              style={{ padding: '0.65rem 1.25rem', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: 'white', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
-            >
-              ➕ Add New User
-            </button>
-            )}
-          </div>
-        </div>
-
+      {/* 📊 Full Width Users Directory Table Container */}
+      <div style={{ background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
             <thead>
@@ -280,7 +271,6 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                         <div>
                           <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{u.name || u.username}</div>
                           {u.phone && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{u.phone}</div>}
-                          {isSuperAdmin && <span style={{ fontSize: '0.68rem', color: '#f59e0b', fontWeight: 800 }}>👑 SUPER ADMIN</span>}
                         </div>
                       </div>
                     </td>

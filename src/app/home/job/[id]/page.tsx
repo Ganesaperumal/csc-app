@@ -382,6 +382,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const [newShipmentDate, setNewShipmentDate] = useState('');
   const [newShipmentLocation, setNewShipmentLocation] = useState('');
   const [agentName, setAgentName] = useState('Agent');
+  const [agentFullName, setAgentFullName] = useState('');
   const { getAccessLevel } = usePermissions();
   const [profileRoles, setProfileRoles] = useState<{ role?: string; csc_role?: string; tracking_role?: string; unbilled_role?: string } | null>(null);
 
@@ -539,7 +540,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           .single();
           
         if (profile) {
-          setAgentName(profile.username || profile.name || data.user.email?.split('@')[0] || 'User');
+          setAgentName(profile.username || data.user.email?.split('@')[0] || 'User');
+          setAgentFullName(profile.name || profile.username || data.user.email?.split('@')[0] || 'User');
           setProfileRoles(profile);
         } else {
           setAgentName(data.user.email?.split('@')[0] || 'Agent');
@@ -721,6 +723,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   };
 
   const pendingUpdatesRef = useRef<Record<string, any>>({});
+  const pendingOldValuesRef = useRef<Record<string, any>>({});
   const saveTimeout = useRef<NodeJS.Timeout | null>(null);
   const jobRef = useRef<any>(null);
 
@@ -736,11 +739,13 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
     }
 
     const toSave = { ...pendingUpdatesRef.current };
+    const oldValues = { ...pendingOldValuesRef.current };
     if (Object.keys(toSave).length === 0) {
       setSaving(false);
       return;
     }
     pendingUpdatesRef.current = {};
+    pendingOldValuesRef.current = {};
 
     try {
       setSaving(true);
@@ -751,7 +756,27 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
       if (error) throw error;
 
-      // audit_logs writing removed
+
+      // Insert one audit_logs row per changed field (fire-and-forget)
+      const SKIP_AUDIT_FIELDS = new Set(['updated_at']);
+      const auditRows = Object.entries(toSave)
+        .filter(([field]) => !SKIP_AUDIT_FIELDS.has(field))
+        .map(([field, newVal]) => ({
+          job_number: decodedId,
+          name: agentFullName || agentName,
+          username: agentName,
+          field_change: field,
+          old_value: oldValues[field] !== undefined && oldValues[field] !== null
+            ? String(oldValues[field])
+            : '',
+          new_value: newVal !== undefined && newVal !== null ? String(newVal) : '',
+        }));
+      if (auditRows.length > 0) {
+        supabase.from('audit_logs').insert(auditRows)
+          .then(({ error }) => {
+            if (error) console.error('[audit_logs] insert failed:', error.message, error);
+          });
+      }
     } catch (err: any) {
       const errMsg = err?.message || err?.details || err?.hint || (typeof err === 'object' ? JSON.stringify(err) : String(err));
       console.error('Failed to auto-save job:', errMsg, err);
@@ -782,6 +807,13 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
     if (name === 'goods_type' && typeof value === 'string' && value.toLowerCase().includes('vehicle')) {
       updates.car_included = true;
     }
+
+    // Capture old value for audit logging BEFORE modifying job state
+    Object.keys(updates).forEach(key => {
+      if (!(key in pendingOldValuesRef.current)) {
+        pendingOldValuesRef.current[key] = jobRef.current?.[key];
+      }
+    });
 
     pendingUpdatesRef.current = { ...pendingUpdatesRef.current, ...updates };
     setJob((prev: any) => ({ ...prev, ...updates }));

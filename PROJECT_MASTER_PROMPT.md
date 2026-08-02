@@ -43,7 +43,7 @@ src/
 │       ├── all-jobs/           # All jobs (full-width, no sidebar)
 │       ├── follow-ups/         # Follow-up management
 │       ├── spocs/              # SPOC contact management
-│       ├── reports/            # Reports & Analytics (Recharts)
+│       ├── reports/            # Reports (Recharts)
 │       ├── tracking/           # Jobs Tracking dashboard (SPOC view)
 │       ├── unbilled/           # Unbilled jobs management (full-width)
 │       ├── legacy-jobs/        # Legacy jobs list
@@ -88,6 +88,7 @@ src/
 | `unbilled_followups` | `job_number`, `agent_name`, `followup_notes`, `next_followup_date`, `display_id` | Unbilled follow-up notes |
 | `role_permissions` | `category` (CSC/Tracking/Unbilled/Admin), `role_name`, `page_name`, `access_level` (None/View/Edit) | RBAC permission matrix |
 | `ai_settings` | Admin-configurable AI prompt context | AI chatbot config |
+| `audit_logs` | `id`, `job_number`, `name`, `username`, `field_change`, `old_value`, `new_value`, `timestamp` | Field-level edit audit trail (written from Job Detail + Unbilled pages for all job edits; excludes unbilled followups and file uploads) |
 
 ---
 
@@ -106,8 +107,14 @@ Users have **one primary role** + **two category roles**:
 - `branches` (TEXT[]) → `['ALL']` = super admin, else branch-filtered queries
 - `is_approved` must be `true` to access the dashboard
 - Sidebar hidden on: `/home/job/[id]`, `/home/all-jobs`, `/home/unbilled`
-- **Sync ERP Button**: Disabled (visible but greyed) for Viewers; active for Executive/Manager
+- **Sync ERP Button**: Removed from RBAC permission matrix. Visible ONLY to Admins, CSC Manager, and CSC Executive.
+- **Role Permissions UI**: Unified single matrix table listing sections (`CSC Jobs`, `All Jobs`, `Unbilled`). Reports page and Sync ERP are removed from the matrix.
+- **Reports Access**: Admin, Manager, and Executive of CSC Jobs can see CSC reports (`Active Jobs Report` & `Agent Activity Oversight`). Admin, Manager, and Executive of Unbilled can see `Unbilled Report`. Viewers cannot see Reports page.
+- **Follow-ups Access**: Hidden from sidebar and strictly route-blocked for Viewers (accessible only to Admin, Manager, and Executive).
 - **Group Chat**: Hidden for Viewers; visible for Executive/Manager/Admin
+- **Call Alerts / Notifications**: Hardcoded sealed rules (removed from RBAC matrix). Admin sees all alerts; Viewers see nothing; Manager & Executive see only items matching their assigned branch/coordinator.
+- **Unbilled Follow-up Reminders**: Removed from RBAC permission matrix. Automatically enabled for any user who has access to the Unbilled page.
+- **Export Capabilities (Jobs & Unbilled)**: Removed from RBAC permission matrix. Automatically enabled for any user who has access to the corresponding page (`All Jobs` or `Unbilled`).
 - **SPOC role is REMOVED** — `isSPOC = false` constant in job detail, no redirect logic
 
 ---
@@ -171,16 +178,16 @@ Users have **one primary role** + **two category roles**:
 /home → /home/active-jobs (default redirect)
 /home/active-jobs     → Jobs list (csc_role ≠ None)
 /home/closed-jobs     → Closed jobs (csc_role ≠ None)
+/home/follow-ups      → Follow-ups (csc_role ≠ None)
 /home/all-jobs        → Full-width jobs table (csc_role ≠ None)
-/home/follow-ups      → Follow-ups (csc_role ≠ Viewer/None)
-/home/reports         → Charts & analytics (csc_role ≠ None)
 /home/unbilled        → Unbilled jobs (unbilled_role ≠ None)
+/home/reports         → Reports (csc_role ≠ None)
 /home/legacy-jobs     → Legacy jobs (unbilled_role ≠ None)
 /home/job/[id]        → Job detail (edit or read-only based on role)
-/home/admin           → Admin panel (Admin only)
-/home/permissions     → Role permission matrix (Admin only)
-/home/users           → User management (Admin only)
-/home/activity-log    → Audit log (Admin only)
+/home/admin           → Admin: Bulk Data Management (Admin & Super Admin sidebar link: Admin)
+/home/permissions     → Roles matrix (Super Admin sidebar link: Roles)
+/home/users           → Users directory (Super Admin sidebar link: Users)
+/home/activity-log    → Audit log (Admin only) — field-level edit history from jobs table
 /track/[...id]        → Public tracking page (no auth required)
 ```
 

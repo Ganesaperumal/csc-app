@@ -61,7 +61,7 @@ export default function FollowUpsPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, name, username')
+        .select('role, csc_role, name, username')
         .eq('id', user.id)
         .single();
 
@@ -70,12 +70,17 @@ export default function FollowUpsPage() {
 
       if (profile) {
         activeName = profile.name || profile.username || user.email?.split('@')[0] || 'Agent';
-        adminRole = profile.role === 'Admin';
+        adminRole = profile.role === 'Admin' || profile.csc_role === 'Admin';
         setIsAdmin(adminRole);
         
-        const level = getAccessLevel('Follow-ups', profile);
-        if (level === 'None') { router.push('/home'); return; }
-        setIsViewer(level !== 'Edit');
+        const level = getAccessLevel('CSC Jobs', profile);
+        const isUserViewer = profile.csc_role === 'Viewer' || (profile.role === 'Viewer' && profile.csc_role !== 'Admin' && profile.csc_role !== 'Manager' && profile.csc_role !== 'Executive') || (level === 'View' && !adminRole);
+
+        if (level === 'None' || isUserViewer) {
+          router.push('/home');
+          return;
+        }
+        setIsViewer(false);
         
         setAgentName(activeName);
       } else {

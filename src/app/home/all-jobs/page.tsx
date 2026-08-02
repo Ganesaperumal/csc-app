@@ -261,7 +261,7 @@ function AllJobsContent() {
       const level = getAccessLevel('All Jobs', profileData);
       if (level === 'None') { router.push('/home'); return; }
       if (level === 'View') setIsViewer(true);
-      setCanExportJobs(getAccessLevel('Export Jobs', profileData) !== 'None');
+      setCanExportJobs(true);
     };
     checkAccess();
   }, []);

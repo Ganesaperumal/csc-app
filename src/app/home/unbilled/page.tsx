@@ -153,6 +153,48 @@ function DateCellInput({ value, onChange, disabled }: { value: string | null; on
   );
 }
 
+function SpocCellInput({ value, onChange, disabled }: { value: string | null; onChange: (val: string) => void; disabled?: boolean }) {
+  const [draftValue, setDraftValue] = useState(value || '');
+
+  useEffect(() => {
+    setDraftValue(value || '');
+  }, [value]);
+
+  const handleCommit = (valToCommit: string) => {
+    if (valToCommit !== (value || '')) {
+      onChange(valToCommit);
+    }
+  };
+
+  return (
+    <input
+      type="text"
+      value={draftValue}
+      disabled={disabled}
+      onChange={(e) => setDraftValue(e.target.value)}
+      onBlur={(e) => handleCommit(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          handleCommit(draftValue);
+        }
+      }}
+      placeholder="SPOC Name"
+      style={{
+        width: '110px',
+        padding: '0.4rem 0.6rem',
+        borderRadius: '6px',
+        border: '1px solid var(--border-color)',
+        background: disabled ? 'var(--surface-color)' : 'var(--bg-color)',
+        color: 'var(--text-primary)',
+        fontSize: '0.78rem',
+        fontFamily: 'inherit',
+        boxSizing: 'border-box'
+      }}
+    />
+  );
+}
+
+
 function AnimatedNumber({ value, isCurrency = false }: { value: number; isCurrency?: boolean }) {
   const [displayVal, setDisplayVal] = useState(0);
 
@@ -224,7 +266,7 @@ function ColumnFilterDropdown({
       case 'po_status': return job.po_status || '—';
       case 'po_date': return formatDate(job.po_date);
       case 'inv_request_date': return formatDate(job.inv_request_date);
-      case 'spoc_name': return job.unbilled_spoc || job.spoc_name || '—';
+      case 'spoc_name': return job.spoc_name || job.unbilled_spoc || '—';
       default: return '—';
     }
   };
@@ -245,7 +287,7 @@ function ColumnFilterDropdown({
       case 'po_status': return job.po_status || '';
       case 'po_date': return job.po_date || '';
       case 'inv_request_date': return job.inv_request_date || '';
-      case 'spoc_name': return job.unbilled_spoc || job.spoc_name || '';
+      case 'spoc_name': return job.spoc_name || job.unbilled_spoc || '';
       default: return '';
     }
   };
@@ -384,8 +426,8 @@ export default function UnbilledManagementPage() {
       return;
     }
     setIsViewer(level === 'View');
-    setCanExportUnbilled(getAccessLevel('Export Unbilled', userProfile) !== 'None');
-    setCanSeeReminders(getAccessLevel('Unbilled Followup', userProfile) !== 'None');
+    setCanExportUnbilled(true);
+    setCanSeeReminders(true);
   }, [permissionsLoading, userProfile]);
 
   // Handle ESC key to close drawer
@@ -500,20 +542,40 @@ export default function UnbilledManagementPage() {
 
   const handleUpdateJobField = async (job: any, field: string, value: any) => {
     try {
+      const fieldToUpdate = field === 'unbilled_spoc' ? 'spoc_name' : field;
       const table = job.source_table || 'jobs';
-      const oldV = job[field];
+      const oldV = job[fieldToUpdate] ?? job[field];
+
+      const oldStr = oldV !== undefined && oldV !== null ? String(oldV) : '';
+      const newStr = value !== undefined && value !== null ? String(value) : '';
+
+      if (oldStr === newStr) return;
 
       const { error } = await supabase
         .from(table)
-        .update({ [field]: value })
+        .update({ [fieldToUpdate]: value })
         .eq('job_number', job.job_number);
 
       if (error) throw error;
 
+      // Insert audit log for both jobs and legacy_jobs
+      const auditName = userProfile?.name || userProfile?.username || currentUser?.email?.split('@')[0] || 'User';
+      const auditUsername = userProfile?.username || currentUser?.email?.split('@')[0] || 'User';
+      supabase.from('audit_logs').insert({
+        job_number: job.job_number,
+        name: auditName,
+        username: auditUsername,
+        field_change: fieldToUpdate,
+        old_value: oldStr,
+        new_value: newStr,
+      }).then(({ error: auditErr }) => {
+        if (auditErr) {
+          console.error('[audit_logs] insert failed:', auditErr.message, auditErr);
+        }
+      }); // fire and forget — no await
 
-
-      setJobs(prev => prev.map(j => j.job_number === job.job_number ? { ...j, [field]: value } : j));
-      showToast(`Updated ${field.replace(/_/g, ' ')}`, 'success');
+      setJobs(prev => prev.map(j => j.job_number === job.job_number ? { ...j, [fieldToUpdate]: value, [field]: value } : j));
+      showToast(`Updated ${fieldToUpdate.replace(/_/g, ' ')}`, 'success');
     } catch (err: any) {
       showToast(`Failed to update: ${err.message}`, 'error');
     }
@@ -601,7 +663,7 @@ export default function UnbilledManagementPage() {
                        (selectedGoodsStatus.includes('No Status') && (!j.goods_track_status || j.goods_track_status.trim() === '')) ||
                        selectedGoodsStatus.includes(getDisplayGoodsStatus(j.goods_track_status) || '');
     const matchPo = selectedPoStatus.includes('All') || selectedPoStatus.includes(j.po_status || '');
-    const matchSpoc = selectedSpoc.includes('All') || selectedSpoc.includes(j.unbilled_spoc || j.spoc_name || '');
+    const matchSpoc = selectedSpoc.includes('All') || selectedSpoc.includes(j.spoc_name || j.unbilled_spoc || '');
 
     // Check Column Funnel Filters
     for (const [colId, allowedVals] of Object.entries(columnFilters)) {
@@ -620,7 +682,7 @@ export default function UnbilledManagementPage() {
         else if (colId === 'po_status') val = j.po_status || '';
         else if (colId === 'po_date') val = j.po_date || '';
         else if (colId === 'inv_request_date') val = j.inv_request_date || '';
-        else if (colId === 'spoc_name') val = j.unbilled_spoc || j.spoc_name || '';
+        else if (colId === 'spoc_name') val = j.spoc_name || j.unbilled_spoc || '';
 
         if (!allowedVals.includes(val)) return false;
       }
@@ -691,7 +753,7 @@ export default function UnbilledManagementPage() {
         'PO Date': formatDate(j.po_date),
         'Inv Request Dt': formatDate(j.inv_request_date),
         'Bill Closure Date': formatDate(j.bill_closure_date),
-        'SPOC': j.unbilled_spoc || j.spoc_name || ''
+        'SPOC': j.spoc_name || j.unbilled_spoc || ''
       };
     });
 
@@ -843,7 +905,7 @@ export default function UnbilledManagementPage() {
             <MultiSelect
               value={selectedSpoc}
               onChange={(val) => setSelectedSpoc(val)}
-              options={[{ value: 'All', label: 'All SPOC' }, ...Array.from(new Set(jobs.map(j => j.unbilled_spoc || j.spoc_name).filter(Boolean))).map(s => ({ value: s as string, label: s as string }))]}
+              options={[{ value: 'All', label: 'All SPOC' }, ...Array.from(new Set(jobs.map(j => j.spoc_name || j.unbilled_spoc).filter(Boolean))).map(s => ({ value: s as string, label: s as string }))]}
               placeholder="All SPOC"
             />
           </div>
@@ -896,7 +958,7 @@ export default function UnbilledManagementPage() {
             <span className={styles.searchIcon}>🔍</span>
           </div>
 
-          {/* Download XLSX Button — only shown with Export Unbilled permission */}
+          {/* Download XLSX Button — shown for users with Unbilled page access */}
           {canExportUnbilled && (
           <button
             onClick={handleExportXlsx}
@@ -920,7 +982,7 @@ export default function UnbilledManagementPage() {
           </button>
           )}
 
-          {/* Reminders Bell — only shown with Unbilled Followup permission */}
+          {/* Reminders Bell — shown for users with Unbilled page access */}
           {canSeeReminders && (
           <div style={{ position: 'relative' }}>
             <button
@@ -1220,27 +1282,10 @@ export default function UnbilledManagementPage() {
 
                     {/* 15. SPOC */}
                     <td>
-                      <input
-                        type="text"
-                        value={j.unbilled_spoc || j.spoc_name || ''}
+                      <SpocCellInput
+                        value={j.spoc_name || j.unbilled_spoc}
+                        onChange={(val) => handleUpdateJobField(j, 'spoc_name', val)}
                         disabled={isViewer}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setJobs(prev => prev.map(job => job.job_number === j.job_number ? { ...job, unbilled_spoc: val } : job));
-                        }}
-                        onBlur={(e) => handleUpdateJobField(j, 'unbilled_spoc', e.target.value)}
-                        placeholder="SPOC Name"
-                        style={{
-                          width: '110px',
-                          padding: '0.4rem 0.6rem',
-                          borderRadius: '6px',
-                          border: '1px solid var(--border-color)',
-                          background: isViewer ? 'var(--surface-color)' : 'var(--bg-color)',
-                          color: 'var(--text-primary)',
-                          fontSize: '0.78rem',
-                          fontFamily: 'inherit',
-                          boxSizing: 'border-box'
-                        }}
                       />
                     </td>
                   </tr>
