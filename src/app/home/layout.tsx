@@ -171,9 +171,9 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
                   transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                   color: pathname === '/home/admin' ? '#ffffff' : 'var(--text-secondary)',
                   background: pathname === '/home/admin'
-                    ? 'linear-gradient(135deg, #6366f1, #4f46e5)'
+                    ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
                     : 'transparent',
-                  boxShadow: pathname === '/home/admin' ? '0 4px 12px rgba(99, 102, 241, 0.35)' : 'none',
+                  boxShadow: pathname === '/home/admin' ? '0 4px 12px rgba(59, 130, 246, 0.35)' : 'none',
                 }}
               >
                 <span>⚙️</span> Admin
