@@ -43,12 +43,14 @@ export default function MissingDataPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, csc_role')
+        .select('name, username, email, role, csc_role')
         .eq('id', session.user.id)
         .single();
 
-      const isAdmin = profile?.role === 'Admin' || profile?.csc_role === 'Admin';
-      if (!isAdmin) { router.push('/home/active-jobs'); return; }
+      const userEmail = (session.user.email || profile?.email || (profile?.username ? `${profile.username}@transworldintl.com` : '')).toLowerCase();
+      const isSuperAdmin = userEmail === 'gp@transworldintl.com' || profile?.username === 'gp' || profile?.username === 'ganesh' || profile?.name?.includes('Ganesaperumal');
+
+      if (!isSuperAdmin) { router.push('/home/active-jobs'); return; }
 
       await fetchData();
     };
@@ -231,24 +233,6 @@ export default function MissingDataPage() {
       flexDirection: 'column',
       gap: '2.5rem',
     }}>
-      {/* Page header */}
-      <div>
-        <h1 style={{
-          margin: 0,
-          fontSize: '1.8rem',
-          fontWeight: 'bold',
-          backgroundImage: 'linear-gradient(45deg, #f59e0b, #ef4444)',
-          WebkitBackgroundClip: 'text',
-          backgroundClip: 'text',
-          color: 'transparent',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-        }}>
-          <span>📑</span> Data
-        </h1>
-      </div>
-
       {loading ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
           <div style={{ width: '20px', height: '20px', border: '3px solid var(--border-color)', borderTopColor: '#f59e0b', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />

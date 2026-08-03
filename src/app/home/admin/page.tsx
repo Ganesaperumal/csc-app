@@ -147,15 +147,16 @@ export default function AdminPage() {
         return;
       }
       setCurrentUser(data.user);
-      const userEmail = data.user.email?.toLowerCase() || '';
-
       supabase.from('profiles').select('*').eq('id', data.user.id).single()
         .then(({ data: profile }) => {
-          if (profile && (profile.role === 'Admin' || userEmail === 'gp@transworldintl.com')) {
+          const userEmail = (data.user.email || profile?.email || (profile?.username ? `${profile.username}@transworldintl.com` : '')).toLowerCase();
+          const isSuperAdmin = userEmail === 'gp@transworldintl.com' || profile?.username === 'gp' || profile?.username === 'ganesh' || profile?.name?.includes('Ganesaperumal');
+
+          if (profile && isSuperAdmin) {
             setUserRole(profile.role);
             setCheckingAuth(false);
           } else {
-            showToast('⛔ Access Denied: Admin Center is restricted to Admins only.', 'error');
+            showToast('⛔ Access Denied: Admin Center is restricted to Super Admin only.', 'error');
             router.push('/home/active-jobs');
           }
         });
