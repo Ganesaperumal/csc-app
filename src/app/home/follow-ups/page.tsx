@@ -347,26 +347,12 @@ export default function FollowUpsPage() {
               Follow-up Tasks
             </span>
           </h1>
-          <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            {isAdmin ? `Managing follow-ups for all active coordinators` : `Managing follow-up reminders for ${agentName}`}
-          </p>
+
         </div>
 
         {/* Filters */}
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* Search bar */}
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <input 
-              type="text" 
-              placeholder="Search tasks..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ padding: '0.5rem 2rem 0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', fontSize: '0.85rem', minWidth: '200px' }}
-            />
-            <span style={{ position: 'absolute', right: '10px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>🔍</span>
-          </div>
-
-          {/* Admin Agent filter dropdown */}
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'nowrap' }}>
+          {/* Admin Agent filter dropdown — left of search */}
           {isAdmin && (
             <CustomSelect
               placeholder="All Operators"
@@ -376,9 +362,21 @@ export default function FollowUpsPage() {
                 { value: 'All', label: 'All Operators' },
                 ...allAgents.map(name => ({ value: name, label: name }))
               ]}
-              style={{ minWidth: '160px' }}
+              style={{ width: '180px', minWidth: '180px', flexGrow: 0 }}
             />
           )}
+
+          {/* Search bar — always right of dropdown */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ padding: '0.5rem 2rem 0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', fontSize: '0.85rem', minWidth: '200px' }}
+            />
+            <span style={{ position: 'absolute', right: '10px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>🔍</span>
+          </div>
         </div>
       </div>
       {loading ? (
