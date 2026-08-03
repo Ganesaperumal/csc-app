@@ -245,7 +245,7 @@ export default function MissingDataPage() {
           alignItems: 'center',
           gap: '0.5rem',
         }}>
-          <span>📊</span> Data
+          <span>📑</span> Data
         </h1>
       </div>
 

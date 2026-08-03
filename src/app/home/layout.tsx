@@ -200,7 +200,7 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
                   boxShadow: pathname === '/home/data' ? '0 4px 12px rgba(245, 158, 11, 0.35)' : 'none',
                 }}
               >
-                <span>📊</span> Data
+                <span>📑</span> Data
               </Link>
             </div>
           )}
