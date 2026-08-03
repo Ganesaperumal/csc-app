@@ -7,19 +7,22 @@ import { showToast } from '@/components/GlobalDialogs';
 
 interface MissingQuoteJob {
   job_number: string;
-  enquiry_number: string;
+  enq_number?: string;
+  enquiry_number?: string;
   company: string;
   customer_name: string;
-  quote_value: string | null;
+  quote_value: string | number | null;
 }
 
 interface MissingSpocJob {
   job_number: string;
-  enquiry_number: string;
+  enq_number?: string;
+  enquiry_number?: string;
   company: string;
   customer_name: string;
   sales_by: string | null;
   spoc_name: string | null;
+  unbilled_spoc?: string | null;
 }
 
 export default function MissingDataPage() {
@@ -80,7 +83,7 @@ export default function MissingDataPage() {
     // Fetch all jobs to evaluate missing values accurately
     const { data: allJobs, error } = await supabase
       .from('jobs')
-      .select('job_number, enquiry_number, company, customer_name, quote_value, sales_by, spoc_name')
+      .select('job_number, enq_number, company, customer_name, quote_value, sales_by, spoc_name, unbilled_spoc')
       .order('job_number', { ascending: false });
 
     if (error) {
@@ -94,8 +97,8 @@ export default function MissingDataPage() {
     // Filter jobs missing quote_value (null, empty, 0, ₹0, etc.)
     const qJobs = jobs.filter(j => isQuoteMissing(j.quote_value));
 
-    // Filter jobs missing sales_by OR spoc_name
-    const sJobs = jobs.filter(j => isSpocMissing(j.sales_by) || isSpocMissing(j.spoc_name));
+    // Filter jobs missing sales_by OR spoc_name/unbilled_spoc
+    const sJobs = jobs.filter(j => isSpocMissing(j.sales_by) || isSpocMissing(j.spoc_name || j.unbilled_spoc));
 
     setQuoteJobs(qJobs);
     setSpocJobs(sJobs);
@@ -109,7 +112,8 @@ export default function MissingDataPage() {
     const spi: Record<string, string> = {};
     sJobs.forEach(j => {
       si[j.job_number] = isSpocMissing(j.sales_by) ? '' : (j.sales_by || '');
-      spi[j.job_number] = isSpocMissing(j.spoc_name) ? '' : (j.spoc_name || '');
+      const currentSpoc = j.spoc_name || j.unbilled_spoc;
+      spi[j.job_number] = isSpocMissing(currentSpoc) ? '' : (currentSpoc || '');
     });
     setSalesInputs(si);
     setSpocInputs(spi);
@@ -127,7 +131,7 @@ export default function MissingDataPage() {
       .eq('job_number', job.job_number);
     setSaving(s => ({ ...s, [`q_${job.job_number}`]: false }));
     if (error) { showToast(`Error: ${error.message}`, 'error'); return; }
-    showToast(`✅ Quote value saved for ${job.enquiry_number || job.job_number}`, 'success');
+    showToast(`✅ Quote value saved for ${job.enq_number || job.enquiry_number || job.job_number}`, 'success');
     setQuoteJobs(prev => prev.filter(j => j.job_number !== job.job_number));
   };
 
@@ -141,24 +145,28 @@ export default function MissingDataPage() {
     setSaving(s => ({ ...s, [`s_${job.job_number}`]: true }));
     const updates: any = {};
     if (!isSpocMissing(sales)) updates.sales_by = sales;
-    if (!isSpocMissing(spoc)) updates.spoc_name = spoc;
+    if (!isSpocMissing(spoc)) {
+      updates.spoc_name = spoc;
+      updates.unbilled_spoc = spoc;
+    }
     const { error } = await supabase
       .from('jobs')
       .update(updates)
       .eq('job_number', job.job_number);
     setSaving(s => ({ ...s, [`s_${job.job_number}`]: false }));
     if (error) { showToast(`Error: ${error.message}`, 'error'); return; }
-    showToast(`✅ SPOC saved for ${job.enquiry_number || job.job_number}`, 'success');
+    showToast(`✅ SPOC saved for ${job.enq_number || job.enquiry_number || job.job_number}`, 'success');
 
     // Re-check remaining status
+    const currentSpoc = job.spoc_name || job.unbilled_spoc;
     const newSales = !isSpocMissing(sales) ? sales : job.sales_by;
-    const newSpoc = !isSpocMissing(spoc) ? spoc : job.spoc_name;
+    const newSpoc = !isSpocMissing(spoc) ? spoc : currentSpoc;
     if (!isSpocMissing(newSales) && !isSpocMissing(newSpoc)) {
       setSpocJobs(prev => prev.filter(j => j.job_number !== job.job_number));
     } else {
       setSpocJobs(prev => prev.map(j =>
         j.job_number === job.job_number
-          ? { ...j, sales_by: newSales, spoc_name: newSpoc }
+          ? { ...j, sales_by: newSales, spoc_name: newSpoc, unbilled_spoc: newSpoc }
           : j
       ));
     }
@@ -293,7 +301,7 @@ export default function MissingDataPage() {
                       >
                         <td style={tdStyle}>
                           <span style={{ fontWeight: 700, color: '#f59e0b', fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                            {job.enquiry_number || '—'}
+                            {job.enq_number || job.enquiry_number || job.job_number}
                           </span>
                         </td>
                         <td style={tdStyle}>{job.company || '—'}</td>
@@ -345,7 +353,7 @@ export default function MissingDataPage() {
                       >
                         <td style={tdStyle}>
                           <span style={{ fontWeight: 700, color: '#6366f1', fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                            {job.enquiry_number || '—'}
+                            {job.enq_number || job.enquiry_number || job.job_number}
                           </span>
                         </td>
                         <td style={tdStyle}>
@@ -366,8 +374,8 @@ export default function MissingDataPage() {
                           )}
                         </td>
                         <td style={tdStyle}>
-                          {!isSpocMissing(job.spoc_name) ? (
-                            <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.8rem' }}>✓ {job.spoc_name}</span>
+                          {!isSpocMissing(job.spoc_name || job.unbilled_spoc) ? (
+                            <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.8rem' }}>✓ {job.spoc_name || job.unbilled_spoc}</span>
                           ) : (
                             <input
                               type="text"
