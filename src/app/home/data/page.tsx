@@ -161,12 +161,13 @@ export default function MissingDataPage() {
     const currentSpoc = job.spoc_name || job.unbilled_spoc;
     const newSales = !isSpocMissing(sales) ? sales : job.sales_by;
     const newSpoc = !isSpocMissing(spoc) ? spoc : currentSpoc;
+    const safeSpoc = newSpoc || null;
     if (!isSpocMissing(newSales) && !isSpocMissing(newSpoc)) {
       setSpocJobs(prev => prev.filter(j => j.job_number !== job.job_number));
     } else {
       setSpocJobs(prev => prev.map(j =>
         j.job_number === job.job_number
-          ? { ...j, sales_by: newSales, spoc_name: newSpoc, unbilled_spoc: newSpoc }
+          ? { ...j, sales_by: newSales || null, spoc_name: safeSpoc, unbilled_spoc: safeSpoc }
           : j
       ));
     }
