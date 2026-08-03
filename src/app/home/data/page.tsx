@@ -77,13 +77,19 @@ export default function MissingDataPage() {
     );
   };
 
+  const isUnbilledJob = (j: any) => {
+    const hasInvoice = j.invoice_number && String(j.invoice_number).trim() !== '';
+    const status = j.erp_status ? String(j.erp_status).trim().toLowerCase() : '';
+    return !hasInvoice && status !== 'billed' && status !== 'canceled' && status !== 'cancelled';
+  };
+
   const fetchData = async () => {
     setLoading(true);
 
     // Fetch all jobs to evaluate missing values accurately
     const { data: allJobs, error } = await supabase
       .from('jobs')
-      .select('job_number, enq_number, company, customer_name, quote_value, sales_by, spoc_name, unbilled_spoc')
+      .select('job_number, enq_number, company, customer_name, quote_value, sales_by, spoc_name, unbilled_spoc, invoice_number, erp_status')
       .order('job_number', { ascending: false });
 
     if (error) {
@@ -92,13 +98,14 @@ export default function MissingDataPage() {
       return;
     }
 
-    const jobs = allJobs || [];
+    // Only look at UNBILLED jobs (no invoice_number and not billed/cancelled)
+    const unbilledJobs = (allJobs || []).filter(isUnbilledJob);
 
     // Filter jobs missing quote_value (null, empty, 0, ₹0, etc.)
-    const qJobs = jobs.filter(j => isQuoteMissing(j.quote_value));
+    const qJobs = unbilledJobs.filter(j => isQuoteMissing(j.quote_value));
 
     // Filter jobs missing sales_by OR spoc_name/unbilled_spoc
-    const sJobs = jobs.filter(j => isSpocMissing(j.sales_by) || isSpocMissing(j.spoc_name || j.unbilled_spoc));
+    const sJobs = unbilledJobs.filter(j => isSpocMissing(j.sales_by) || isSpocMissing(j.spoc_name || j.unbilled_spoc));
 
     setQuoteJobs(qJobs);
     setSpocJobs(sJobs);
@@ -263,7 +270,7 @@ export default function MissingDataPage() {
           <span>⚠️</span> Missing Data
         </h1>
         <p style={{ margin: '0.3rem 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-          Jobs with incomplete fields — fill in missing values and save row by row.
+          Unbilled jobs (without invoice numbers) with incomplete fields — fill in missing values and save row by row.
         </p>
       </div>
 
