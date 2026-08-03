@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+/* Google Fonts loaded via <link> in layout for non-blocking font load */
 
 :root {
   /* ═══ LIQUID GLASS LIGHT PALETTE ═══ */
@@ -12,9 +12,10 @@
   --table-header-bg: rgba(248, 250, 252, 0.95);
 
   /* ═══ GLASS SPECIFIC TOKENS ═══ */
-  --glass-blur: blur(24px) saturate(190%);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.06), inset 0 1px 2px rgba(255, 255, 255, 0.4);
-  --glass-shadow-hover: 0 12px 40px 0 rgba(31, 38, 135, 0.1), inset 0 1px 2px rgba(255, 255, 255, 0.5);
+  /* Reduced blur for performance: heavy backdrop-filter is the #1 cause of GPU drain & cursor flicker */
+  --glass-blur: blur(8px);
+  --glass-shadow: 0 4px 16px 0 rgba(31, 38, 135, 0.06), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  --glass-shadow-hover: 0 8px 24px 0 rgba(31, 38, 135, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.5);
 
   /* ═══ ACCENTS ═══ */
   --primary-color: #4f46e5;
@@ -36,30 +37,6 @@
   --radius-sm: 10px;
 }
 
-/* Dark theme overrides */
-.dark-theme body {
-  /* ═══ LIQUID GLASS DARK PALETTE ═══ */
-  --bg-color: #030712;
-  --surface-color: rgba(17, 24, 39, 0.45);
-  --surface-hover: rgba(17, 24, 39, 0.55);
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(255, 255, 255, 0.12);
-  --border-glow: rgba(129, 140, 248, 0.15);
-  --table-border-color: rgba(255, 255, 255, 0.18);
-  --table-header-bg: rgba(15, 23, 42, 0.95);
-
-  /* ═══ GLASS SPECIFIC TOKENS ═══ */
-  --glass-blur: blur(24px) saturate(190%);
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.24), inset 0 1px 2px rgba(255, 255, 255, 0.05);
-  --glass-shadow-hover: 0 12px 40px 0 rgba(0, 0, 0, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.08);
-
-  /* ═══ ACCENTS & TEXT ═══ */
-  --primary-color: #6366f1;
-  --primary-hover: #4f46e5;
-  --text-primary: #f3f4f6;
-  --text-secondary: #9ca3af;
-  --text-accent: #818cf8;
-}
 
 * {
   box-sizing: border-box;
@@ -77,33 +54,21 @@ html, body {
   overflow: hidden;
 }
 
-/* ═══ ANIMATED LIQUID GRADIENTS ═══ */
-@keyframes liquidBackground {
-  0% {
-    background-position: 0% 50%, 100% 50%, 50% 50%;
-  }
-  50% {
-    background-position: 100% 50%, 50% 100%, 0% 0%;
-  }
-  100% {
-    background-position: 0% 50%, 100% 50%, 50% 50%;
-  }
-}
-
+/* ═══ STATIC BACKGROUND (animated version removed for performance) ═══ */
+/* The animated liquidBackground + background-attachment:fixed caused
+   constant GPU repaints and cursor/scroll jank. Static gradient is used instead. */
 body {
   background-color: var(--bg-color);
   background-image:
-    radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 45%),
-    radial-gradient(circle at 90% 80%, rgba(217, 70, 239, 0.12) 0%, transparent 45%),
-    radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.08) 0%, transparent 55%);
-  background-size: 200% 200%;
-  animation: liquidBackground 20s ease infinite alternate;
-  background-attachment: fixed;
+    radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 90% 80%, rgba(217, 70, 239, 0.09) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.06) 0%, transparent 55%);
+  background-attachment: scroll;
   color: var(--text-primary);
   font-family: var(--font-family);
   -webkit-font-smoothing: antialiased;
   letter-spacing: 0.01em;
-  transition: background-color 0.5s ease;
+  transition: background-color 0.3s ease;
 }
 
 /* ═══ CLASS UTILITIES ═══ */
@@ -114,35 +79,35 @@ body {
   border: 1px solid var(--border-color);
   box-shadow: var(--glass-shadow);
   border-radius: var(--radius);
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  /* Use specific properties instead of 'all' to avoid triggering unnecessary repaints */
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.glass:hover {
+/* Sidebar glass should NOT lift on hover (causes layout repaint) */
+aside.glass:hover {
+  background: var(--surface-color);
+  border-color: var(--border-color);
+  box-shadow: var(--glass-shadow);
+  transform: none;
+}
+
+.glass:hover:not(aside) {
   background: var(--surface-hover);
   border-color: var(--border-hover);
   box-shadow: var(--glass-shadow-hover);
-  transform: translateY(-2px);
 }
 
 /* ═══ INPUTS ═══ */
 input, select, textarea {
-  background: rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  /* Removed backdrop-filter from inputs: stacking blur on many inputs causes massive GPU overhead */
+  background: rgba(255, 255, 255, 0.6);
   color: var(--text-primary);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(200, 210, 230, 0.5);
   padding: 0.75rem 1rem;
   border-radius: var(--radius-sm);
   font-family: var(--font-family);
   font-size: 0.9rem;
-  transition: all 0.25s ease;
-}
-
-.dark-theme body input, 
-.dark-theme body select, 
-.dark-theme body textarea {
-  background: rgba(17, 24, 39, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 input:focus, select:focus, textarea:focus {
@@ -150,13 +115,6 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--primary-color);
   background: rgba(255, 255, 255, 0.8);
   box-shadow: 0 0 0 3px var(--primary-glow), 0 4px 12px var(--border-glow);
-}
-
-.dark-theme body input:focus, 
-.dark-theme body select:focus, 
-.dark-theme body textarea:focus {
-  background: rgba(17, 24, 39, 0.95);
-  box-shadow: 0 0 0 3px var(--primary-glow), 0 4px 12px rgba(0,0,0,0.5);
 }
 
 
@@ -186,13 +144,12 @@ select option {
 }
 
 .btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.35);
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35);
   filter: brightness(1.08);
 }
 
 .btn:active {
-  transform: scale(0.97) translateY(0);
+  transform: scale(0.97);
 }
 
 .btn-secondary {
@@ -200,11 +157,6 @@ select option {
   border: 1px solid rgba(255, 255, 255, 0.4);
   color: var(--text-primary) !important;
   box-shadow: none;
-}
-
-.dark-theme body .btn-secondary {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .btn-secondary:hover {
@@ -435,7 +387,7 @@ select option {
   overflow: hidden;
   animation: slideDown 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
-.dark-theme body .cmd-box { background: rgba(15,23,42,0.96); border-color: rgba(255,255,255,0.08); }
+
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-20px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
@@ -466,10 +418,11 @@ select option {
 /* ═══ NOTIFICATION PULSE ═══ */
 @keyframes notifPulse {
   0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
-  70%  { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+  70%  { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
   100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
 }
-.notif-pulse { animation: notifPulse 1.5s ease infinite; }
+/* Slowed to 2.5s and uses will-change to promote to own compositing layer */
+.notif-pulse { animation: notifPulse 2.5s ease infinite; will-change: box-shadow; }
 
 /* ═══ CONFETTI ═══ */
 @keyframes confettiFall {
@@ -481,9 +434,9 @@ select option {
 /* ═══ TRACKING PROGRESS ═══ */
 @keyframes progressGlow {
   0%, 100% { box-shadow: 0 0 6px 2px rgba(16,185,129,0.4); }
-  50%       { box-shadow: 0 0 14px 4px rgba(16,185,129,0.8); }
+  50%       { box-shadow: 0 0 12px 3px rgba(16,185,129,0.7); }
 }
-.stage-active-pulse { animation: progressGlow 1.8s ease-in-out infinite; }
+.stage-active-pulse { animation: progressGlow 2.2s ease-in-out infinite; will-change: box-shadow; }
 @keyframes lineFill { from { width: 0; } to { width: 100%; } }
 .stage-line-fill { animation: lineFill 0.6s ease forwards; }
 

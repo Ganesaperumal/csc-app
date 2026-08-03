@@ -1,5 +1,14 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// Server-only admin client — always uses service role key regardless of module cache.
+// Do NOT use the shared @/lib/supabase singleton here: it can be evaluated in the
+// client bundle context first (where SUPABASE_SERVICE_ROLE_KEY is undefined),
+// causing auth.admin calls to silently run with the anon key.
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 // GET all user profiles with auth emails
 export async function GET() {
@@ -31,21 +40,22 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { userId, name, username, email, role, csc_role, tracking_role, unbilled_role, branches, is_approved, photo, password } = body;
+    const { userId, name, username, email, phone, role, csc_role, tracking_role, unbilled_role, branches, is_approved, photo, password } = body;
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    // 1. If password or email provided, update Supabase Auth User
-    const authUpdates: any = {};
-    if (password) authUpdates.password = password;
-    if (email) authUpdates.email = email.toLowerCase();
-
-    if (Object.keys(authUpdates).length > 0) {
-      const { error: authError } = await supabase.auth.admin.updateUserById(userId, authUpdates);
+    // 1. Only update Supabase Auth if a new password is explicitly provided.
+    //    Email is intentionally NOT updated here — it's always the formula email
+    //    and `email` in the payload is always truthy (even when unchanged), which
+    //    caused spurious auth.admin calls that fail with empty error messages.
+    if (password) {
+      const { error: authError } = await supabase.auth.admin.updateUserById(userId, { password });
       if (authError) {
-        return NextResponse.json({ error: `Auth Error: ${authError.message}` }, { status: 400 });
+        const msg = authError.message || JSON.stringify(authError);
+        console.error('[PUT /api/admin/users] Auth update error:', msg);
+        return NextResponse.json({ error: `Auth Error: ${msg}` }, { status: 400 });
       }
     }
 
@@ -53,12 +63,14 @@ export async function PUT(request: Request) {
     const updates: any = {};
     if (name !== undefined) updates.name = name;
     if (username !== undefined) updates.username = username;
+    if (phone !== undefined) updates.phone = phone;
     if (role !== undefined) updates.role = role;
     if (csc_role !== undefined) updates.csc_role = csc_role;
     if (tracking_role !== undefined) updates.tracking_role = tracking_role;
     if (unbilled_role !== undefined) updates.unbilled_role = unbilled_role;
     if (branches !== undefined) updates.branches = branches;
     if (is_approved !== undefined) updates.is_approved = is_approved;
+    // Only update photo if it's changed (avoid sending unchanged large base64 strings)
     if (photo !== undefined) updates.photo = photo;
 
     const { error: profileError } = await supabase
@@ -67,6 +79,7 @@ export async function PUT(request: Request) {
       .eq('id', userId);
 
     if (profileError) {
+      console.error('[PUT /api/admin/users] Profile update error:', profileError);
       return NextResponse.json({ error: profileError.message }, { status: 400 });
     }
 

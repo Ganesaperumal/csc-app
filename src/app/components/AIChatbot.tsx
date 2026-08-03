@@ -63,13 +63,6 @@ export default function AIChatbot() {
 
   return (
     <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9999 }}>
-      <style>{`
-        @keyframes pulse-glow {
-          0% { box-shadow: 0 0 10px rgba(0, 242, 254, 0.6), 0 0 20px rgba(240, 147, 251, 0.6), 0 0 30px rgba(0, 242, 254, 0.4); }
-          50% { box-shadow: 0 0 15px rgba(240, 147, 251, 0.8), 0 0 30px rgba(0, 242, 254, 0.8), 0 0 45px rgba(240, 147, 251, 0.6); }
-          100% { box-shadow: 0 0 10px rgba(0, 242, 254, 0.6), 0 0 20px rgba(240, 147, 251, 0.6), 0 0 30px rgba(0, 242, 254, 0.4); }
-        }
-      `}</style>
       {isOpen ? (
         <div style={{ 
           width: '350px', 
@@ -85,20 +78,11 @@ export default function AIChatbot() {
           {/* Header */}
           <div style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)', padding: '15px', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <svg width="22" height="22" viewBox="0 0 36 36" fill="none" stroke="url(#aiCircuitGradSm)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <defs>
-                  <linearGradient id="aiCircuitGradSm" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#00f2fe">
-                      <animate attributeName="stop-color" values="#00f2fe;#4facfe;#00f2fe" dur="3s" repeatCount="indefinite" />
-                    </stop>
-                    <stop offset="100%" stopColor="#f093fb">
-                      <animate attributeName="stop-color" values="#f093fb;#f5576c;#f093fb" dur="3s" repeatCount="indefinite" />
-                    </stop>
-                  </linearGradient>
-                </defs>
-                <rect x="6" y="10" width="22" height="16" rx="4" strokeWidth="2.5" />
-                <text x="17" y="18" dominantBaseline="central" fontSize="14" fontWeight="900" fontFamily="sans-serif" fill="url(#aiCircuitGradSm)" stroke="none" textAnchor="middle">AI</text>
-                <text x="28" y="11" fontSize="11" stroke="none" fill="currentColor" textAnchor="middle">✨</text>
+              {/* Static SVG icon — no SMIL animations for performance */}
+              <svg width="22" height="22" viewBox="0 0 36 36" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="6" y="10" width="22" height="16" rx="4" strokeWidth="2.5" stroke="#00f2fe" />
+                <text x="17" y="22" dominantBaseline="central" fontSize="14" fontWeight="900" fontFamily="sans-serif" fill="#f093fb" stroke="none" textAnchor="middle">AI</text>
+                <text x="28" y="11" fontSize="11" stroke="none" fill="white" textAnchor="middle">✨</text>
               </svg> 
               Transworld Intl - AI Assistant
             </div>
@@ -152,34 +136,25 @@ export default function AIChatbot() {
           </form>
         </div>
       ) : (
-        <button 
+        <button
           onClick={() => setIsOpen(true)}
           style={{
-            width: '65px', height: '65px', borderRadius: '35px',
-            background: 'var(--bg-color, #1e293b)',
-            border: '2px solid rgba(240, 147, 251, 0.4)',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'transform 0.2s',
-            animation: 'pulse-glow 3s infinite alternate'
+            width: '52px', height: '52px', borderRadius: '50%',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
           }}
-          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.08)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          title="Open AI Assistant"
         >
-          <svg width="48" height="48" viewBox="0 0 36 36" fill="none" stroke="url(#aiCircuitGrad)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <defs>
-              <linearGradient id="aiCircuitGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#00f2fe">
-                  <animate attributeName="stop-color" values="#00f2fe;#4facfe;#00f2fe" dur="3s" repeatCount="indefinite" />
-                </stop>
-                <stop offset="100%" stopColor="#f093fb">
-                  <animate attributeName="stop-color" values="#f093fb;#f5576c;#f093fb" dur="3s" repeatCount="indefinite" />
-                </stop>
-              </linearGradient>
-            </defs>
-            <rect x="6" y="10" width="22" height="16" rx="4" strokeWidth="2.5" />
-            <text x="17" y="18" dominantBaseline="central" fontSize="14" fontWeight="900" fontFamily="sans-serif" fill="url(#aiCircuitGrad)" stroke="none" textAnchor="middle">AI</text>
-            <text x="28" y="11" fontSize="11" stroke="none" fill="currentColor" textAnchor="middle">✨</text>
-          </svg>
+          <div style={{ display: 'flex', alignItems: 'flex-end', lineHeight: 1 }}>
+            <span style={{ fontSize: '1.5rem', fontWeight: 900, color: '#4f46e5', fontFamily: 'sans-serif', textShadow: '0 0 0.5px #4f46e5, 0 0 0.5px #4f46e5' }}>A</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.5rem', lineHeight: 1 }}>✨</span>
+              <span style={{ fontSize: '1.5rem', fontWeight: 900, color: '#4f46e5', fontFamily: 'sans-serif', lineHeight: 1, textShadow: '0 0 0.5px #4f46e5, 0 0 0.5px #4f46e5' }}>I</span>
+            </div>
+          </div>
         </button>
       )}
     </div>

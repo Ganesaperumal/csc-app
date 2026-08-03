@@ -139,8 +139,11 @@ export default function FollowUpsPage() {
       }));
       setTasks(enrichedComms);
 
-      // Find list of all unique agent names for filtering (if admin)
-      const agents = Array.from(new Set(enrichedComms.map(c => c.agent_name))).sort();
+      // Find list of all unique agent names for filtering (if admin).
+      // DB stores agent_name in lowercase — deduplicate with a Set and display as-is.
+      const agents = Array.from(
+        new Set(enrichedComms.map((c: any) => c.agent_name?.toLowerCase()).filter(Boolean))
+      ).sort() as string[];
       setAllAgents(agents);
 
       setLoading(false);
@@ -178,7 +181,7 @@ export default function FollowUpsPage() {
   // Filtering logic
   const filteredTasks = tasks.filter(task => {
     // Admin filtering
-    if (isAdmin && selectedAgentFilter !== 'All' && task.agent_name !== selectedAgentFilter) return false;
+    if (isAdmin && selectedAgentFilter !== 'All' && task.agent_name?.toLowerCase() !== selectedAgentFilter.toLowerCase()) return false;
     
     // Search filtering
     if (searchQuery.trim()) {

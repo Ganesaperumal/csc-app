@@ -69,11 +69,14 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedData)
       });
-      if (!res.ok) throw new Error('Failed to update user profile');
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody?.error || 'Failed to update user profile');
+      }
       setActiveModalUser(null);
       fetchPendingUsers();
     } catch (err: any) {
-      console.error(err);
+      console.error('[PendingApprovalsReminder] handleSaveUser error:', err);
     }
   };
 
@@ -92,7 +95,7 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
           color: 'white',
           padding: '0.65rem 1.25rem',
           borderRadius: '50px',
-          boxShadow: '0 10px 25px rgba(245, 158, 11, 0.4), 0 0 15px rgba(245, 158, 11, 0.6)',
+          boxShadow: '0 4px 16px rgba(245, 158, 11, 0.35)',
           display: 'flex',
           alignItems: 'center',
           gap: '0.6rem',
@@ -101,9 +104,17 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
           cursor: 'pointer',
           zIndex: 9990,
           fontFamily: "'Outfit', sans-serif",
-          animation: 'pulse 2s infinite'
+          /* Use transform-based pulse — GPU composited, no repaint */
+          animation: 'badge-pulse 2.5s ease-in-out infinite',
+          willChange: 'transform',
         }}
       >
+        <style>{`
+          @keyframes badge-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.04); }
+          }
+        `}</style>
         <span style={{ fontSize: '1.1rem' }}>🔔</span>
         <span>{pendingUsers.length} Pending Sign-Up</span>
       </div>

@@ -16,7 +16,6 @@ export default function ProfilePopup({ user }: { user: any }) {
   const [avatar, setAvatar] = useState(user?.user_metadata?.avatar_url || null);
   const [phone, setPhone] = useState(user?.user_metadata?.phone || '');
   const [loading, setLoading] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const router = useRouter();
   const popupRef = useRef<HTMLDivElement>(null);
   
@@ -76,10 +75,6 @@ export default function ProfilePopup({ user }: { user: any }) {
       });
     }
 
-    if (typeof window !== 'undefined') {
-      setIsDarkMode(document.documentElement.classList.contains('dark-theme'));
-    }
-
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as HTMLElement;
       if (popupRef.current && !popupRef.current.contains(target) && !target.closest('.profile-popup-portal')) {
@@ -90,18 +85,6 @@ export default function ProfilePopup({ user }: { user: any }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const toggleTheme = () => {
-    const newTheme = !isDarkMode;
-    setIsDarkMode(newTheme);
-    if (newTheme) {
-      document.documentElement.classList.add('dark-theme');
-      localStorage.setItem('csc_theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark-theme');
-      localStorage.setItem('csc_theme', 'light');
-    }
-  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -252,19 +235,6 @@ export default function ProfilePopup({ user }: { user: any }) {
               </button>
 
 
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'rgba(148,163,184,0.1)', marginBottom: '1rem' }}>
-                <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 500 }}>
-                  {isDarkMode ? '🌙 Dark Mode' : '☀️ Light Mode'}
-                </span>
-                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                  <div style={{ position: 'relative' }}>
-                    <input type="checkbox" style={{ display: 'none' }} checked={isDarkMode} onChange={toggleTheme} />
-                    <div style={{ width: '42px', height: '22px', backgroundColor: isDarkMode ? '#4f46e5' : 'var(--border-color)', borderRadius: '99px', transition: 'background-color 0.2s' }}></div>
-                    <div style={{ position: 'absolute', top: '3px', left: isDarkMode ? '23px' : '3px', width: '16px', height: '16px', backgroundColor: 'var(--bg-color)', borderRadius: '50%', transition: 'left 0.2s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}></div>
-                  </div>
-                </label>
-              </div>
 
               <div style={{ width: '100%', borderTop: '1px solid var(--border-color)', marginBottom: '1rem' }}></div>
 

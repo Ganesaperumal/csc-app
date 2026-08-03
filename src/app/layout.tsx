@@ -28,22 +28,8 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                // Default is LIGHT theme for new users.
-                // Only switch to dark if the user has explicitly chosen it.
-                if (localStorage.getItem('csc_theme') === 'dark') {
-                  document.documentElement.classList.add('dark-theme');
-                }
-              } catch (e) {}
+      <head />
 
-            `,
-          }}
-        />
-      </head>
       <body className="min-h-full flex flex-col">
         {children}
       </body>
