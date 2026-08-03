@@ -144,9 +144,14 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
       {hasControlCenterAccess && (
         <div style={{ marginTop: 'auto', paddingTop: '0.75rem' }}>
           {(isAdmin || isSuperAdmin) && (
-            <Link href="/home/admin" className={`${styles.navItem} ${pathname === '/home/admin' ? styles.active : ''}`}>
-              <span>⚙️</span> Admin
-            </Link>
+            <>
+              <Link href="/home/admin" className={`${styles.navItem} ${pathname === '/home/admin' ? styles.active : ''}`}>
+                <span>⚙️</span> Admin
+              </Link>
+              <Link href="/home/data" className={`${styles.navItem} ${pathname === '/home/data' ? styles.active : ''}`}>
+                <span>⚠️</span> Missing Data
+              </Link>
+            </>
           )}
 
           {isSuperAdmin && (
