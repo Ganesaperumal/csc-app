@@ -190,8 +190,8 @@ export default function MissingDataPage() {
     </button>
   );
 
-  const sectionHeader = (title: string, subtitle: string, count: number, color: string) => (
-    <div style={{ marginBottom: '1rem' }}>
+  const sectionHeader = (title: string, count: number, color: string) => (
+    <div style={{ marginBottom: '0.75rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color }}>{title}</h2>
         <span style={{
@@ -199,7 +199,6 @@ export default function MissingDataPage() {
           background: `${color}20`, color, fontSize: '0.75rem', fontWeight: 800
         }}>{count} jobs</span>
       </div>
-      <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{subtitle}</p>
     </div>
   );
 
@@ -246,24 +245,21 @@ export default function MissingDataPage() {
           alignItems: 'center',
           gap: '0.5rem',
         }}>
-          <span>⚠️</span> Missing Data
+          <span>📊</span> Data
         </h1>
-        <p style={{ margin: '0.3rem 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-          Unbilled jobs (without invoice numbers) with incomplete fields — fill in missing values and save row by row.
-        </p>
       </div>
 
       {loading ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
           <div style={{ width: '20px', height: '20px', border: '3px solid var(--border-color)', borderTopColor: '#f59e0b', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          Loading missing data…
+          Loading data…
         </div>
       ) : (
         <>
           {/* ── Section 1: Missing Quote Value ── */}
           <section>
-            {sectionHeader('Missing Quote Value', 'Enter the quote/contract value for each enquiry number.', quoteJobs.length, '#f59e0b')}
+            {sectionHeader('Missing Quote Value', quoteJobs.length, '#f59e0b')}
             {quoteJobs.length === 0 ? (
               <div style={{ padding: '1.5rem', background: 'var(--surface-color)', borderRadius: '12px', border: '1px solid var(--border-color)', color: '#10b981', fontWeight: 700, fontSize: '0.88rem' }}>
                 ✅ All jobs have a quote value — nothing to fill in!
@@ -315,7 +311,7 @@ export default function MissingDataPage() {
 
           {/* ── Section 2: Missing Unbilled SPOC ── */}
           <section>
-            {sectionHeader('Missing Unbilled SPOC', 'Enter the Unbilled SPOC for each company.', spocJobs.length, '#6366f1')}
+            {sectionHeader('Missing Unbilled SPOC', spocJobs.length, '#6366f1')}
             {spocJobs.length === 0 ? (
               <div style={{ padding: '1.5rem', background: 'var(--surface-color)', borderRadius: '12px', border: '1px solid var(--border-color)', color: '#10b981', fontWeight: 700, fontSize: '0.88rem' }}>
                 ✅ All unbilled jobs have an Unbilled SPOC assigned — nothing to fill in!
