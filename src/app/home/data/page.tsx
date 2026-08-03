@@ -33,7 +33,6 @@ export default function MissingDataPage() {
 
   // Local editable state maps: job_number → value
   const [quoteInputs, setQuoteInputs] = useState<Record<string, string>>({});
-  const [salesInputs, setSalesInputs] = useState<Record<string, string>>({});
   const [spocInputs, setSpocInputs] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
 
@@ -104,8 +103,8 @@ export default function MissingDataPage() {
     // Filter jobs missing quote_value (null, empty, 0, ₹0, etc.)
     const qJobs = unbilledJobs.filter(j => isQuoteMissing(j.quote_value));
 
-    // Filter jobs missing sales_by OR spoc_name/unbilled_spoc
-    const sJobs = unbilledJobs.filter(j => isSpocMissing(j.sales_by) || isSpocMissing(j.spoc_name || j.unbilled_spoc));
+    // Filter jobs missing spoc_name/unbilled_spoc ONLY
+    const sJobs = unbilledJobs.filter(j => isSpocMissing(j.spoc_name || j.unbilled_spoc));
 
     setQuoteJobs(qJobs);
     setSpocJobs(sJobs);
@@ -115,14 +114,11 @@ export default function MissingDataPage() {
     qJobs.forEach(j => { qi[j.job_number] = ''; });
     setQuoteInputs(qi);
 
-    const si: Record<string, string> = {};
     const spi: Record<string, string> = {};
     sJobs.forEach(j => {
-      si[j.job_number] = isSpocMissing(j.sales_by) ? '' : (j.sales_by || '');
       const currentSpoc = j.spoc_name || j.unbilled_spoc;
       spi[j.job_number] = isSpocMissing(currentSpoc) ? '' : (currentSpoc || '');
     });
-    setSalesInputs(si);
     setSpocInputs(spi);
 
     setLoading(false);
@@ -143,41 +139,24 @@ export default function MissingDataPage() {
   };
 
   const saveSpoc = async (job: MissingSpocJob) => {
-    const sales = salesInputs[job.job_number]?.trim();
     const spoc = spocInputs[job.job_number]?.trim();
-    if (isSpocMissing(sales) && isSpocMissing(spoc)) {
-      showToast('Enter at least one SPOC value', 'error');
+    if (isSpocMissing(spoc)) {
+      showToast('Enter an Unbilled SPOC value', 'error');
       return;
     }
     setSaving(s => ({ ...s, [`s_${job.job_number}`]: true }));
-    const updates: any = {};
-    if (!isSpocMissing(sales)) updates.sales_by = sales;
-    if (!isSpocMissing(spoc)) {
-      updates.spoc_name = spoc;
-      updates.unbilled_spoc = spoc;
-    }
+    const updates = {
+      spoc_name: spoc,
+      unbilled_spoc: spoc
+    };
     const { error } = await supabase
       .from('jobs')
       .update(updates)
       .eq('job_number', job.job_number);
     setSaving(s => ({ ...s, [`s_${job.job_number}`]: false }));
     if (error) { showToast(`Error: ${error.message}`, 'error'); return; }
-    showToast(`✅ SPOC saved for ${job.enq_number || job.enquiry_number || job.job_number}`, 'success');
-
-    // Re-check remaining status
-    const currentSpoc = job.spoc_name || job.unbilled_spoc;
-    const newSales = !isSpocMissing(sales) ? sales : job.sales_by;
-    const newSpoc = !isSpocMissing(spoc) ? spoc : currentSpoc;
-    const safeSpoc = newSpoc || null;
-    if (!isSpocMissing(newSales) && !isSpocMissing(newSpoc)) {
-      setSpocJobs(prev => prev.filter(j => j.job_number !== job.job_number));
-    } else {
-      setSpocJobs(prev => prev.map(j =>
-        j.job_number === job.job_number
-          ? { ...j, sales_by: newSales || null, spoc_name: safeSpoc, unbilled_spoc: safeSpoc }
-          : j
-      ));
-    }
+    showToast(`✅ Unbilled SPOC saved for ${job.enq_number || job.enquiry_number || job.job_number}`, 'success');
+    setSpocJobs(prev => prev.filter(j => j.job_number !== job.job_number));
   };
 
   const inputStyle: React.CSSProperties = {
@@ -334,12 +313,12 @@ export default function MissingDataPage() {
             )}
           </section>
 
-          {/* ── Section 2: Missing Sales SPOC / Unbilled SPOC ── */}
+          {/* ── Section 2: Missing Unbilled SPOC ── */}
           <section>
-            {sectionHeader('Missing Sales & Unbilled SPOC', 'Enter the Sales SPOC and/or Unbilled SPOC for each company.', spocJobs.length, '#6366f1')}
+            {sectionHeader('Missing Unbilled SPOC', 'Enter the Unbilled SPOC for each company.', spocJobs.length, '#6366f1')}
             {spocJobs.length === 0 ? (
               <div style={{ padding: '1.5rem', background: 'var(--surface-color)', borderRadius: '12px', border: '1px solid var(--border-color)', color: '#10b981', fontWeight: 700, fontSize: '0.88rem' }}>
-                ✅ All jobs have SPOC values assigned — nothing to fill in!
+                ✅ All unbilled jobs have an Unbilled SPOC assigned — nothing to fill in!
               </div>
             ) : (
               <div style={{ border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden' }}>
@@ -348,8 +327,7 @@ export default function MissingDataPage() {
                     <tr>
                       <th style={thStyle}>Enquiry No.</th>
                       <th style={thStyle}>Company</th>
-                      <th style={{ ...thStyle, width: '190px' }}>Sales SPOC</th>
-                      <th style={{ ...thStyle, width: '190px' }}>Unbilled SPOC</th>
+                      <th style={{ ...thStyle, width: '220px' }}>Unbilled SPOC</th>
                       <th style={{ ...thStyle, width: '90px' }}>Action</th>
                     </tr>
                   </thead>
@@ -369,30 +347,13 @@ export default function MissingDataPage() {
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{job.customer_name}</div>
                         </td>
                         <td style={tdStyle}>
-                          {!isSpocMissing(job.sales_by) ? (
-                            <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.8rem' }}>✓ {job.sales_by}</span>
-                          ) : (
-                            <input
-                              type="text"
-                              placeholder="Sales SPOC name"
-                              value={salesInputs[job.job_number] ?? ''}
-                              onChange={e => setSalesInputs(prev => ({ ...prev, [job.job_number]: e.target.value }))}
-                              style={inputStyle}
-                            />
-                          )}
-                        </td>
-                        <td style={tdStyle}>
-                          {!isSpocMissing(job.spoc_name || job.unbilled_spoc) ? (
-                            <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.8rem' }}>✓ {job.spoc_name || job.unbilled_spoc}</span>
-                          ) : (
-                            <input
-                              type="text"
-                              placeholder="Unbilled SPOC name"
-                              value={spocInputs[job.job_number] ?? ''}
-                              onChange={e => setSpocInputs(prev => ({ ...prev, [job.job_number]: e.target.value }))}
-                              style={inputStyle}
-                            />
-                          )}
+                          <input
+                            type="text"
+                            placeholder="Unbilled SPOC name"
+                            value={spocInputs[job.job_number] ?? ''}
+                            onChange={e => setSpocInputs(prev => ({ ...prev, [job.job_number]: e.target.value }))}
+                            style={inputStyle}
+                          />
                         </td>
                         <td style={tdStyle}>
                           {saveBtn(!!saving[`s_${job.job_number}`], () => saveSpoc(job))}
