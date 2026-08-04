@@ -231,7 +231,7 @@ export default function ProfilePopup({ user }: { user: any }) {
                 onClick={() => setIsManageMode(true)}
                 style={{ background: 'linear-gradient(135deg, #3b82f6, #2563eb)', border: 'none', color: 'white', padding: '0.5rem 1rem', borderRadius: '20px', cursor: 'pointer', fontSize: '0.9rem', marginBottom: '0.5rem', width: '100%', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}
               >
-                Manage your Profile
+                🔑 Reset Password
               </button>
 
 
@@ -249,7 +249,7 @@ export default function ProfilePopup({ user }: { user: any }) {
           ) : (
             // Edit Mode
             <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <h3 style={{ marginBottom: '1.5rem', color: 'var(--text-primary)' }}>Edit Profile</h3>
+              <h3 style={{ marginBottom: '1.5rem', color: 'var(--text-primary)' }}>🔑 Reset Password</h3>
               
               <label style={{ cursor: 'pointer', marginBottom: '1.5rem' }}>
                 <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
