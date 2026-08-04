@@ -1,7 +1,7 @@
 'use client';
 import { showToast, customConfirm } from '@/components/GlobalDialogs';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { fetchLegacyJobsBypassingRLS } from './actions';
 import { supabase } from '@/lib/supabase';
@@ -363,6 +363,7 @@ export default function UnbilledManagementPage() {
   const [selectedGoodsStatus, setSelectedGoodsStatus] = useState<string[]>(['All']);
   const [selectedPoStatus, setSelectedPoStatus] = useState<string[]>(['All']);
   const [selectedSpoc, setSelectedSpoc] = useState<string[]>(['All']);
+  const [selectedYear, setSelectedYear] = useState<string[]>(['All']);
 
   // ColumnFunnel filters
   const [showColumnFilters, setShowColumnFilters] = useState(false);
@@ -404,7 +405,7 @@ export default function UnbilledManagementPage() {
 
   useEffect(() => {
     setVisibleCount(80);
-  }, [search, selectedBranch, selectedGoodsStatus, selectedPoStatus, selectedSpoc, columnFilters, columnSorts]);
+  }, [search, selectedBranch, selectedGoodsStatus, selectedPoStatus, selectedSpoc, selectedYear, columnFilters, columnSorts]);
 
   const handleTableScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
@@ -648,6 +649,17 @@ export default function UnbilledManagementPage() {
     }));
   };
 
+  const getJobFinancialYear = (j: any): string | null => {
+    const dStr = j.job_date || j.packing_date || j.created_at;
+    if (!dStr) return null;
+    const d = new Date(dStr);
+    if (isNaN(d.getTime())) return null;
+    const month = d.getMonth();
+    const year = d.getFullYear();
+    const fy = month >= 3 ? year : year - 1;
+    return String(fy);
+  };
+
   // Filtered jobs logic
   let filteredJobs = jobs.filter(j => {
     const q = search.toLowerCase();
@@ -664,6 +676,11 @@ export default function UnbilledManagementPage() {
                        selectedGoodsStatus.includes(getDisplayGoodsStatus(j.goods_track_status) || '');
     const matchPo = selectedPoStatus.includes('All') || selectedPoStatus.includes(j.po_status || '');
     const matchSpoc = selectedSpoc.includes('All') || selectedSpoc.includes(j.spoc_name || j.unbilled_spoc || '');
+
+    const matchYear = selectedYear.includes('All') || (() => {
+      const fy = getJobFinancialYear(j);
+      return fy ? selectedYear.includes(fy) : false;
+    })();
 
     // Check Column Funnel Filters
     for (const [colId, allowedVals] of Object.entries(columnFilters)) {
@@ -688,7 +705,7 @@ export default function UnbilledManagementPage() {
       }
     }
 
-    return matchSearch && matchBranch && matchGoods && matchPo && matchSpoc;
+    return matchSearch && matchBranch && matchGoods && matchPo && matchSpoc && matchYear;
   });
 
   // Apply column sorts if active; default to job_date descending
@@ -832,7 +849,28 @@ export default function UnbilledManagementPage() {
     return hasPo || goodsEmpty || validGoods;
   });
 
-  const hasAppliedFilters = Object.keys(columnFilters).length > 0 || search.trim() !== '' || !selectedBranch.includes('All') || !selectedGoodsStatus.includes('All') || !selectedPoStatus.includes('All') || !selectedSpoc.includes('All');
+  const hasAppliedFilters = Object.keys(columnFilters).length > 0 || search.trim() !== '' || !selectedBranch.includes('All') || !selectedGoodsStatus.includes('All') || !selectedPoStatus.includes('All') || !selectedSpoc.includes('All') || !selectedYear.includes('All');
+
+  const yearOptions = useMemo(() => {
+    const yearsSet = new Set<string>(['2026', '2025', '2024']);
+    jobs.forEach(j => {
+      const dStr = j.job_date || j.packing_date || j.created_at;
+      if (dStr) {
+        const d = new Date(dStr);
+        if (!isNaN(d.getTime())) {
+          const month = d.getMonth();
+          const year = d.getFullYear();
+          const fy = month >= 3 ? year : year - 1;
+          yearsSet.add(String(fy));
+        }
+      }
+    });
+    const sortedYears = Array.from(yearsSet).sort((a, b) => Number(b) - Number(a));
+    return [
+      { value: 'All', label: 'All Years' },
+      ...sortedYears.map(y => ({ value: y, label: y }))
+    ];
+  }, [jobs]);
 
   // Fixed 176px width during counter animation (showJobCounts = false), then content-fit width (width: auto) once animation finishes
   const kpiCardWidthStyle: React.CSSProperties = showJobCounts 
@@ -878,6 +916,13 @@ export default function UnbilledManagementPage() {
             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', marginRight: '0.15rem', whiteSpace: 'nowrap' }}>Filters:</span>
             
             <MultiSelect
+              value={selectedYear}
+              onChange={(val) => setSelectedYear(val)}
+              options={yearOptions}
+              placeholder="All Years"
+            />
+
+            <MultiSelect
               value={selectedBranch}
               onChange={(val) => setSelectedBranch(val)}
               options={[{ value: 'All', label: 'All Branches' }, ...Array.from(new Set(jobs.map(j => j.branch).filter(Boolean))).map(b => ({ value: b, label: b as string }))]}
@@ -921,6 +966,7 @@ export default function UnbilledManagementPage() {
                 setSelectedGoodsStatus(['All']);
                 setSelectedPoStatus(['All']);
                 setSelectedSpoc(['All']);
+                setSelectedYear(['All']);
                 setActiveFilterColumn(null);
               } else {
                 setShowColumnFilters(true);

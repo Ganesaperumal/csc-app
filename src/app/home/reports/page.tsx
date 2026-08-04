@@ -1776,39 +1776,6 @@ export default function ReportsPage() {
       {activeTab === 'unbilled' && canAccessUnbilled && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           
-          {/* Top Summary KPI Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-            <div className="glass" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', borderRadius: '16px', borderLeft: '4px solid #10b981' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Unbilled Value</span>
-              <span style={{ fontSize: '1.75rem', fontWeight: 900, color: '#10b981', marginTop: '0.35rem', fontFamily: 'var(--font-mono)' }}>
-                ₹{(currentFyUnbilledMatrix.grandTotal + previousFyUnbilledMatrix.grandTotal).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-              </span>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                {(currentFyUnbilledMatrix.jobCount || 0) + (previousFyUnbilledMatrix.jobCount || 0)} Total Jobs
-              </span>
-            </div>
-
-            <div className="glass" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', borderRadius: '16px', borderLeft: '4px solid #6366f1' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current FY Unbilled</span>
-              <span style={{ fontSize: '1.75rem', fontWeight: 900, color: '#6366f1', marginTop: '0.35rem', fontFamily: 'var(--font-mono)' }}>
-                ₹{currentFyUnbilledMatrix.grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-              </span>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                {currentFyUnbilledMatrix.jobCount || 0} Jobs
-              </span>
-            </div>
-
-            <div className="glass" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', borderRadius: '16px', borderLeft: '4px solid #f59e0b' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Previous FY Unbilled</span>
-              <span style={{ fontSize: '1.75rem', fontWeight: 900, color: '#f59e0b', marginTop: '0.35rem', fontFamily: 'var(--font-mono)' }}>
-                ₹{previousFyUnbilledMatrix.grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-              </span>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                {previousFyUnbilledMatrix.jobCount || 0} Jobs
-              </span>
-            </div>
-          </div>
-
           {/* Table 1: Current FY */}
           <div className="glass" style={{ padding: '1.5rem', overflowX: 'auto', borderRadius: '16px' }}>
             <div style={{ marginBottom: '1.25rem' }}>
