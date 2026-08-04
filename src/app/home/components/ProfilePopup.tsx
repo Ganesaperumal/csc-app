@@ -215,7 +215,7 @@ export default function ProfilePopup({ user }: { user: any }) {
             <>
               <label style={{ cursor: 'pointer' }}>
                 <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
-                <AvatarComponent size={140} />
+                <AvatarComponent size={140} showPencil={true} />
               </label>
               <h3 style={{ marginTop: '1rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>{displayName}!</h3>
               {role && role !== 'Executive' && role !== 'Manager' && (
