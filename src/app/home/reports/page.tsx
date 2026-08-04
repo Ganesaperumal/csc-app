@@ -634,22 +634,74 @@ export default function ReportsPage() {
         setActiveTab('jobs');
       }
 
-      await loadAllAnalyticsData();
+      await loadAllAnalyticsData(profileData);
     };
 
     initPage();
   }, []);
 
-  const loadAllAnalyticsData = async () => {
+  const loadAllAnalyticsData = async (userProfileOverride?: any) => {
     setLoading(true);
     try {
+      const profile = userProfileOverride || currentUserProfile;
+
       // 1. Fetch Profiles
       const { data: pData } = await supabase.from('profiles').select('*');
       setProfiles(pData || []);
 
-      // 2. Fetch Jobs (including both active & billed/closed for lead times & full insights)
-      const { data: jData } = await supabase.from('jobs').select('*');
-      setJobs(jData || []);
+      // Branch Isolation check
+      const restrictedRoles = ['Viewer', 'Executive', 'Manager'];
+      const requiresSlicing = profile && (
+        restrictedRoles.includes(profile.role) || 
+        restrictedRoles.includes(profile.branch_user_role) || 
+        restrictedRoles.includes(profile.unbilled_role)
+      );
+
+      let branchFilter: string[] | null = null;
+      let legacyBranchesToFetch: string[] | null = ['ALL'];
+      if (requiresSlicing) {
+        if (profile.branches && profile.branches.includes('ALL')) {
+          branchFilter = null;
+          legacyBranchesToFetch = ['ALL'];
+        } else if (profile.branches && profile.branches.length > 0) {
+          branchFilter = profile.branches;
+          legacyBranchesToFetch = profile.branches;
+        } else {
+          branchFilter = ['NONE'];
+          legacyBranchesToFetch = ['NONE'];
+        }
+      }
+
+      // 2. Fetch Jobs (Paginated to bypass PostgREST 1000 limit)
+      let allJobs: any[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        let query = supabase.from('jobs').select('*');
+        if (branchFilter) {
+          query = query.in('branch', branchFilter);
+        }
+        query = query.range(page * pageSize, (page + 1) * pageSize - 1);
+
+        const { data: pageData, error: pageErr } = await query;
+        if (pageErr) {
+          console.error('Error fetching jobs page:', pageErr);
+          break;
+        }
+        if (pageData && pageData.length > 0) {
+          allJobs = allJobs.concat(pageData);
+          if (pageData.length < pageSize) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        } else {
+          hasMore = false;
+        }
+      }
+      setJobs(allJobs);
 
       // 3. Audit logs scrapped/bypassed
       setAuditLogs([]);
@@ -658,11 +710,8 @@ export default function ReportsPage() {
       const { data: cData } = await supabase.from('job_communications').select('*');
       setComms(cData || []);
 
-      // 5. Fetch Job Notes
-
-
       // 7. Fetch legacy jobs for accurate Unbilled matrix
-      const legacyResData = await fetchLegacyJobsBypassingRLS(['ALL']).catch(err => {
+      const legacyResData = await fetchLegacyJobsBypassingRLS(legacyBranchesToFetch).catch(err => {
         console.error('Failed to fetch legacy jobs:', err);
         return [];
       });
@@ -950,7 +999,7 @@ export default function ReportsPage() {
 
     const branchChart = data.filter(d => d.Total > 0).map(d => ({ label: d.branch as string, value: d.Total }));
 
-    return { data, totals, categories, branchChart, grandTotal: totals['Total'] };
+    return { data, totals, categories, branchChart, grandTotal: totals['Total'], jobCount: jobList.length };
   };
 
   const currentFyUnbilledMatrix = useMemo(() => {
@@ -1727,6 +1776,39 @@ export default function ReportsPage() {
       {activeTab === 'unbilled' && canAccessUnbilled && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           
+          {/* Top Summary KPI Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+            <div className="glass" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', borderRadius: '16px', borderLeft: '4px solid #10b981' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Unbilled Value</span>
+              <span style={{ fontSize: '1.75rem', fontWeight: 900, color: '#10b981', marginTop: '0.35rem', fontFamily: 'var(--font-mono)' }}>
+                ₹{(currentFyUnbilledMatrix.grandTotal + previousFyUnbilledMatrix.grandTotal).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              </span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                {(currentFyUnbilledMatrix.jobCount || 0) + (previousFyUnbilledMatrix.jobCount || 0)} Total Jobs
+              </span>
+            </div>
+
+            <div className="glass" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', borderRadius: '16px', borderLeft: '4px solid #6366f1' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current FY Unbilled</span>
+              <span style={{ fontSize: '1.75rem', fontWeight: 900, color: '#6366f1', marginTop: '0.35rem', fontFamily: 'var(--font-mono)' }}>
+                ₹{currentFyUnbilledMatrix.grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              </span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                {currentFyUnbilledMatrix.jobCount || 0} Jobs
+              </span>
+            </div>
+
+            <div className="glass" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', borderRadius: '16px', borderLeft: '4px solid #f59e0b' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Previous FY Unbilled</span>
+              <span style={{ fontSize: '1.75rem', fontWeight: 900, color: '#f59e0b', marginTop: '0.35rem', fontFamily: 'var(--font-mono)' }}>
+                ₹{previousFyUnbilledMatrix.grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              </span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                {previousFyUnbilledMatrix.jobCount || 0} Jobs
+              </span>
+            </div>
+          </div>
+
           {/* Table 1: Current FY */}
           <div className="glass" style={{ padding: '1.5rem', overflowX: 'auto', borderRadius: '16px' }}>
             <div style={{ marginBottom: '1.25rem' }}>
