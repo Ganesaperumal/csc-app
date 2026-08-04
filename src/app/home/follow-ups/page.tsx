@@ -94,9 +94,9 @@ export default function FollowUpsPage() {
         .select('*')
         .eq('follow_up_required', true);
 
-      // If not admin, restrict to owner agent
+      // If not admin, restrict to owner agent (case-insensitive matching for agent_name)
       if (!adminRole) {
-        query = query.eq('agent_name', activeName);
+        query = query.ilike('agent_name', activeName);
       }
 
       const { data: comms, error } = await query.order('follow_up_date', { ascending: true });

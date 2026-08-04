@@ -431,7 +431,7 @@ function JobsTable() {
       .eq('follow_up_completed', false);
 
     if (!isAdmin) {
-      query = query.eq('agent_name', agentName);
+      query = query.ilike('agent_name', agentName);
     }
 
     const { data, error } = await query.order('follow_up_date', { ascending: true });
