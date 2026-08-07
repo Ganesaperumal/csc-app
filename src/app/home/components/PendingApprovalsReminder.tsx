@@ -72,7 +72,8 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
           boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          justifyContent: 'center',
+          gap: '0.5rem',
           fontWeight: 700,
           fontSize: '0.78rem',
           cursor: 'pointer',
@@ -86,18 +87,8 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
             50% { transform: scale(1.02); }
           }
         `}</style>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <span>🔔</span>
-          <span>{pendingUsers.length} Pending Sign-Up{pendingUsers.length > 1 ? 's' : ''}</span>
-        </div>
-        <span style={{ 
-          background: 'rgba(255, 255, 255, 0.25)', 
-          padding: '1px 6px', 
-          borderRadius: '10px',
-          fontSize: '0.7rem' 
-        }}>
-          Review ➔
-        </span>
+        <span>🔔</span>
+        <span>{pendingUsers.length} Pending Sign-Up{pendingUsers.length > 1 ? 's' : ''}</span>
       </div>
 
       {/* Reminders Modal Popup (Mimicking CSC Follow-up Reminders Popup) */}
