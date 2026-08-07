@@ -76,6 +76,79 @@ export default function AdminPage() {
   ]);
   const [loadingJobQuote, setLoadingJobQuote] = useState(false);
   const [csvUploadMode, setCsvUploadMode] = useState<'fill_empty' | 'force_overwrite'>('fill_empty');
+
+  // Legacy jobs bulk delete states & handlers
+  const [legacyDeleteRows, setLegacyDeleteRows] = useState<{ job_number: string }[]>([
+    { job_number: '' },
+    { job_number: '' },
+    { job_number: '' }
+  ]);
+  const [loadingDeleteLegacy, setLoadingDeleteLegacy] = useState(false);
+
+  const handleAddLegacyDeleteRow = () => {
+    setLegacyDeleteRows(prev => [...prev, { job_number: '' }]);
+  };
+
+  const handleRemoveLegacyDeleteRow = (index: number) => {
+    if (legacyDeleteRows.length <= 1) return;
+    setLegacyDeleteRows(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleLegacyDeleteRowChange = (index: number, value: string) => {
+    setLegacyDeleteRows(prev => {
+      const next = [...prev];
+      next[index] = { job_number: value };
+      return next;
+    });
+  };
+
+  const handleBulkDeleteLegacyJobs = async () => {
+    const validJobNumbers = Array.from(
+      new Set(
+        legacyDeleteRows
+          .map(r => r.job_number.trim())
+          .filter(jn => jn.length > 0)
+      )
+    );
+
+    if (validJobNumbers.length === 0) {
+      showToast('Please enter at least one Legacy Job Number before deleting.', 'error');
+      return;
+    }
+
+    const confirmed = await customConfirm(
+      `🚨 WARNING: Are you sure you want to BULK DELETE ${validJobNumbers.length} job(s) strictly from the LEGACY_JOBS table?\n\n` +
+      `Target Job Numbers:\n${validJobNumbers.join(', ')}\n\n` +
+      `This operation is permanent and ONLY affects the legacy_jobs table.`
+    );
+    if (!confirmed) return;
+
+    setLoadingDeleteLegacy(true);
+    try {
+      const res = await fetch('/api/admin/delete-legacy-jobs', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobNumbers: validJobNumbers })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to delete legacy jobs');
+      }
+
+      showToast(`✅ ${data.message}`, 'success');
+      setLegacyDeleteRows([
+        { job_number: '' },
+        { job_number: '' },
+        { job_number: '' }
+      ]);
+    } catch (err: any) {
+      showToast(`❌ Delete failed: ${err.message}`, 'error');
+    } finally {
+      setLoadingDeleteLegacy(false);
+    }
+  };
+
   const router = useRouter();
 
   const handleConsolidatedCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -771,7 +844,7 @@ export default function AdminPage() {
         </div>
 
         {/* 3. Bulk Document Upload (Cloudflare R2) */}
-        <div>
+        <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
           <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <span>📁</span> 3. Bulk Document &amp; POD Upload
           </h3>
@@ -786,6 +859,135 @@ export default function AdminPage() {
             >
               📄 Bulk Upload Documents
             </button>
+          </div>
+        </div>
+
+        {/* 4. Bulk Delete Legacy Jobs (Legacy Table Only) */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem', gap: '1rem', flexWrap: 'wrap' }}>
+            <div>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#ef4444', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span>🗑️</span> 4. Bulk Delete Legacy Jobs (Legacy Table Only)
+              </h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0.25rem 0 0 0' }}>
+                Mention Job Numbers of legacy table in rows below (or paste line-by-line). This operation strictly targets the <strong style={{ color: '#ef4444' }}>legacy_jobs</strong> table in Supabase and will not affect active jobs or other tables.
+              </p>
+            </div>
+
+            <button
+              onClick={handleBulkDeleteLegacyJobs}
+              disabled={loadingDeleteLegacy}
+              style={{
+                padding: '0.6rem 1.4rem',
+                borderRadius: '8px',
+                background: loadingDeleteLegacy ? 'var(--border-color)' : 'linear-gradient(135deg, #ef4444, #dc2626)',
+                color: 'white',
+                border: 'none',
+                cursor: loadingDeleteLegacy ? 'not-allowed' : 'pointer',
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                flexShrink: 0
+              }}
+            >
+              {loadingDeleteLegacy ? 'Deleting...' : '🗑️ Delete Bulk Legacy Jobs'}
+            </button>
+          </div>
+
+          <div style={{ background: 'rgba(239, 68, 68, 0.03)', borderRadius: '12px', padding: '1rem', border: '1px solid rgba(239, 68, 68, 0.2)', marginTop: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 40px', gap: '0.75rem', fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', paddingLeft: '0.25rem' }}>
+                <div>#</div>
+                <div>Legacy Job Number / ENQ</div>
+                <div></div>
+              </div>
+
+              {legacyDeleteRows.map((row, index) => (
+                <div key={index} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 40px', gap: '0.75rem', alignItems: 'center' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', paddingLeft: '0.25rem' }}>
+                    #{index + 1}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="e.g. LEGACY-2023-001 (or paste multi-line job numbers)"
+                    value={row.job_number}
+                    onChange={(e) => handleLegacyDeleteRowChange(index, e.target.value)}
+                    onPaste={(e) => {
+                      const pasteText = e.clipboardData.getData('text');
+                      if (pasteText.includes('\n') || pasteText.includes(',')) {
+                        e.preventDefault();
+                        const items = pasteText
+                          .split(/[\n,]+/)
+                          .map(s => s.trim())
+                          .filter(Boolean);
+                        if (items.length > 0) {
+                          setLegacyDeleteRows(prev => {
+                            const next = [...prev];
+                            next.splice(index, 1, ...items.map(job_number => ({ job_number })));
+                            return next;
+                          });
+                        }
+                      }
+                    }}
+                    style={{
+                      padding: '0.55rem 0.8rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      background: 'var(--surface-color)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.85rem'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveLegacyDeleteRow(index)}
+                    disabled={legacyDeleteRows.length <= 1}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: legacyDeleteRows.length <= 1 ? 'var(--border-color)' : '#ef4444',
+                      cursor: legacyDeleteRows.length <= 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '1.1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0.4rem'
+                    }}
+                    title="Remove Row"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))}
+
+              <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={handleAddLegacyDeleteRow}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    borderRadius: '8px',
+                    border: '1px dashed #ef4444',
+                    background: 'rgba(239, 68, 68, 0.05)',
+                    color: '#ef4444',
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem'
+                  }}
+                >
+                  ➕ Add Row (Next Row)
+                </button>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                  Tip: You can paste multi-line job numbers directly into any row input!
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 

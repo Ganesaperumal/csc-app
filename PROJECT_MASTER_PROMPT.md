@@ -28,6 +28,7 @@ src/
 │   │   ├── admin/
 │   │   │   ├── create-user/    # Admin: create new user
 │   │   │   ├── delete-jobs/    # Admin: bulk delete jobs
+│   │   │   ├── delete-legacy-jobs/ # Admin: bulk delete legacy jobs (legacy_jobs table only)
 │   │   │   ├── unlock-sync/    # Admin: unlock ERP sync
 │   │   │   ├── users/          # Admin: list/update users
 │   │   │   └── ai-settings/    # Admin: AI config
