@@ -70,18 +70,24 @@ export default function FollowUpsPage() {
 
       if (profile) {
         activeName = profile.name || profile.username || user.email?.split('@')[0] || 'Agent';
-        adminRole = profile.role === 'Admin' || profile.csc_role === 'Admin';
+        const isSuperAdmin = profile.username === 'gp' || profile.username === 'ganesh' || profile.name?.includes('Ganesaperumal');
+        adminRole = isSuperAdmin || profile.role === 'Admin' || profile.csc_role === 'Admin';
         setIsAdmin(adminRole);
         
-        const level = getAccessLevel('CSC Jobs', profile);
+        const cscRole = profile.csc_role || 'None';
         const trackingRole = profile.tracking_role || 'None';
 
+        const hasCscAccess = isSuperAdmin || (cscRole !== 'None' && cscRole !== '');
+        const hasTrackingAccess = isSuperAdmin || (trackingRole !== 'None' && trackingRole !== '');
+
         // Block only if CSC = None OR Follow-Ups (tracking_role) = None
-        if (level === 'None' || trackingRole === 'None') {
+        if (!hasCscAccess || !hasTrackingAccess) {
           router.push('/home');
           return;
         }
-        setIsViewer(false);
+
+        const isViewerUser = !isSuperAdmin && (cscRole === 'Viewer' || cscRole === 'View');
+        setIsViewer(isViewerUser);
         
         setAgentName(activeName);
       } else {
