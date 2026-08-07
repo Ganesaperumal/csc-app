@@ -588,13 +588,14 @@ export default function ReportsPage() {
 
   const canAccessCsc = useMemo(() => {
     if (!currentUserProfile) return false;
-    return ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(currentUserProfile.csc_role || '') || 
-           ['Admin', 'Manager', 'Executive'].includes(currentUserProfile.role || '');
+    // Any non-None CSC access (View or Edit) can see CSC reports
+    return currentUserProfile.csc_role && currentUserProfile.csc_role !== 'None';
   }, [currentUserProfile]);
 
   const canAccessUnbilled = useMemo(() => {
     if (!currentUserProfile) return false;
-    return ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(currentUserProfile.unbilled_role || '');
+    // Any non-None Unbilled access (View or Edit) can see Unbilled reports
+    return currentUserProfile.unbilled_role && currentUserProfile.unbilled_role !== 'None';
   }, [currentUserProfile]);
 
   useEffect(() => {
@@ -610,9 +611,8 @@ export default function ReportsPage() {
         .from('profiles').select('*').eq('id', session.user.id).single();
       if (!profileData) { router.push('/home'); return; }
       
-      const hasCsc = ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(profileData.csc_role || '') || 
-                     ['Admin', 'Manager', 'Executive'].includes(profileData.role || '');
-      const hasUnbilled = ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(profileData.unbilled_role || '');
+      const hasCsc = profileData.csc_role && profileData.csc_role !== 'None';
+      const hasUnbilled = profileData.unbilled_role && profileData.unbilled_role !== 'None';
 
       if (!hasCsc && !hasUnbilled) {
         router.push('/home');

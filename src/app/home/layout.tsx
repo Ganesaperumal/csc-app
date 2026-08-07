@@ -29,10 +29,12 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
   const isClosedActive = pathname === '/home/closed-jobs';
 
   const cscAccessLevel = getAccessLevel('CSC Jobs', profile);
-  const isCscViewer = profile?.csc_role === 'Viewer' || (profile?.role === 'Viewer' && profile?.csc_role !== 'Admin' && profile?.csc_role !== 'Manager' && profile?.csc_role !== 'Executive') || (cscAccessLevel === 'View' && !isAdmin && profile?.csc_role !== 'Admin');
-  const canAccessFollowUps = cscAccessLevel !== 'None' && !isCscViewer;
-  const canCscReports = ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(profile?.csc_role || '') || ['Admin', 'Manager', 'Executive'].includes(profile?.role || '');
-  const canUnbilledReports = ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(profile?.unbilled_role || '');
+  // Follow-Ups: visible when CSC ≠ None AND tracking_role ≠ None (tracking_role controls Self vs All)
+  const trackingRole = profile?.tracking_role || 'None';
+  const canAccessFollowUps = cscAccessLevel !== 'None' && trackingRole !== 'None';
+  // Reports: visible for ANY CSC access (View or Edit) or ANY Unbilled access
+  const canCscReports = cscAccessLevel !== 'None';
+  const canUnbilledReports = getAccessLevel('Unbilled', profile) !== 'None';
   const canAccessReports = canCscReports || canUnbilledReports;
 
   return (

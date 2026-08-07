@@ -61,7 +61,7 @@ export default function FollowUpsPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, csc_role, name, username')
+        .select('role, csc_role, tracking_role, name, username')
         .eq('id', user.id)
         .single();
 
@@ -74,9 +74,10 @@ export default function FollowUpsPage() {
         setIsAdmin(adminRole);
         
         const level = getAccessLevel('CSC Jobs', profile);
-        const isUserViewer = profile.csc_role === 'Viewer' || (profile.role === 'Viewer' && profile.csc_role !== 'Admin' && profile.csc_role !== 'Manager' && profile.csc_role !== 'Executive') || (level === 'View' && !adminRole);
+        const trackingRole = profile.tracking_role || 'None';
 
-        if (level === 'None' || isUserViewer) {
+        // Block only if CSC = None OR Follow-Ups (tracking_role) = None
+        if (level === 'None' || trackingRole === 'None') {
           router.push('/home');
           return;
         }
@@ -88,14 +89,24 @@ export default function FollowUpsPage() {
         setAgentName(activeName);
       }
 
-      // 2. Query follow-up tasks first
+      // 2. Query follow-up tasks
+      //    tracking_role === 'Admin' → All agents' follow-ups
+      //    tracking_role === 'Executive' (Self) → only own follow-ups
+      const { data: profileFull } = await supabase
+        .from('profiles')
+        .select('tracking_role')
+        .eq('id', user.id)
+        .single();
+      const trackingRole = profileFull?.tracking_role || 'None';
+      const showAll = adminRole || trackingRole === 'Admin';
+
       let query = supabase
         .from('job_communications')
         .select('*')
         .eq('follow_up_required', true);
 
-      // If not admin, restrict to owner agent (case-insensitive matching for agent_name)
-      if (!adminRole) {
+      // If not admin/All, restrict to owner agent (Self)
+      if (!showAll) {
         query = query.ilike('agent_name', activeName);
       }
 
