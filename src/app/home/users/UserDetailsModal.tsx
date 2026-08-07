@@ -139,7 +139,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
       csc_role:      cscAccess === 'None' ? 'None' : (cscAccess === 'View' ? 'Viewer' : 'Executive'),
       tracking_role: cscAccess === 'None' ? 'None' : (followupAccess === 'None' ? 'None' : (followupAccess === 'Self' ? 'Executive' : 'Admin')),
       unbilled_role: unbilledAccess === 'None' ? 'None' : (unbilledAccess === 'View' ? 'Viewer' : 'Executive'),
-      role: (cscAccess === 'Edit' || unbilledAccess === 'Edit') ? 'Executive' : (cscAccess === 'View' || unbilledAccess === 'View' || allJobsAccess === 'View' ? 'Viewer' : 'None'),
+      role: allJobsAccess === 'None' ? 'None' : ((cscAccess === 'Edit' || unbilledAccess === 'Edit') ? 'Executive' : 'Viewer'),
       branches: unbilledAccess === 'None' ? [] : (branches.length ? branches : ['ALL']),
       is_approved: isApproved, photo,
     });
