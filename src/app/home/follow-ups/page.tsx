@@ -1,41 +1,67 @@
 'use client';
 import { showToast } from '@/components/GlobalDialogs';
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 interface Task {
   id: number;
   job_number: string;
+  agent_name: string;
   call_type: string;
   regarding: string;
   summary: string;
-  created_at: string;
-  agent_name: string;
   follow_up_required: boolean;
   follow_up_date: string | null;
   follow_up_completed: boolean;
+  created_at: string;
   customerName?: string;
   spocName?: string;
   companyName?: string;
 }
 
+const formatDate = (dateStr: string | null) => {
+  if (!dateStr) return 'No Date';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return dateStr;
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = date.toLocaleString('en-US', { month: 'short' });
+  const year = date.getFullYear().toString().slice(-2);
+  return `${day}-${month}-${year}`;
+};
+
+const getUserColor = (name: string) => {
+  const colors = [
+    { bg: 'rgba(79, 70, 229, 0.12)', text: '#4f46e5' },
+    { bg: 'rgba(16, 185, 129, 0.12)', text: '#059669' },
+    { bg: 'rgba(217, 119, 6, 0.12)', text: '#d97706' },
+    { bg: 'rgba(225, 29, 72, 0.12)', text: '#e11d48' },
+    { bg: 'rgba(147, 51, 234, 0.12)', text: '#9333ea' },
+  ];
+  let hash = 0;
+  for (let i = 0; i < (name || '').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+};
+
 export default function FollowUpsPage() {
-  const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedAgentFilter, setSelectedAgentFilter] = useState('All');
-  const [allAgents, setAllAgents] = useState<string[]>([]);
   const [agentName, setAgentName] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [isViewer, setIsViewer] = useState(false);
+  const [selectedAgentFilter, setSelectedAgentFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [allAgents, setAllAgents] = useState<string[]>([]);
+  
+  const router = useRouter();
 
   useEffect(() => {
     const initializePage = async () => {
       setLoading(true);
       
+      // 1. Get logged-in user profile details
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         router.push('/login');
@@ -75,11 +101,13 @@ export default function FollowUpsPage() {
         setAgentName(activeName);
       }
 
+      // 2. Query follow-up tasks first
       let query = supabase
         .from('job_communications')
         .select('*')
         .eq('follow_up_required', true);
 
+      // If not admin/All, restrict to owner agent
       if (!showAll) {
         query = query.ilike('agent_name', activeName);
       }
@@ -94,6 +122,7 @@ export default function FollowUpsPage() {
 
       const activeComms = comms || [];
 
+      // 3. Fetch job details mapping for only those jobs that have active follow-ups
       const jobMap: Record<string, { customer: string; spoc: string; company: string }> = {};
       const jobNumbers = Array.from(new Set(activeComms.map(c => c.job_number)));
 
@@ -114,6 +143,7 @@ export default function FollowUpsPage() {
         }
       }
 
+      // 4. Enrich and set tasks
       const enrichedComms = activeComms.map((c: any) => ({
         ...c,
         customerName: jobMap[c.job_number]?.customer || 'Unknown Client',
@@ -122,6 +152,7 @@ export default function FollowUpsPage() {
       }));
       setTasks(enrichedComms);
 
+      // Find list of all unique agent names for filtering (if admin).
       const agents = Array.from(
         new Set(enrichedComms.map((c: any) => c.agent_name?.toLowerCase()).filter(Boolean))
       ).sort() as string[];
@@ -133,10 +164,12 @@ export default function FollowUpsPage() {
     initializePage();
   }, [router]);
 
+  // Handle task status update
   const toggleTaskCompletion = async (taskId: number, currentCompleted: boolean) => {
     if (isViewer) return;
     const updatedStatus = !currentCompleted;
     
+    // Update local state first (optimistic UI change)
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, follow_up_completed: updatedStatus } : t));
 
     try {
@@ -145,67 +178,39 @@ export default function FollowUpsPage() {
         .update({ follow_up_completed: updatedStatus })
         .eq('id', taskId);
 
-      if (error) {
-        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, follow_up_completed: currentCompleted } : t));
-        showToast('Failed to update status', 'error');
-      } else {
-        showToast(updatedStatus ? 'Follow-up marked complete ✅' : 'Follow-up reopened 🔄', 'success');
-      }
+      if (error) throw error;
     } catch (err) {
-      console.error(err);
+      console.error('Error toggling follow-up:', err);
+      // Revert state on error
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, follow_up_completed: currentCompleted } : t));
-      showToast('Error updating status', 'error');
+      showToast('Failed to update task status in database.', 'error');
     }
   };
 
-  // Helper date functions for Board Columns
+  // Date constants for column categorisation
   const todayStr = new Date().toISOString().split('T')[0];
 
+  // Filtering logic
   const filteredTasks = tasks.filter(task => {
+    // Admin filtering
     if (isAdmin && selectedAgentFilter !== 'All' && task.agent_name?.toLowerCase() !== selectedAgentFilter.toLowerCase()) return false;
     
+    // Search filtering
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchJob = task.job_number?.toLowerCase().includes(q);
-      const matchCustomer = task.customerName?.toLowerCase().includes(q);
-      const matchCompany = task.companyName?.toLowerCase().includes(q);
-      const matchRegarding = task.regarding?.toLowerCase().includes(q);
-      const matchSummary = task.summary?.toLowerCase().includes(q);
-      const matchAgent = task.agent_name?.toLowerCase().includes(q);
-      if (!matchJob && !matchCustomer && !matchCompany && !matchRegarding && !matchSummary && !matchAgent) {
-        return false;
-      }
+      const query = searchQuery.toLowerCase();
+      const matchJobNum = task.job_number.toLowerCase().includes(query);
+      const matchCustomer = (task.customerName || '').toLowerCase().includes(query);
+      const matchSummary = task.summary.toLowerCase().includes(query);
+      return matchJobNum || matchCustomer || matchSummary;
     }
     return true;
   });
 
-  const overdueTasks = filteredTasks.filter(t => !t.follow_up_completed && t.follow_up_date && t.follow_up_date < todayStr);
-  const todayTasks = filteredTasks.filter(t => !t.follow_up_completed && t.follow_up_date && t.follow_up_date === todayStr);
-  const upcomingTasks = filteredTasks.filter(t => !t.follow_up_completed && (!t.follow_up_date || t.follow_up_date > todayStr));
+  // Category splits
+  const overdueTasks = filteredTasks.filter(t => !t.follow_up_completed && (t.follow_up_date === null || t.follow_up_date < todayStr));
+  const todayTasks = filteredTasks.filter(t => !t.follow_up_completed && t.follow_up_date === todayStr);
+  const upcomingTasks = filteredTasks.filter(t => !t.follow_up_completed && t.follow_up_date !== null && t.follow_up_date > todayStr);
   const completedTasks = filteredTasks.filter(t => t.follow_up_completed);
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'No Date';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch {
-      return dateString;
-    }
-  };
-
-  const getUserColor = (name: string) => {
-    const colors = [
-      { bg: 'rgba(79, 70, 229, 0.12)', text: '#4f46e5' },
-      { bg: 'rgba(16, 185, 129, 0.12)', text: '#059669' },
-      { bg: 'rgba(217, 119, 6, 0.12)', text: '#d97706' },
-      { bg: 'rgba(225, 29, 72, 0.12)', text: '#e11d48' },
-      { bg: 'rgba(147, 51, 234, 0.12)', text: '#9333ea' },
-    ];
-    let hash = 0;
-    for (let i = 0; i < (name || '').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    return colors[Math.abs(hash) % colors.length];
-  };
 
   const renderTaskColumn = (title: string, list: Task[], theme: 'danger' | 'warning' | 'primary' | 'success') => {
     const badgeColors = {
