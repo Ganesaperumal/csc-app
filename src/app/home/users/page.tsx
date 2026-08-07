@@ -139,7 +139,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
     return (
       <span style={{
         display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
-        fontSize: '0.72rem', padding: '0.18rem 0.5rem', borderRadius: '4px',
+        fontSize: '0.72rem', padding: '0.2rem 0.65rem', borderRadius: '20px',
         background: style.bg, color: style.color,
         border: `1px solid ${style.border}`,
         fontWeight: 600, whiteSpace: 'nowrap',
@@ -180,8 +180,8 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
-              padding: '0.55rem 0.85rem',
-              borderRadius: '8px', width: '220px',
+              padding: '0.55rem 0.9rem',
+              borderRadius: '20px', width: '220px',
               border: '1px solid var(--border-color)',
               background: 'var(--surface-color)',
               color: 'var(--text-primary)', fontSize: '0.85rem',
@@ -192,7 +192,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
             <button
               onClick={() => setActiveModalUser({})}
               style={{
-                padding: '0.55rem 1.1rem', borderRadius: '8px', border: 'none',
+                padding: '0.55rem 1.15rem', borderRadius: '20px', border: 'none',
                 background: '#4f46e5',
                 color: '#ffffff', fontWeight: 600, fontSize: '0.85rem',
                 cursor: 'pointer', whiteSpace: 'nowrap',
@@ -208,7 +208,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
       {/* ─── Users Directory Table Container ─── */}
       <div style={{
         background: 'var(--surface-color)',
-        borderRadius: '12px',
+        borderRadius: '16px',
         border: '1px solid var(--border-color)',
         overflow: 'hidden',
       }}>
@@ -234,11 +234,11 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                 const isApproved = u.is_approved !== false;
 
                 const getCscLabel = (r?: string): string => (!r || r === 'None') ? 'None' : (r === 'Viewer' || r === 'View' ? 'View' : 'Edit');
-                const getFollowupLabel = (r?: string): string => (!r || r === 'None') ? 'None' : (r === 'Executive' || r === 'Self' || r === 'Viewer' ? 'Self' : 'All');
+                const getAllJobsLabel = (r?: string): string => (r === 'None' ? 'None' : 'View');
                 const getUnbilledLabel = (r?: string): string => (!r || r === 'None') ? 'None' : (r === 'Viewer' || r === 'View' ? 'View' : 'Edit');
 
                 const cLabel = getCscLabel(u.csc_role);
-                const fLabel = getFollowupLabel(u.tracking_role);
+                const aLabel = getAllJobsLabel(u.role);
                 const uLabel = getUnbilledLabel(u.unbilled_role);
 
                 return (
@@ -270,8 +270,8 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                             {u.name || u.username}
                             {isSuperAdmin && (
                               <span style={{
-                                marginLeft: '0.4rem', fontSize: '0.65rem', padding: '0.1rem 0.4rem',
-                                background: '#fef3c7', color: '#92400e', borderRadius: '4px',
+                                marginLeft: '0.4rem', fontSize: '0.65rem', padding: '0.12rem 0.45rem',
+                                background: '#fef3c7', color: '#92400e', borderRadius: '12px',
                                 border: '1px solid #fde68a', fontWeight: 700, verticalAlign: 'middle',
                               }}>SUPER</span>
                             )}
@@ -292,23 +292,19 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                       </div>
                     </td>
 
-                    {/* Access Badges */}
+                    {/* Access Badges: CSC, All Jobs, Unbilled */}
                     <td
                       style={{ padding: '0.85rem 1rem' }}
                       onClick={() => !isViewerMode && setActiveModalUser(u)}
                     >
-                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontWeight: 700, marginRight: '0.1rem' }}>CSC</span>
+                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontWeight: 700, marginRight: '0.05rem' }}>CSC</span>
                         {getAccessBadge(cLabel, 'csc')}
 
-                        {cLabel !== 'None' && fLabel !== 'None' && (
-                          <>
-                            <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontWeight: 700, marginLeft: '0.2rem' }}>Followups</span>
-                            {getAccessBadge(fLabel, 'followup')}
-                          </>
-                        )}
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontWeight: 700, marginLeft: '0.15rem', marginRight: '0.05rem' }}>All Jobs</span>
+                        {getAccessBadge(aLabel, 'alljobs')}
 
-                        <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontWeight: 700, marginLeft: '0.2rem' }}>Unbilled</span>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontWeight: 700, marginLeft: '0.15rem', marginRight: '0.05rem' }}>Unbilled</span>
                         {getAccessBadge(uLabel, 'unbilled')}
                       </div>
                     </td>
@@ -351,7 +347,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                             title="Reset Password & Copy Credentials"
                             onClick={(e) => { e.stopPropagation(); handleResetPassword(u); }}
                             style={{
-                              padding: '0.35rem 0.6rem', borderRadius: '6px',
+                              padding: '0.35rem 0.65rem', borderRadius: '20px',
                               border: '1px solid var(--border-color)', background: 'var(--surface-color)',
                               color: 'var(--text-primary)', fontSize: '0.85rem',
                               cursor: 'pointer', fontWeight: 700,
@@ -363,7 +359,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                             title="Edit Profile"
                             onClick={(e) => { e.stopPropagation(); setActiveModalUser(u); }}
                             style={{
-                              padding: '0.3rem 0.55rem', borderRadius: '6px',
+                              padding: '0.3rem 0.6rem', borderRadius: '20px',
                               border: '1px solid #a5b4fc', background: '#e0e7ff',
                               color: '#3730a3', fontSize: '0.8rem',
                               cursor: 'pointer', fontWeight: 600,

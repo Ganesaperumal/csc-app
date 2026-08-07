@@ -25,7 +25,7 @@ const unbilledCycle: UnbilledAccess[] = ['None', 'View', 'Edit'];
 
 function next<T>(arr: T[], cur: T): T { return arr[(arr.indexOf(cur) + 1) % arr.length]; }
 
-/* ── Badge solid colors (Clean & Crisp, No Transparency) ── */
+/* ── Badge solid colors (Clean, Crisp & Rounded) ── */
 const badgeColor: Record<string, { bg: string; color: string; border: string }> = {
   None:  { bg: '#f1f5f9', color: '#64748b', border: '#cbd5e1' },
   View:  { bg: '#e0e7ff', color: '#3730a3', border: '#a5b4fc' },
@@ -47,8 +47,8 @@ function AccessTile({
       style={{
         flex: 1,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0.65rem 0.85rem',
-        borderRadius: '8px',
+        padding: '0.65rem 0.9rem',
+        borderRadius: '12px',
         border: '1px solid #e2e8f0',
         background: '#ffffff',
         cursor: 'pointer',
@@ -65,10 +65,10 @@ function AccessTile({
           {label}
         </span>
       </div>
-      {/* Badge — small rectangular shape */}
+      {/* Badge — rounded pill shape */}
       <span style={{
-        padding: '0.2rem 0.55rem',
-        borderRadius: '4px',
+        padding: '0.22rem 0.65rem',
+        borderRadius: '20px',
         fontSize: '0.7rem', fontWeight: 700,
         letterSpacing: '0.03em', textTransform: 'uppercase',
         background: c.bg, color: c.color, border: `1px solid ${c.border}`,
@@ -135,8 +135,8 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
   };
 
   const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '0.6rem 0.8rem',
-    borderRadius: '6px', border: '1px solid #cbd5e1',
+    width: '100%', padding: '0.6rem 0.85rem',
+    borderRadius: '10px', border: '1px solid #cbd5e1',
     background: '#ffffff', color: '#0f172a',
     fontSize: '0.85rem',
     outline: 'none', transition: 'border-color 0.2s',
@@ -219,10 +219,10 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                   cursor: isSuperAdmin ? 'not-allowed' : 'pointer',
                   background: isApproved ? '#f0fdf4' : '#fef2f2',
                   border: `1px solid ${isApproved ? '#bbf7d0' : '#fecaca'}`,
-                  borderRadius: '16px', padding: '0.2rem 0.6rem 0.2rem 0.4rem',
+                  borderRadius: '20px', padding: '0.2rem 0.6rem 0.2rem 0.4rem',
                 }}>
                   <div style={{
-                    width: '30px', height: '16px', borderRadius: '8px',
+                    width: '30px', height: '16px', borderRadius: '10px',
                     background: isApproved ? '#16a34a' : '#cbd5e1',
                     position: 'relative', transition: 'all 0.2s', flexShrink: 0,
                   }}>
@@ -328,7 +328,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                 <div style={{
                   marginTop: '0.65rem',
                   padding: '0.75rem',
-                  borderRadius: '8px',
+                  borderRadius: '14px',
                   border: '1px solid #e2e8f0',
                   background: '#f8fafc',
                 }}>
@@ -345,7 +345,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                         <button key={code} type="button" className="udm-branch"
                           onClick={() => toggleBranch(code)}
                           style={{
-                            padding: '0.22rem 0.55rem', borderRadius: '4px',
+                            padding: '0.25rem 0.65rem', borderRadius: '20px',
                             fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer',
                             border: `1px solid ${active ? '#16a34a' : '#cbd5e1'}`,
                             background: active ? '#dcfce7' : '#ffffff',
@@ -369,7 +369,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                 className="udm-save"
                 style={{
                   width: '100%', padding: '0.75rem',
-                  borderRadius: '6px', border: 'none',
+                  borderRadius: '20px', border: 'none',
                   background: '#4f46e5',
                   color: '#ffffff', fontWeight: 700, fontSize: '0.88rem',
                   cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1,
@@ -388,7 +388,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                   }}
                   style={{
                     width: '100%', padding: '0.65rem',
-                    borderRadius: '6px', border: '1px solid #fecaca',
+                    borderRadius: '20px', border: '1px solid #fecaca',
                     background: '#fef2f2', color: '#dc2626',
                     fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer',
                     transition: 'background 0.15s ease',
