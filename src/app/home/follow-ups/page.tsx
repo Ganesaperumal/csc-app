@@ -460,10 +460,10 @@ export default function FollowUpsPage() {
       ) : (
         /* Board Columns Grid */
         <div style={{ display: 'flex', flex: 1, gap: '1.25rem', flexWrap: 'nowrap', overflowX: 'auto', minHeight: 0, paddingBottom: '0.5rem' }}>
-          {renderTaskColumn('Overdue', overdueTasks, 'danger')}
-          {renderTaskColumn('Due Today', todayTasks, 'warning')}
-          {renderTaskColumn('Upcoming Reminders', upcomingTasks, 'primary')}
-          {renderTaskColumn('Completed Tasks', completedTasks, 'success')}
+          {renderTaskColumn('⚠️ Overdue', overdueTasks, 'danger')}
+          {renderTaskColumn('⏰ Due Today', todayTasks, 'warning')}
+          {renderTaskColumn('📅 Upcoming Reminders', upcomingTasks, 'primary')}
+          {renderTaskColumn('✅ Completed Tasks', completedTasks, 'success')}
         </div>
       )}
     </div>
