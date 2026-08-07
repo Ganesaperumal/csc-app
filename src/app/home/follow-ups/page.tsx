@@ -214,12 +214,15 @@ export default function FollowUpsPage() {
 
   const renderTaskColumn = (title: string, list: Task[], theme: 'danger' | 'warning' | 'primary' | 'success') => {
     const badgeColors = {
-      danger: { bg: '#fee2e2', text: '#dc2626', border: '#fca5a5', containerBg: 'rgba(254, 242, 242, 0.7)', cardSummaryBg: '#fef2f2', summaryLeftBorder: '#ef4444' },
-      warning: { bg: '#fef3c7', text: '#d97706', border: '#fde68a', containerBg: 'var(--surface-color)', cardSummaryBg: 'var(--surface-color)', summaryLeftBorder: '#f59e0b' },
-      primary: { bg: '#e0e7ff', text: '#4f46e5', border: '#c7d2fe', containerBg: 'var(--surface-color)', cardSummaryBg: 'var(--surface-color)', summaryLeftBorder: '#4f46e5' },
-      success: { bg: '#d1fae5', text: '#059669', border: '#6ee7b7', containerBg: 'var(--surface-color)', cardSummaryBg: 'var(--surface-color)', summaryLeftBorder: '#10b981' },
+      danger: { bg: '#fee2e2', text: '#dc2626', border: '#fca5a5' },
+      warning: { bg: '#fef3c7', text: '#d97706', border: '#fde68a' },
+      primary: { bg: '#e0e7ff', text: '#4f46e5', border: '#c7d2fe' },
+      success: { bg: '#d1fae5', text: '#059669', border: '#6ee7b7' },
     };
-    const { bg: badgeBg, text: badgeText, border: badgeBorder, containerBg, cardSummaryBg, summaryLeftBorder } = badgeColors[theme];
+    const { bg: badgeBg, text: badgeText, border: badgeBorder } = badgeColors[theme];
+
+    // Dark red accent line on summary box left side for Overdue cards
+    const summaryBorderLeftColor = theme === 'danger' ? '#b91c1c' : badgeBg;
 
     return (
       <div 
@@ -231,22 +234,22 @@ export default function FollowUpsPage() {
           display: 'flex', 
           flexDirection: 'column', 
           borderRadius: '14px', 
-          border: `1px solid ${theme === 'danger' ? '#fca5a5' : 'var(--border-color)'}`,
+          border: theme === 'danger' ? '1px solid #fca5a5' : '1px solid var(--border-color)',
           overflow: 'hidden',
-          background: containerBg
+          background: theme === 'danger' ? 'rgba(254, 242, 242, 0.65)' : 'var(--surface-color)'
         }}
       >
         {/* Column Header */}
         <div style={{ 
           padding: '0.85rem 1rem', 
-          borderBottom: `1px solid ${theme === 'danger' ? '#fca5a5' : 'var(--border-color)'}`, 
-          background: theme === 'danger' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(0,0,0,0.02)',
+          borderBottom: '1px solid var(--border-color)', 
+          background: theme === 'danger' ? 'rgba(254, 226, 226, 0.5)' : 'rgba(0,0,0,0.02)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: theme === 'danger' ? '#991b1b' : 'var(--text-primary)' }}>{title}</span>
+            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>{title}</span>
             <span style={{ 
               background: badgeBg, 
               color: badgeText, 
@@ -275,15 +278,15 @@ export default function FollowUpsPage() {
                 style={{ 
                   padding: '1rem', 
                   borderRadius: '10px', 
-                  border: `1px solid ${theme === 'danger' ? '#fca5a5' : 'var(--border-color)'}`,
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--surface-color)',
                   boxShadow: 'var(--glass-shadow)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.5rem',
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   cursor: 'default',
-                  position: 'relative',
-                  background: theme === 'danger' ? '#fff5f5' : 'var(--surface-color)'
+                  position: 'relative'
                 }}
                 onMouseOver={(e) => {
                   e.currentTarget.style.transform = 'translateY(-2px)';
@@ -311,14 +314,14 @@ export default function FollowUpsPage() {
                       {task.job_number}
                     </Link>
                   </div>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: theme === 'danger' ? '#991b1b' : 'var(--text-secondary)', background: theme === 'danger' ? '#fee2e2' : 'rgba(0,0,0,0.03)', padding: '2px 6px', borderRadius: '4px' }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)', background: 'rgba(0,0,0,0.03)', padding: '2px 6px', borderRadius: '4px' }}>
                     {task.regarding}
                   </span>
                 </div>
 
                 {/* Customer & Company Details */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                  <strong style={{ fontSize: '0.9rem', color: theme === 'danger' ? '#7f1d1d' : 'var(--text-primary)' }}>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>
                     {task.customerName}
                   </strong>
                   {task.companyName && (
@@ -329,7 +332,7 @@ export default function FollowUpsPage() {
                 </div>
 
                 {/* Call summary comment */}
-                <p style={{ margin: 0, fontSize: '0.8rem', color: theme === 'danger' ? '#991b1b' : 'var(--text-secondary)', background: cardSummaryBg, padding: '0.5rem', borderRadius: '6px', borderLeft: `4px solid ${summaryLeftBorder}`, lineClamp: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'var(--surface-color)', padding: '0.5rem', borderRadius: '6px', borderLeft: `4px solid ${summaryBorderLeftColor}`, lineClamp: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {task.summary}
                 </p>
 
