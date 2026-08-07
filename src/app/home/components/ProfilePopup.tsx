@@ -55,8 +55,6 @@ export default function ProfilePopup({ user }: { user: any }) {
   }, [isOpen]);
 
   const username = user?.email?.split('@')[0] || 'User';
-  
-  const role = profile?.csc_role ? `CSC: ${profile.csc_role}` : 'User';
   const displayAvatar = avatar || profile?.photo || user?.user_metadata?.avatar_url || null;
   const displayName = fullName || profile?.name || user?.user_metadata?.full_name || username;
 
@@ -215,8 +213,7 @@ export default function ProfilePopup({ user }: { user: any }) {
                 <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
                 <AvatarComponent size={140} showPencil={true} />
               </label>
-              <h3 style={{ marginTop: '1rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>{displayName}!</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: profile?.phone ? '0.25rem' : '1.5rem' }}>{role}</p>
+              <h3 style={{ marginTop: '1rem', color: 'var(--text-primary)', marginBottom: profile?.phone ? '0.25rem' : '1.5rem' }}>{displayName}</h3>
               {profile?.phone && (
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span>📞</span> <span>{profile.phone}</span>
