@@ -108,9 +108,8 @@ Users have **one primary role** + **two category roles**:
 - `branches` (TEXT[]) → `['ALL']` = super admin, else branch-filtered queries
 - `is_approved` must be `true` to access the dashboard
 - Sidebar hidden on: `/home/job/[id]`, `/home/all-jobs`, `/home/unbilled`
-- **Sync ERP Button**: Removed from RBAC permission matrix. Visible ONLY to Admins, CSC Manager, and CSC Executive.
-- **Role Permissions UI**: Unified single matrix table listing sections (`CSC Jobs`, `All Jobs`, `Unbilled`). Reports page and Sync ERP are removed from the matrix.
-- **Reports Access**: Admin, Manager, and Executive of CSC Jobs can see CSC reports (`Active Jobs Report` & `Agent Activity Oversight`). Admin, Manager, and Executive of Unbilled can see `Unbilled Report`. Viewers cannot see Reports page.
+- **Sync ERP Button**: Enabled for `followups_role` (`Self`/`All`) or `csc_role === 'Edit'`. Visible but disabled for `csc_role === 'View'`. Completely hidden if `csc_role === 'None'` (unless followups role is active).
+- **Reports Access**: CSC Reports (`Active Jobs Report` & `Agent Activity Oversight`) visible for `csc_role !== 'None'` OR `followups_role` (`Self`/`All`). Unbilled Report visible for `unbilled_role !== 'None'`. Hidden if all roles are `None`.
 - **Active Jobs Access**: Governed by `csc_role` (`csc_role !== 'None'`), exactly like Closed Jobs. No `is_super_admin` restriction.
 - **Follow-ups Access**: Governed strictly by `followups_role` (`All` vs `Self`). No automatic `All` access granted to `admin` roles.
 - **Group Chat**: Hidden for Viewers; visible for Executive/Manager/Admin

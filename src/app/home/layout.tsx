@@ -32,7 +32,7 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
   const canAccessFollowUps = canAccessCsc && followupsRole !== 'None';
   const canAccessAllJobs = allJobsRole !== 'None' && allJobsRole !== '';
   const canAccessUnbilled = unbilledRole !== 'None' && unbilledRole !== '';
-  const canAccessReports = canAccessCsc || canAccessUnbilled;
+  const canAccessReports = canAccessCsc || canAccessUnbilled || (followupsRole !== 'None' && followupsRole !== '');
 
   return (
     <nav className={styles.nav} style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', gap: '0.35rem' }}>
@@ -292,8 +292,11 @@ export default function DashboardLayout({
 }
 
 function SyncERPWrapper({ user, profile }: { user: any, profile: any }) {
-  const cscRole = profile?.csc_role || '';
+  const cscRole = profile?.csc_role || 'None';
+  const fRole = (profile?.followups_role || profile?.tracking_role || '').toLowerCase();
+  const hasFollowups = fRole === 'self' || fRole === 'all' || fRole.includes('self') || fRole.includes('all');
   const hasCscAccess = cscRole !== 'None' && cscRole !== '';
-  if (!hasCscAccess) return null;
+
+  if (!hasCscAccess && !hasFollowups) return null;
   return <SyncERPButton user={user} profile={profile} />;
 }

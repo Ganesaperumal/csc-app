@@ -588,13 +588,14 @@ export default function ReportsPage() {
 
   const canAccessCsc = useMemo(() => {
     if (!currentUserProfile) return false;
-    // Any non-None CSC access (View or Edit) can see CSC reports
-    return currentUserProfile.csc_role && currentUserProfile.csc_role !== 'None';
+    const cscRole = currentUserProfile.csc_role || 'None';
+    const fRole = (currentUserProfile.followups_role || currentUserProfile.tracking_role || '').toLowerCase();
+    const hasFollowups = fRole === 'self' || fRole === 'all' || fRole.includes('self') || fRole.includes('all');
+    return (cscRole !== 'None' && cscRole !== '') || hasFollowups;
   }, [currentUserProfile]);
 
   const canAccessUnbilled = useMemo(() => {
     if (!currentUserProfile) return false;
-    // Any non-None Unbilled access (View or Edit) can see Unbilled reports
     return currentUserProfile.unbilled_role && currentUserProfile.unbilled_role !== 'None';
   }, [currentUserProfile]);
 
@@ -611,7 +612,10 @@ export default function ReportsPage() {
         .from('profiles').select('*').eq('id', session.user.id).single();
       if (!profileData) { router.push('/home'); return; }
       
-      const hasCsc = profileData.csc_role && profileData.csc_role !== 'None';
+      const cRole = profileData.csc_role || 'None';
+      const fRole = (profileData.followups_role || profileData.tracking_role || '').toLowerCase();
+      const hasFollowups = fRole === 'self' || fRole === 'all' || fRole.includes('self') || fRole.includes('all');
+      const hasCsc = (cRole !== 'None' && cRole !== '') || hasFollowups;
       const hasUnbilled = profileData.unbilled_role && profileData.unbilled_role !== 'None';
 
       if (!hasCsc && !hasUnbilled) {
