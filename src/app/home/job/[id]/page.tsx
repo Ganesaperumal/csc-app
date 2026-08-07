@@ -388,11 +388,10 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const { getAccessLevel } = usePermissions();
   const [profileRoles, setProfileRoles] = useState<any | null>(null);
 
-  // Edit access for Job Details is ONLY granted by csc_role = 'Edit' or unbilled_role = 'Edit'.
-  // followups_role and all_jobs_role NEVER grant edit access to job fields!
+  // Edit access for Job Details is ONLY granted by csc_role = 'Edit'.
+  // unbilled_role, followups_role, and all_jobs_role NEVER grant edit access to CSC job details!
   const cRole = (profileRoles?.csc_role || '').toString().trim().toLowerCase();
-  const uRole = (profileRoles?.unbilled_role || '').toString().trim().toLowerCase();
-  const hasEditAccess = profileRoles ? (cRole === 'edit' || uRole === 'edit') : false;
+  const hasEditAccess = profileRoles ? cRole === 'edit' : false;
 
   const isReadOnly = profileRoles ? !hasEditAccess : true;
   const isViewOnly = isReadOnly;
