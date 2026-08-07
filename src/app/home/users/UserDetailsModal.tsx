@@ -34,7 +34,7 @@ const valueEmoji: Record<string, string> = {
   All:  '🌐',
 };
 
-/* ── Badge solid colors (Clean, Crisp & Curved Rectangle) ── */
+/* ── Badge solid colors (Clean & Rounded Pills) ── */
 const badgeColor: Record<string, { bg: string; color: string; border: string }> = {
   None:  { bg: '#f1f5f9', color: '#64748b', border: '#cbd5e1' },
   View:  { bg: '#e0e7ff', color: '#3730a3', border: '#a5b4fc' },
@@ -58,7 +58,7 @@ function AccessTile({
         flex: 1,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0.65rem 0.9rem',
-        borderRadius: '10px',
+        borderRadius: '12px',
         border: '1px solid #e2e8f0',
         background: '#ffffff',
         cursor: 'pointer',
@@ -75,10 +75,10 @@ function AccessTile({
           {label}
         </span>
       </div>
-      {/* Badge with Emoji */}
+      {/* Badge — Rounded Pill */}
       <span style={{
-        padding: '0.22rem 0.6rem',
-        borderRadius: '6px',
+        padding: '0.22rem 0.65rem',
+        borderRadius: '20px',
         fontSize: '0.72rem', fontWeight: 700,
         letterSpacing: '0.02em',
         background: c.bg, color: c.color, border: `1px solid ${c.border}`,
@@ -147,7 +147,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '0.6rem 0.85rem',
-    borderRadius: '8px', border: '1px solid #cbd5e1',
+    borderRadius: '10px', border: '1px solid #cbd5e1',
     background: '#ffffff', color: '#0f172a',
     fontSize: '0.85rem',
     outline: 'none', transition: 'border-color 0.2s',
@@ -230,7 +230,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                   cursor: isSuperAdmin ? 'not-allowed' : 'pointer',
                   background: isApproved ? '#f0fdf4' : '#fef2f2',
                   border: `1px solid ${isApproved ? '#bbf7d0' : '#fecaca'}`,
-                  borderRadius: '16px', padding: '0.2rem 0.6rem 0.2rem 0.4rem',
+                  borderRadius: '20px', padding: '0.2rem 0.6rem 0.2rem 0.4rem',
                 }}>
                   <div style={{
                     width: '30px', height: '16px', borderRadius: '10px',
@@ -339,7 +339,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                 <div style={{
                   marginTop: '0.65rem',
                   padding: '0.75rem',
-                  borderRadius: '10px',
+                  borderRadius: '12px',
                   border: '1px solid #e2e8f0',
                   background: '#f8fafc',
                 }}>
@@ -356,7 +356,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                         <button key={code} type="button" className="udm-branch"
                           onClick={() => toggleBranch(code)}
                           style={{
-                            padding: '0.25rem 0.65rem', borderRadius: '6px',
+                            padding: '0.25rem 0.65rem', borderRadius: '20px',
                             fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer',
                             border: `1px solid ${active ? '#16a34a' : '#cbd5e1'}`,
                             background: active ? '#dcfce7' : '#ffffff',
@@ -392,7 +392,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                 {saving ? '⏳ Saving...' : isCreate ? '➕ Create User Account' : '💾 Save Profile & Permissions'}
               </button>
 
-              {/* Delete Button (Curved Rectangle) */}
+              {/* Curved Rectangle Delete Button */}
               {!isCreate && !isSuperAdmin && onDelete && (
                 <button
                   type="button" className="udm-delete"
