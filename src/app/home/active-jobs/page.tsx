@@ -1004,8 +1004,8 @@ function JobsTable() {
                             </div>
                           </div>
 
-                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: isAdmin ? 2 : 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontStyle: 'italic', marginTop: '0.2rem' }}>
-                            {isAdmin ? (
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: isFollowupsAll || isAdmin ? 2 : 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontStyle: 'italic', marginTop: '0.2rem' }}>
+                            {isFollowupsAll || isAdmin ? (
                               <>
                                 <strong style={{ fontStyle: 'normal', color: 'var(--text-primary)' }}>{n.agent_name || 'Agent'}:</strong> "{n.summary.split('\n')[0]}"
                               </>
