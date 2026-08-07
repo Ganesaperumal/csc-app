@@ -126,7 +126,7 @@ const StatusSlider = ({ name, options, value, onChange, disabled }: { name: stri
   );
 };
 
-const CarStatusSlider = ({ name, options, value, onChange }: { name: string, options: string[], value: any, onChange: (e: any) => void }) => {
+const CarStatusSlider = ({ name, options, value, onChange, disabled }: { name: string, options: string[], value: any, onChange: (e: any) => void, disabled?: boolean }) => {
   const currentIndex = options.indexOf(value || options[0]);
   const safeIndex = currentIndex === -1 ? 0 : currentIndex;
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -139,6 +139,7 @@ const CarStatusSlider = ({ name, options, value, onChange }: { name: string, opt
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement> | PointerEvent) => {
+    if (disabled) return;
     if (trackRef.current) {
       const rect = trackRef.current.getBoundingClientRect();
       const innerWidth = rect.width - 46; // inner track is offset by 23px on each side
@@ -154,6 +155,7 @@ const CarStatusSlider = ({ name, options, value, onChange }: { name: string, opt
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (disabled) return;
     if (e.button !== undefined && e.button !== 0) return;
     
     // Check if clicked inside a tooltip to prevent dragging it
@@ -521,30 +523,34 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   };
 
   useEffect(() => {
-    // Fetch the real username from profiles table
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) {
+    const initProfile = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      let user = session?.user;
+      if (!user) {
+        const { data: userData } = await supabase.auth.getUser();
+        user = userData.user || undefined;
+      }
+      if (!user) {
         window.location.href = '/login';
         return;
       }
-      const fetchProfile = async () => {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('username, name, role, csc_role, tracking_role, followups_role, all_jobs_role, unbilled_role')
-          .eq('id', data.user.id)
-          .single();
-          
-        if (profile) {
-          setAgentName(profile.username || data.user.email?.split('@')[0] || 'User');
-          setAgentFullName(profile.name || profile.username || data.user.email?.split('@')[0] || 'User');
-          setProfileRoles(profile);
-        } else {
-          setAgentName(data.user.email?.split('@')[0] || 'Agent');
-          setProfileRoles({});
-        }
-      };
-      fetchProfile();
-    });
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+        
+      if (profile) {
+        setAgentName(profile.username || user.email?.split('@')[0] || 'User');
+        setAgentFullName(profile.name || profile.username || user.email?.split('@')[0] || 'User');
+        setProfileRoles(profile);
+      } else {
+        setAgentName(user.email?.split('@')[0] || 'Agent');
+        setProfileRoles({ csc_role: 'Edit' });
+      }
+    };
+    initProfile();
   }, []);
 
   useEffect(() => {
@@ -1369,7 +1375,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
                 <div style={{ width: '100%' }}>
                   <label style={{ fontWeight: 'bold', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', display: 'block' }}>📍 CAR TRACK</label>
-                  <CarStatusSlider name="car_track_status" options={CAR_TRACK_OPTIONS} value={job.car_track_status} onChange={handleChange} />
+                  <CarStatusSlider disabled={isViewer} name="car_track_status" options={CAR_TRACK_OPTIONS} value={job.car_track_status} onChange={handleChange} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                       {isFieldVisible(isViewOnly, job.car_pickup_date || '') && (
