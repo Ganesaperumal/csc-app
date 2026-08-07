@@ -281,35 +281,33 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{u.email || `${u.username}@transworldintl.com`}</div>
                     </td>
 
-                    {/* Module Access Matrix Badges with Emojis */}
+                    {/* Page & Section Access Badges */}
                     <td style={{ padding: '0.85rem 1rem' }} onClick={() => !isViewerMode && setActiveModalUser(u)}>
                       <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
                         {(() => {
-                          const getRoleIcon = (role: string) => {
-                            if (role === 'Viewer') return '👁️';
-                            if (role === 'Executive') return '✏️';
-                            if (role === 'Manager' || role === 'Branch Manager') return '💼';
-                            if (role === 'Admin') return '🛡️';
-                            return '';
-                          };
+                          const getCscLabel = (r?: string) => (!r || r === 'None') ? 'None' : (r === 'Viewer' || r === 'View' ? 'View' : 'Edit');
+                          const getFollowupLabel = (r?: string) => (!r || r === 'None') ? 'None' : (r === 'Executive' || r === 'Self' || r === 'Viewer' ? 'Self' : 'All');
+                          const getUnbilledLabel = (r?: string) => (!r || r === 'None') ? 'None' : (r === 'Viewer' || r === 'View' ? 'View' : 'Edit');
 
-                          const cRole = u.csc_role || u.role || 'Executive';
-                          const tRole = u.tracking_role || 'Executive';
-                          const uRole = u.unbilled_role || 'Executive';
+                          const cLabel = getCscLabel(u.csc_role);
+                          const fLabel = getFollowupLabel(u.tracking_role);
+                          const uLabel = getUnbilledLabel(u.unbilled_role);
 
                           return (
                             <>
-                              {cRole !== 'None' && (
-                                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '6px', background: 'rgba(79,70,229,0.12)', color: '#4f46e5', fontWeight: 700 }}>
-                                  CSC: {getRoleIcon(cRole)}
+                              <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '6px', background: cLabel === 'None' ? 'rgba(148,163,184,0.12)' : cLabel === 'View' ? 'rgba(79,70,229,0.12)' : 'rgba(79,70,229,0.2)', color: cLabel === 'None' ? '#64748b' : '#4f46e5', fontWeight: 700 }}>
+                                CSC: {cLabel === 'None' ? '🚫 None' : cLabel === 'View' ? '👁️ View' : '✏️ Edit'}
+                              </span>
+
+                              {cLabel !== 'None' && fLabel !== 'None' && (
+                                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '6px', background: 'rgba(99,102,241,0.12)', color: '#6366f1', fontWeight: 700 }}>
+                                  Follow-Ups: {fLabel === 'Self' ? '👤 Self' : '🌐 All'}
                                 </span>
                               )}
 
-                              {uRole !== 'None' && (
-                                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '6px', background: 'rgba(16,185,129,0.12)', color: '#10b981', fontWeight: 700 }}>
-                                  Unbilled: {getRoleIcon(uRole)}
-                                </span>
-                              )}
+                              <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '6px', background: uLabel === 'None' ? 'rgba(148,163,184,0.12)' : uLabel === 'View' ? 'rgba(16,185,129,0.12)' : 'rgba(16,185,129,0.2)', color: uLabel === 'None' ? '#64748b' : '#10b981', fontWeight: 700 }}>
+                                Unbilled: {uLabel === 'None' ? '🚫 None' : uLabel === 'View' ? '👁️ View' : '✏️ Edit'}
+                              </span>
                             </>
                           );
                         })()}

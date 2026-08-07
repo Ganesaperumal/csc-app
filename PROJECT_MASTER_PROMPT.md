@@ -187,8 +187,8 @@ Users have **one primary role** + **two category roles**:
 /home/job/[id]        → Job detail (edit or read-only based on role)
 /home/admin           → Admin: Bulk Data Management & Missing Data Editor (Missing Quote Value & Missing Unbilled SPOC)
 /home/data            → Redirects to /home/admin
-/home/permissions     → Roles matrix (Super Admin sidebar link: Roles)
-/home/users           → Users directory (Super Admin sidebar link: Users)
+/home/permissions     → Redirects to /home/users (replaced by direct section permission pills in User Details drawer)
+/home/users           → Users directory & User Details Permission Editor (CSC Jobs, Follow-Ups, All Jobs, Unbilled, Assigned Unbilled Branches)
 /home/activity-log    → Audit log (Admin only) — field-level edit history from jobs table
 /track/[...id]        → Public tracking page (no auth required)
 ```

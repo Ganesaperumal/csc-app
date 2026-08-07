@@ -1,16 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import CustomSelect from '../components/CustomSelect';
 import { customConfirm } from '@/components/GlobalDialogs';
-
-const ROLE_OPTIONS = [
-  { value: 'None', label: 'None' },
-  { value: 'Viewer', label: 'Viewer' },
-  { value: 'Executive', label: 'Executive' },
-  { value: 'Manager', label: 'Manager' },
-  { value: 'Admin', label: 'Admin' }
-];
 
 const BRANCH_CODES = ['ALL', 'BLR', 'DEL', 'BOM', 'MAA', 'PNQ', 'HYD', 'AMD', 'COK', 'KOL', 'OSS'];
 
@@ -40,19 +31,37 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
   const [phone, setPhone] = useState(user?.phone || '');
   const [password, setPassword] = useState('');
 
-  const normalizeRole = (r: string) => {
+  const getInitialCscAccess = (r?: string): 'None' | 'View' | 'Edit' => {
     if (!r || r === 'None') return 'None';
-    if (r === 'Executive') return 'Executive';
-    if (r === 'Branch Manager' || r === 'Manager') return 'Manager';
-    if (r === 'Viewer' || r === 'SPOC') return 'Viewer';
-    if (r === 'Admin') return 'Admin';
-    return 'None';
+    if (r === 'Viewer' || r === 'View') return 'View';
+    return 'Edit';
   };
 
-  const [cscRole, setCscRole] = useState(normalizeRole(user?.csc_role));
-  const [trackingRole, setTrackingRole] = useState(normalizeRole(user?.tracking_role));
-  const [unbilledRole, setUnbilledRole] = useState(normalizeRole(user?.unbilled_role));
-  const [selectedBranches, setSelectedBranches] = useState<string[]>(user?.branches && user?.branches.length > 0 ? user?.branches : ['ALL']);
+  const getInitialFollowupAccess = (r?: string): 'None' | 'Self' | 'All' => {
+    if (!r || r === 'None') return 'None';
+    if (r === 'Executive' || r === 'Self' || r === 'Viewer') return 'Self';
+    return 'All';
+  };
+
+  const getInitialAllJobsAccess = (r?: string): 'None' | 'View' => {
+    if (r === 'None') return 'None';
+    return 'View';
+  };
+
+  const getInitialUnbilledAccess = (r?: string): 'None' | 'View' | 'Edit' => {
+    if (!r || r === 'None') return 'None';
+    if (r === 'Viewer' || r === 'View') return 'View';
+    return 'Edit';
+  };
+
+  const [cscAccess, setCscAccess] = useState<'None' | 'View' | 'Edit'>(getInitialCscAccess(user?.csc_role));
+  const [followupAccess, setFollowupAccess] = useState<'None' | 'Self' | 'All'>(getInitialFollowupAccess(user?.tracking_role));
+  const [allJobsAccess, setAllJobsAccess] = useState<'None' | 'View'>(getInitialAllJobsAccess(user?.role));
+  const [unbilledAccess, setUnbilledAccess] = useState<'None' | 'View' | 'Edit'>(getInitialUnbilledAccess(user?.unbilled_role));
+  
+  const [selectedBranches, setSelectedBranches] = useState<string[]>(
+    user?.branches && user?.branches.length > 0 ? user?.branches : ['ALL']
+  );
   const [isApproved, setIsApproved] = useState<boolean>(user?.is_approved !== false);
   const [photo, setPhoto] = useState<string | null>(user?.photo || null);
   const [hasChanges, setHasChanges] = useState(false);
@@ -60,6 +69,13 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
 
   const handleSaveData = async () => {
     setSaving(true);
+
+    const csc_role = cscAccess === 'None' ? 'None' : (cscAccess === 'View' ? 'Viewer' : 'Executive');
+    const tracking_role = cscAccess === 'None' ? 'None' : (followupAccess === 'None' ? 'None' : (followupAccess === 'Self' ? 'Executive' : 'Admin'));
+    const unbilled_role = unbilledAccess === 'None' ? 'None' : (unbilledAccess === 'View' ? 'Viewer' : 'Executive');
+    const role = (cscAccess === 'Edit' || unbilledAccess === 'Edit') ? 'Executive' : (cscAccess === 'View' || unbilledAccess === 'View' || allJobsAccess === 'View' ? 'Viewer' : 'None');
+    const branches = unbilledAccess === 'None' ? [] : (selectedBranches.length > 0 ? selectedBranches : ['ALL']);
+
     await onSave({
       userId: user?.id,
       name,
@@ -67,10 +83,11 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
       email,
       phone,
       password: isCreate ? password : (password || undefined),
-      csc_role: cscRole,
-      tracking_role: trackingRole,
-      unbilled_role: unbilledRole,
-      branches: selectedBranches,
+      csc_role,
+      tracking_role,
+      unbilled_role,
+      role,
+      branches,
       is_approved: isApproved,
       photo
     });
@@ -119,7 +136,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex', justifyContent: 'flex-end' }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: '560px', maxWidth: '100vw', height: '100vh', background: '#ffffff', color: '#0f172a', borderLeft: '1px solid #cbd5e1', boxShadow: '-10px 0 40px rgba(0,0,0,0.35)', padding: '2rem', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: '580px', maxWidth: '100vw', height: '100vh', background: '#ffffff', color: '#0f172a', borderLeft: '1px solid #cbd5e1', boxShadow: '-10px 0 40px rgba(0,0,0,0.35)', padding: '2rem', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
         
         {/* Header */}
         {isCreate && (
@@ -150,7 +167,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                 <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{email || 'john@transworldintl.com'}</div>
               </div>
 
-              {/* Right end of Name line: Approved label & checkbox */}
+              {/* Approved status switch */}
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: isSuperAdmin ? 'not-allowed' : 'pointer' }}>
                 <span style={{ fontSize: '0.82rem', fontWeight: 700, color: isApproved ? '#059669' : '#dc2626' }}>
                   Approved
@@ -208,64 +225,196 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
             </div>
           )}
 
-          {/* Module Access 2-Column Row: CSC Portal Access (Left) | Unbilled Management Access (Right) */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#4f46e5', marginBottom: '0.4rem' }}>📋 CSC Portal Access</label>
-              <CustomSelect
-                value={cscRole}
-                onChange={(val) => {
-                  setCscRole(val);
-                  setHasChanges(true);
-                }}
-                options={ROLE_OPTIONS}
-              />
+          {/* 🔒 Direct Page & Section Permissions Matrix */}
+          <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+            <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #cbd5e1', paddingBottom: '0.5rem' }}>
+              🔒 Direct Page &amp; Section Permissions
             </div>
 
-            <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#10b981', marginBottom: '0.4rem' }}>🧾 Unbilled Management Access</label>
-              <CustomSelect
-                value={unbilledRole}
-                onChange={(val) => {
-                  setUnbilledRole(val);
-                  setHasChanges(true);
-                }}
-                options={ROLE_OPTIONS}
-              />
-            </div>
-          </div>
-
-          {/* Branch Multi-Select Pills (Below) */}
-          {unbilledRole !== 'None' && (
-            <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
-                📍 Assigned Unbilled Branches:
-              </label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                {BRANCH_CODES.map(code => {
-                  const isSelected = selectedBranches.includes(code);
+            {/* 1. CSC Jobs */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>📋 CSC Jobs Access</label>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>Active &amp; Closed Jobs</span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                {(['None', 'View', 'Edit'] as const).map(option => {
+                  const isSelected = cscAccess === option;
                   return (
-                    <div
-                      key={code}
-                      onClick={() => toggleBranch(code)}
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => {
+                        setCscAccess(option);
+                        if (option === 'None') setFollowupAccess('None');
+                        setHasChanges(true);
+                      }}
                       style={{
-                        padding: '0.25rem 0.6rem',
-                        borderRadius: '16px',
-                        fontSize: '0.72rem',
+                        flex: 1,
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '8px',
+                        fontSize: '0.8rem',
                         fontWeight: 700,
                         cursor: 'pointer',
-                        border: `1px solid ${isSelected ? '#10b981' : '#cbd5e1'}`,
-                        background: isSelected ? 'rgba(16,185,129,0.15)' : '#ffffff',
-                        color: isSelected ? '#10b981' : '#475569'
+                        border: isSelected ? '2px solid #4f46e5' : '1px solid #cbd5e1',
+                        background: isSelected ? 'rgba(79, 70, 229, 0.12)' : '#ffffff',
+                        color: isSelected ? '#4f46e5' : '#475569',
+                        transition: 'all 0.15s ease'
                       }}
                     >
-                      {isSelected ? '✓ ' : '+ '} {code}
-                    </div>
+                      {option === 'None' ? '🚫 None' : option === 'View' ? '👁️ View' : '✏️ Edit'}
+                    </button>
                   );
                 })}
               </div>
             </div>
-          )}
+
+            {/* 2. Follow-Ups (Shown ONLY if CSC Jobs !== 'None') */}
+            {cscAccess !== 'None' && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>⏰ Follow-Ups Access</label>
+                  <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>Follow-up Reminders</span>
+                </div>
+                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  {(['None', 'Self', 'All'] as const).map(option => {
+                    const isSelected = followupAccess === option;
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => {
+                          setFollowupAccess(option);
+                          setHasChanges(true);
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '8px',
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          border: isSelected ? '2px solid #6366f1' : '1px solid #cbd5e1',
+                          background: isSelected ? 'rgba(99, 102, 241, 0.12)' : '#ffffff',
+                          color: isSelected ? '#6366f1' : '#475569',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {option === 'None' ? '🚫 None' : option === 'Self' ? '👤 Self' : '🌐 All'}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 3. All Jobs */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>📁 All Jobs Access</label>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>Full-Width Jobs View</span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                {(['None', 'View'] as const).map(option => {
+                  const isSelected = allJobsAccess === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => {
+                        setAllJobsAccess(option);
+                        setHasChanges(true);
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '8px',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        border: isSelected ? '2px solid #0284c7' : '1px solid #cbd5e1',
+                        background: isSelected ? 'rgba(2, 132, 199, 0.12)' : '#ffffff',
+                        color: isSelected ? '#0284c7' : '#475569',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {option === 'None' ? '🚫 None' : '👁️ View'}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 4. Unbilled */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569' }}>🧾 Unbilled Access</label>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>Unbilled Jobs Portal</span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                {(['None', 'View', 'Edit'] as const).map(option => {
+                  const isSelected = unbilledAccess === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => {
+                        setUnbilledAccess(option);
+                        if (option === 'None') setSelectedBranches([]);
+                        setHasChanges(true);
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '8px',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        border: isSelected ? '2px solid #10b981' : '1px solid #cbd5e1',
+                        background: isSelected ? 'rgba(16, 185, 129, 0.12)' : '#ffffff',
+                        color: isSelected ? '#10b981' : '#475569',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {option === 'None' ? '🚫 None' : option === 'View' ? '👁️ View' : '✏️ Edit'}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 5. Assigned Unbilled Branches (Shown ONLY if Unbilled !== 'None') */}
+            {unbilledAccess !== 'None' && (
+              <div style={{ paddingTop: '0.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                  📍 Assigned Unbilled Branches:
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  {BRANCH_CODES.map(code => {
+                    const isSelected = selectedBranches.includes(code);
+                    return (
+                      <div
+                        key={code}
+                        onClick={() => toggleBranch(code)}
+                        style={{
+                          padding: '0.25rem 0.6rem',
+                          borderRadius: '16px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          border: `1px solid ${isSelected ? '#10b981' : '#cbd5e1'}`,
+                          background: isSelected ? 'rgba(16,185,129,0.15)' : '#ffffff',
+                          color: isSelected ? '#10b981' : '#475569'
+                        }}
+                      >
+                        {isSelected ? '✓ ' : '+ '} {code}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Footer Actions Immediately Below Branches */}
           <div style={{ marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
