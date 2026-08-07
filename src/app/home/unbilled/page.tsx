@@ -1,5 +1,4 @@
 'use client';
-import { isSuperAdmin } from '@/lib/authUtils';
 import { showToast, customConfirm } from '@/components/GlobalDialogs';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -423,15 +422,14 @@ export default function UnbilledManagementPage() {
   useEffect(() => {
     if (!userProfile) return;
     const unbilledRole = userProfile.unbilled_role || 'None';
-    const isSuper = isSuperAdmin(userProfile);
-    const isUnbilledEdit = isSuper || unbilledRole === 'Edit';
+    const isUnbilledEdit = unbilledRole === 'Edit';
     const isUnbilledView = unbilledRole === 'View';
 
-    if (!isUnbilledEdit && !isUnbilledView && unbilledRole === 'None' && !isSuper) {
+    if (!isUnbilledEdit && !isUnbilledView) {
       router.push('/home');
       return;
     }
-    const isViewerUser = !isUnbilledEdit && isUnbilledView;
+    const isViewerUser = isUnbilledView;
     setIsViewer(isViewerUser);
     setCanExportUnbilled(true);
     setCanSeeReminders(true);
@@ -482,9 +480,8 @@ export default function UnbilledManagementPage() {
 
     let legacyBranchesToFetch = null;
 
-    // Enforce Branch Isolation for specific roles
-    const isSuper = isSuperAdmin(profile);
-    const requiresSlicing = !isSuper;
+    // Enforce Branch Isolation based on user's assigned branches
+    const requiresSlicing = true;
 
     if (requiresSlicing) {
       if (profile.branches && profile.branches.includes('ALL')) {

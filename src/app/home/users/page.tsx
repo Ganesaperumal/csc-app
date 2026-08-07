@@ -1,5 +1,4 @@
 'use client';
-import { isSuperAdmin } from '@/lib/authUtils';
 import { showToast } from '@/components/GlobalDialogs';
 import { useState, useEffect } from 'react';
 import UserDetailsModal from './UserDetailsModal';
@@ -208,7 +207,6 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
             </thead>
             <tbody>
               {filteredUsers.map((u) => {
-                const isSuper = isSuperAdmin(u);
                 const isApproved = u.is_approved !== false;
 
                 const cscVal = u.csc_role || 'None';
@@ -240,13 +238,6 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                         <div>
                           <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                             {u.name || u.username}
-                            {isSuper && (
-                              <span style={{
-                                marginLeft: '0.4rem', fontSize: '0.65rem', padding: '0.12rem 0.45rem',
-                                background: '#fef3c7', color: '#92400e', borderRadius: '12px',
-                                border: '1px solid #fde68a', fontWeight: 700, verticalAlign: 'middle',
-                              }}>SUPER</span>
-                            )}
                           </div>
                           {u.phone && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{u.phone}</div>}
                         </div>
@@ -280,9 +271,9 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                       <div
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (!isSuper) handleToggleApproval(u);
+                          handleToggleApproval(u);
                         }}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: isSuper ? 'not-allowed' : 'pointer' }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
                       >
                         <div style={{
                           width: '38px', height: '20px', borderRadius: '10px',

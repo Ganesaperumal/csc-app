@@ -1,5 +1,4 @@
 'use client';
-import { isSuperAdmin } from '@/lib/authUtils';
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -64,8 +63,8 @@ export default function ActivityLogPage() {
         .eq('id', user.id)
         .single();
 
-      const isSuper = isSuperAdmin(profile);
-      if (!isSuper) {
+      const hasAccess = (profile?.csc_role && profile.csc_role !== 'None') || (profile?.unbilled_role && profile.unbilled_role !== 'None');
+      if (!hasAccess) {
         router.push('/home');
         return;
       }

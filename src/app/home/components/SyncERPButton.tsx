@@ -1,5 +1,4 @@
 'use client';
-import { isSuperAdmin } from '@/lib/authUtils';
 import { showToast } from '@/components/GlobalDialogs';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -14,9 +13,7 @@ export default function SyncERPButton({ user: initialUser, profile: initialProfi
 
   useEffect(() => {
     const resolveAccess = (profile: any) => {
-      const isSuper = isSuperAdmin(profile);
-      const isEditAccess = isSuper || profile?.csc_role === 'Edit';
-      setCanEdit(isEditAccess);
+      setCanEdit(profile?.csc_role === 'Edit');
     };
 
     if (initialProfile) {

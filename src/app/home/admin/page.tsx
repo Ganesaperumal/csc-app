@@ -1,5 +1,4 @@
 'use client';
-import { isSuperAdmin } from '@/lib/authUtils';
 import { showToast, customConfirm } from '@/components/GlobalDialogs';
 
 import { useState, useEffect } from 'react';
@@ -244,13 +243,13 @@ export default function AdminPage() {
       setCurrentUser(data.user);
       supabase.from('profiles').select('*').eq('id', data.user.id).single()
         .then(({ data: profile }) => {
-          const isSuper = isSuperAdmin(profile);
+          const hasAccess = profile && (profile.csc_role === 'Edit' || profile.unbilled_role === 'Edit' || (profile.csc_role && profile.csc_role !== 'None'));
 
-          if (profile && isSuper) {
-            setUserRole(profile.role);
+          if (profile && hasAccess) {
+            setUserRole(profile.csc_role || 'View');
             setCheckingAuth(false);
           } else {
-            showToast('⛔ Access Denied: Admin Center is restricted to Super Admin only.', 'error');
+            showToast('⛔ Access Denied: Admin Center is restricted.', 'error');
             router.push('/home/active-jobs');
           }
         });

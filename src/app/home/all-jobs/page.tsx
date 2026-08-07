@@ -1,5 +1,4 @@
 'use client';
-import { isSuperAdmin } from '@/lib/authUtils';
 import { showToast } from '@/components/GlobalDialogs';
 
 import { useEffect, useState, Suspense, useRef } from 'react';
@@ -260,9 +259,8 @@ function AllJobsContent() {
         .from('profiles').select('*').eq('id', session.user.id).single();
       if (!profileData) { router.push('/home'); return; }
       const allJobsRole = profileData.all_jobs_role || 'None';
-      const isSuper = isSuperAdmin(profileData);
 
-      if ((allJobsRole === 'None' || !allJobsRole) && !isSuper) {
+      if (allJobsRole === 'None' || !allJobsRole) {
         router.push('/home');
         return;
       }

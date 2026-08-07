@@ -1,5 +1,4 @@
 'use client';
-import { isSuperAdmin } from '@/lib/authUtils';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -651,8 +650,7 @@ export default function ReportsPage() {
       setProfiles(pData || []);
 
       // Branch Isolation check
-      const isSuper = isSuperAdmin(profile);
-      const requiresSlicing = !isSuper;
+      const requiresSlicing = true;
 
       let branchFilter: string[] | null = null;
       let legacyBranchesToFetch: string[] | null = ['ALL'];

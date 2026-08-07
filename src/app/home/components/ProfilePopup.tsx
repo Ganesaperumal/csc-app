@@ -1,5 +1,4 @@
 'use client';
-import { isSuperAdmin } from '@/lib/authUtils';
 import { showToast } from '@/components/GlobalDialogs';
 
 import { useState, useRef, useEffect } from 'react';
@@ -57,9 +56,7 @@ export default function ProfilePopup({ user }: { user: any }) {
 
   const username = user?.email?.split('@')[0] || 'User';
   
-  // Use profile data if available, fallback to user_metadata or defaults
-  const isSuper = isSuperAdmin(profile);
-  const role = isSuper ? 'Super Admin' : 'Team Member';
+  const role = profile?.csc_role ? `CSC: ${profile.csc_role}` : 'User';
   const displayAvatar = avatar || profile?.photo || user?.user_metadata?.avatar_url || null;
   const displayName = fullName || profile?.name || user?.user_metadata?.full_name || username;
 

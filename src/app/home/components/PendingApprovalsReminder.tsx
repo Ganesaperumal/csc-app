@@ -1,5 +1,4 @@
 'use client';
-import { isSuperAdmin } from '@/lib/authUtils';
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -15,10 +14,8 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
   // - Admin: Can see all alerts across all branches
   // - Viewer: Cannot see anything (returns null)
   // - Manager & Executive: Can see only their own (filtered by assigned branch/coordinator)
-  const isSuper = isSuperAdmin(profile);
-  const isViewer = !isSuper;
-  const isManagerOrExec = false;
-  const canManageUsers = isSuper;
+  const canManageUsers = profile && (profile.csc_role === 'Edit' || profile.unbilled_role === 'Edit');
+  const isViewer = !canManageUsers;
 
   useEffect(() => {
     if (isViewer) return;
@@ -35,24 +32,7 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
       const res = await fetch('/api/admin/users', { cache: 'no-store' });
       const data = await res.json();
       if (data.users) {
-        let pending = data.users.filter((u: any) => u.is_approved === false);
-
-        // Manager & Executive: Filter to only see their own branch/coordinator pending users
-        if (isManagerOrExec) {
-          const userBranches: string[] = Array.isArray(profile?.branches) ? profile.branches : [];
-          const hasAllBranches = userBranches.includes('ALL');
-          const userName = profile?.name || profile?.username;
-
-          if (!hasAllBranches) {
-            pending = pending.filter((u: any) => {
-              const targetBranches: string[] = Array.isArray(u.branches) ? u.branches : [];
-              const branchMatch = targetBranches.some(b => userBranches.includes(b));
-              const coordinatorMatch = u.csc_coordinator === userName || u.name === userName || u.username === userName;
-              return branchMatch || coordinatorMatch;
-            });
-          }
-        }
-
+        const pending = data.users.filter((u: any) => u.is_approved === false);
         setPendingUsers(pending);
       }
     } catch (err) {

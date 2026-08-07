@@ -13,12 +13,9 @@ import AIChatbot from '../components/AIChatbot';
 import GlobalDialogs, { showToast } from '@/components/GlobalDialogs';
 import PendingApprovalsReminder from './components/PendingApprovalsReminder';
 
-import { isSuperAdmin } from '@/lib/authUtils';
 
 function DashboardNav({ profile, user }: { profile: any; user: any }) {
   const pathname = usePathname();
-
-  const isSuper = isSuperAdmin(profile);
 
   // ─── Direct Profile Column Permissions (Single Source of Truth) ───
   const cscRole = profile?.csc_role || 'None';
@@ -26,15 +23,15 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
   const allJobsRole = profile?.all_jobs_role || 'None';
   const unbilledRole = profile?.unbilled_role || 'None';
 
-  const canAccessCsc = isSuper || (cscRole !== 'None' && cscRole !== '');
+  const canAccessCsc = cscRole !== 'None' && cscRole !== '';
   const canAccessActive = canAccessCsc;
   const canAccessClosed = canAccessCsc;
   const isActiveActive = pathname.startsWith('/home/active-jobs');
   const isClosedActive = pathname === '/home/closed-jobs';
 
   const canAccessFollowUps = canAccessCsc && followupsRole !== 'None';
-  const canAccessAllJobs = isSuper || (allJobsRole !== 'None' && allJobsRole !== '');
-  const canAccessUnbilled = isSuper || (unbilledRole !== 'None' && unbilledRole !== '');
+  const canAccessAllJobs = allJobsRole !== 'None' && allJobsRole !== '';
+  const canAccessUnbilled = unbilledRole !== 'None' && unbilledRole !== '';
   const canAccessReports = canAccessCsc || canAccessUnbilled;
 
   return (
@@ -135,8 +132,7 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
       )}
 
       {/* Admin & Users segmented toggle bar directly above Sync ERP */}
-      {isSuper && (
-        <div style={{ marginTop: 'auto', marginBottom: '0.15rem' }}>
+      <div style={{ marginTop: 'auto', marginBottom: '0.15rem' }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -188,7 +184,6 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
             </Link>
           </div>
         </div>
-      )}
 
     </nav>
   );
@@ -291,9 +286,8 @@ export default function DashboardLayout({
 }
 
 function SyncERPWrapper({ user, profile }: { user: any, profile: any }) {
-  const isSuper = isSuperAdmin(profile);
   const cscRole = profile?.csc_role || '';
-  const hasCscAccess = isSuper || (cscRole !== 'None' && cscRole !== '');
+  const hasCscAccess = cscRole !== 'None' && cscRole !== '';
   if (!hasCscAccess) return null;
   return <SyncERPButton user={user} profile={profile} />;
 }

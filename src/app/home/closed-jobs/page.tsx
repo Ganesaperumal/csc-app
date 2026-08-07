@@ -1,5 +1,4 @@
 'use client';
-import { isSuperAdmin } from '@/lib/authUtils';
 
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -170,15 +169,14 @@ export default function ClosedJobsPage() {
         .from('profiles').select('*').eq('id', session.user.id).single();
       if (!profileData) { router.push('/home'); return; }
       const cscRole = profileData.csc_role || 'None';
-      const isSuper = isSuperAdmin(profileData);
-      const isCscEdit = isSuper || cscRole === 'Edit';
+      const isCscEdit = cscRole === 'Edit';
       const isCscView = cscRole === 'View';
 
-      if (!isCscEdit && !isCscView && cscRole === 'None' && !isSuper) {
+      if (!isCscEdit && !isCscView) {
         router.push('/home');
         return;
       }
-      if (isCscView && !isCscEdit) {
+      if (isCscView) {
         setIsViewer(true);
       }
     };

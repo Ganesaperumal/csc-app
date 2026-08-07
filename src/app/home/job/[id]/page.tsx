@@ -1,5 +1,4 @@
 'use client';
-import { isSuperAdmin } from '@/lib/authUtils';
 import { showToast } from '@/components/GlobalDialogs';
 import { usePermissions } from '@/components/PermissionsContext';
 
@@ -387,12 +386,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const { getAccessLevel } = usePermissions();
   const [profileRoles, setProfileRoles] = useState<any | null>(null);
 
-  const isSuperAdminUser = profileRoles ? isSuperAdmin(profileRoles) : false;
-
-  // Edit access for Job Details is ONLY granted by csc_role = 'Edit' or unbilled_role = 'Edit' or SuperAdmin.
+  // Edit access for Job Details is ONLY granted by csc_role = 'Edit' or unbilled_role = 'Edit'.
   // followups_role and all_jobs_role NEVER grant edit access to job fields!
   const hasEditAccess = profileRoles ? (
-    isSuperAdminUser ||
     profileRoles.csc_role === 'Edit' ||
     profileRoles.unbilled_role === 'Edit'
   ) : false;
