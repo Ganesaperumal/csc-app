@@ -25,40 +25,76 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'No job numbers provided for deletion' }, { status: 400 });
     }
 
-    // Clean and filter job numbers
-    const cleanedJobNumbers = Array.from(
+    // Extract, clean, and build case variations (original, uppercase, lowercase)
+    const cleanedInputs = Array.from(
       new Set(
         jobNumbers
-          .map(jn => (typeof jn === 'string' ? jn.trim() : ''))
+          .flatMap(jn => (typeof jn === 'string' ? jn.split(/[\r\n,\t;]+/) : []))
+          .map(jn => jn.trim().replace(/^["']|["']$/g, ''))
           .filter(jn => jn.length > 0)
       )
     );
 
-    if (cleanedJobNumbers.length === 0) {
+    if (cleanedInputs.length === 0) {
       return NextResponse.json({ error: 'No valid non-empty job numbers provided' }, { status: 400 });
     }
 
-    // STRICTLY target the `legacy_jobs` table ONLY
-    const { data, error } = await supabaseAdmin
+    // Build candidates including upper/lower case variations for robust matching
+    const candidates = Array.from(
+      new Set(
+        cleanedInputs.flatMap(item => [
+          item,
+          item.toUpperCase(),
+          item.toLowerCase()
+        ])
+      )
+    );
+
+    // 1. Delete rows matching job_number
+    const { data: deletedByJob, error: errorJob } = await supabaseAdmin
       .from('legacy_jobs')
       .delete()
-      .in('job_number', cleanedJobNumbers)
-      .select('job_number');
+      .in('job_number', candidates)
+      .select('job_number, enquiry_number');
 
-    if (error) {
-      console.error('Error deleting from legacy_jobs:', error);
-      throw new Error(error.message);
+    if (errorJob) {
+      console.error('Error deleting from legacy_jobs by job_number:', errorJob);
+      throw new Error(errorJob.message);
     }
 
-    const deletedCount = data?.length || 0;
-    const deletedJobNumbers = data?.map(d => d.job_number) || [];
+    // 2. Delete rows matching enquiry_number (in case user passed ENQ numbers)
+    const { data: deletedByEnq, error: errorEnq } = await supabaseAdmin
+      .from('legacy_jobs')
+      .delete()
+      .in('enquiry_number', candidates)
+      .select('job_number, enquiry_number');
+
+    if (errorEnq) {
+      console.error('Error deleting from legacy_jobs by enquiry_number:', errorEnq);
+      throw new Error(errorEnq.message);
+    }
+
+    // Combine deleted rows and deduplicate
+    const combinedDeleted = [...(deletedByJob || []), ...(deletedByEnq || [])];
+    const uniqueDeletedMap = new Map<string, any>();
+    combinedDeleted.forEach(row => {
+      const key = row.job_number || row.enquiry_number;
+      if (key) uniqueDeletedMap.set(key, row);
+    });
+
+    const deletedRows = Array.from(uniqueDeletedMap.values());
+    const deletedCount = deletedRows.length;
+    const deletedIdentifiers = deletedRows.map(r => r.job_number || r.enquiry_number);
 
     return NextResponse.json({
       success: true,
-      message: `Successfully deleted ${deletedCount} legacy job(s) from legacy_jobs table.`,
+      message: deletedCount > 0 
+        ? `Successfully deleted ${deletedCount} legacy job(s) from legacy_jobs table.`
+        : `No matching legacy jobs found in DB for the provided job numbers.`,
       deletedCount,
-      requestedCount: cleanedJobNumbers.length,
-      deletedJobNumbers
+      requestedCount: cleanedInputs.length,
+      requestedJobNumbers: cleanedInputs,
+      deletedJobNumbers: deletedIdentifiers
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to delete legacy jobs' }, { status: 500 });

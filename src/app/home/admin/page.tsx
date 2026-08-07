@@ -78,6 +78,8 @@ export default function AdminPage() {
   const [csvUploadMode, setCsvUploadMode] = useState<'fill_empty' | 'force_overwrite'>('fill_empty');
 
   // Legacy jobs bulk delete states & handlers
+  const [legacyDeleteMode, setLegacyDeleteMode] = useState<'rows' | 'textarea'>('rows');
+  const [legacyTextareaInput, setLegacyTextareaInput] = useState('');
   const [legacyDeleteRows, setLegacyDeleteRows] = useState<{ job_number: string }[]>([
     { job_number: '' },
     { job_number: '' },
@@ -103,10 +105,20 @@ export default function AdminPage() {
   };
 
   const handleBulkDeleteLegacyJobs = async () => {
+    let rawInputs: string[] = [];
+
+    if (legacyDeleteMode === 'rows') {
+      rawInputs = legacyDeleteRows.map(r => r.job_number);
+    } else {
+      rawInputs = legacyTextareaInput.split(/[\r\n,\t;]+/);
+    }
+
+    // Split any row containing multiple values (newlines, commas, tabs, spaces)
     const validJobNumbers = Array.from(
       new Set(
-        legacyDeleteRows
-          .map(r => r.job_number.trim())
+        rawInputs
+          .flatMap(item => item.split(/[\r\n,\t;]+/))
+          .map(jn => jn.trim().replace(/^["']|["']$/g, ''))
           .filter(jn => jn.length > 0)
       )
     );
@@ -117,8 +129,8 @@ export default function AdminPage() {
     }
 
     const confirmed = await customConfirm(
-      `🚨 WARNING: Are you sure you want to BULK DELETE ${validJobNumbers.length} job(s) strictly from the LEGACY_JOBS table?\n\n` +
-      `Target Job Numbers:\n${validJobNumbers.join(', ')}\n\n` +
+      `🚨 WARNING: Are you sure you want to BULK DELETE up to ${validJobNumbers.length} job(s) strictly from the LEGACY_JOBS table?\n\n` +
+      `Target Job Numbers (${validJobNumbers.length}):\n${validJobNumbers.join(', ')}\n\n` +
       `This operation is permanent and ONLY affects the legacy_jobs table.`
     );
     if (!confirmed) return;
@@ -136,12 +148,20 @@ export default function AdminPage() {
         throw new Error(data.error || 'Failed to delete legacy jobs');
       }
 
-      showToast(`✅ ${data.message}`, 'success');
+      if (data.deletedCount === 0) {
+        showToast(`⚠️ No matching jobs found in legacy_jobs table for: ${validJobNumbers.join(', ')}`, 'info');
+      } else if (data.deletedCount < validJobNumbers.length) {
+        showToast(`✅ Deleted ${data.deletedCount} matching legacy job(s) from legacy_jobs table (${validJobNumbers.length - data.deletedCount} not found in DB).`, 'success');
+      } else {
+        showToast(`✅ Successfully deleted all ${data.deletedCount} legacy job(s) from legacy_jobs table!`, 'success');
+      }
+
       setLegacyDeleteRows([
         { job_number: '' },
         { job_number: '' },
         { job_number: '' }
       ]);
+      setLegacyTextareaInput('');
     } catch (err: any) {
       showToast(`❌ Delete failed: ${err.message}`, 'error');
     } finally {
@@ -870,7 +890,7 @@ export default function AdminPage() {
                 <span>🗑️</span> 4. Bulk Delete Legacy Jobs (Legacy Table Only)
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0.25rem 0 0 0' }}>
-                Mention Job Numbers of legacy table in rows below (or paste line-by-line). This operation strictly targets the <strong style={{ color: '#ef4444' }}>legacy_jobs</strong> table in Supabase and will not affect active jobs or other tables.
+                Mention Job Numbers of legacy table in rows below or paste line-by-line. This operation strictly targets the <strong style={{ color: '#ef4444' }}>legacy_jobs</strong> table in Supabase and will not affect active jobs. Non-existent job numbers will be ignored safely.
               </p>
             </div>
 
@@ -897,97 +917,155 @@ export default function AdminPage() {
             </button>
           </div>
 
-          <div style={{ background: 'rgba(239, 68, 68, 0.03)', borderRadius: '12px', padding: '1rem', border: '1px solid rgba(239, 68, 68, 0.2)', marginTop: '1rem' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 40px', gap: '0.75rem', fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', paddingLeft: '0.25rem' }}>
-                <div>#</div>
-                <div>Legacy Job Number / ENQ</div>
-                <div></div>
-              </div>
+          {/* Mode Switcher */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <button
+              type="button"
+              onClick={() => setLegacyDeleteMode('rows')}
+              style={{
+                padding: '0.35rem 0.75rem',
+                borderRadius: '6px',
+                border: legacyDeleteMode === 'rows' ? '1px solid #ef4444' : '1px solid var(--border-color)',
+                background: legacyDeleteMode === 'rows' ? 'rgba(239, 68, 68, 0.1)' : 'var(--surface-color)',
+                color: legacyDeleteMode === 'rows' ? '#ef4444' : 'var(--text-secondary)',
+                fontWeight: 600,
+                fontSize: '0.8rem',
+                cursor: 'pointer'
+              }}
+            >
+              📋 Row Input Mode
+            </button>
+            <button
+              type="button"
+              onClick={() => setLegacyDeleteMode('textarea')}
+              style={{
+                padding: '0.35rem 0.75rem',
+                borderRadius: '6px',
+                border: legacyDeleteMode === 'textarea' ? '1px solid #ef4444' : '1px solid var(--border-color)',
+                background: legacyDeleteMode === 'textarea' ? 'rgba(239, 68, 68, 0.1)' : 'var(--surface-color)',
+                color: legacyDeleteMode === 'textarea' ? '#ef4444' : 'var(--text-secondary)',
+                fontWeight: 600,
+                fontSize: '0.8rem',
+                cursor: 'pointer'
+              }}
+            >
+              📝 Multi-Line Text Mode
+            </button>
+          </div>
 
-              {legacyDeleteRows.map((row, index) => (
-                <div key={index} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 40px', gap: '0.75rem', alignItems: 'center' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', paddingLeft: '0.25rem' }}>
-                    #{index + 1}
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="e.g. LEGACY-2023-001 (or paste multi-line job numbers)"
-                    value={row.job_number}
-                    onChange={(e) => handleLegacyDeleteRowChange(index, e.target.value)}
-                    onPaste={(e) => {
-                      const pasteText = e.clipboardData.getData('text');
-                      if (pasteText.includes('\n') || pasteText.includes(',')) {
-                        e.preventDefault();
-                        const items = pasteText
-                          .split(/[\n,]+/)
-                          .map(s => s.trim())
-                          .filter(Boolean);
-                        if (items.length > 0) {
-                          setLegacyDeleteRows(prev => {
-                            const next = [...prev];
-                            next.splice(index, 1, ...items.map(job_number => ({ job_number })));
-                            return next;
-                          });
+          <div style={{ background: 'rgba(239, 68, 68, 0.03)', borderRadius: '12px', padding: '1rem', border: '1px solid rgba(239, 68, 68, 0.2)', marginTop: '0.5rem' }}>
+            {legacyDeleteMode === 'rows' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 40px', gap: '0.75rem', fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', paddingLeft: '0.25rem' }}>
+                  <div>#</div>
+                  <div>Legacy Job Number / ENQ</div>
+                  <div></div>
+                </div>
+
+                {legacyDeleteRows.map((row, index) => (
+                  <div key={index} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 40px', gap: '0.75rem', alignItems: 'center' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', paddingLeft: '0.25rem' }}>
+                      #{index + 1}
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="e.g. LEGACY-2023-001 (or paste multiple job numbers)"
+                      value={row.job_number}
+                      onChange={(e) => handleLegacyDeleteRowChange(index, e.target.value)}
+                      onPaste={(e) => {
+                        const pasteText = e.clipboardData.getData('text');
+                        if (pasteText.includes('\n') || pasteText.includes(',')) {
+                          e.preventDefault();
+                          const items = pasteText
+                            .split(/[\r\n,\t;]+/)
+                            .map(s => s.trim())
+                            .filter(Boolean);
+                          if (items.length > 0) {
+                            setLegacyDeleteRows(prev => {
+                              const next = [...prev];
+                              next.splice(index, 1, ...items.map(job_number => ({ job_number })));
+                              return next;
+                            });
+                          }
                         }
-                      }
-                    }}
-                    style={{
-                      padding: '0.55rem 0.8rem',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-color)',
-                      background: 'var(--surface-color)',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.85rem'
-                    }}
-                  />
+                      }}
+                      style={{
+                        padding: '0.55rem 0.8rem',
+                        borderRadius: '8px',
+                        border: '1px solid var(--border-color)',
+                        background: 'var(--surface-color)',
+                        color: 'var(--text-primary)',
+                        fontSize: '0.85rem'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveLegacyDeleteRow(index)}
+                      disabled={legacyDeleteRows.length <= 1}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: legacyDeleteRows.length <= 1 ? 'var(--border-color)' : '#ef4444',
+                        cursor: legacyDeleteRows.length <= 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '1.1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0.4rem'
+                      }}
+                      title="Remove Row"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                ))}
+
+                <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                   <button
                     type="button"
-                    onClick={() => handleRemoveLegacyDeleteRow(index)}
-                    disabled={legacyDeleteRows.length <= 1}
+                    onClick={handleAddLegacyDeleteRow}
                     style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: legacyDeleteRows.length <= 1 ? 'var(--border-color)' : '#ef4444',
-                      cursor: legacyDeleteRows.length <= 1 ? 'not-allowed' : 'pointer',
-                      fontSize: '1.1rem',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '8px',
+                      border: '1px dashed #ef4444',
+                      background: 'rgba(239, 68, 68, 0.05)',
+                      color: '#ef4444',
+                      fontWeight: 700,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '0.4rem'
+                      gap: '0.4rem'
                     }}
-                    title="Remove Row"
                   >
-                    🗑️
+                    ➕ Add Row (Next Row)
                   </button>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    Tip: You can enter multiple numbers across rows, or paste multi-line lists into any row input!
+                  </span>
                 </div>
-              ))}
-
-              <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                <button
-                  type="button"
-                  onClick={handleAddLegacyDeleteRow}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    borderRadius: '8px',
-                    border: '1px dashed #ef4444',
-                    background: 'rgba(239, 68, 68, 0.05)',
-                    color: '#ef4444',
-                    fontWeight: 700,
-                    fontSize: '0.82rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem'
-                  }}
-                >
-                  ➕ Add Row (Next Row)
-                </button>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                  Tip: You can paste multi-line job numbers directly into any row input!
-                </span>
               </div>
-            </div>
+            ) : (
+              <div>
+                <textarea
+                  rows={6}
+                  placeholder="Paste Legacy Job Numbers here (one per line, or separated by commas)...&#10;e.g.&#10;LEGACY-2023-001&#10;LEGACY-2023-002&#10;LEGACY-2023-003"
+                  value={legacyTextareaInput}
+                  onChange={(e) => setLegacyTextareaInput(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--surface-color)',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'monospace',
+                    fontSize: '0.85rem',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+            )}
           </div>
         </div>
 
