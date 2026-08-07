@@ -192,6 +192,7 @@ function JobsTable() {
   const [isViewer, setIsViewer] = useState(false);
   const [accessChecked, setAccessChecked] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isFollowupsAll, setIsFollowupsAll] = useState(false);
   const [agentName, setAgentName] = useState<string>('');
   const [filters, setFilters] = useState<Record<string, string[]>>(() => {
     try {
@@ -325,6 +326,10 @@ function JobsTable() {
             if (isCscView && !isCscEdit) {
               setIsViewer(true);
             }
+            const fRole = profileData.followups_role || (profileData.tracking_role === 'Admin' ? 'All' : 'Self');
+            if (fRole === 'All' || isSuperAdmin || profileData.role === 'Admin') {
+              setIsFollowupsAll(true);
+            }
             if (profileData.role === 'Admin' || isSuperAdmin) {
               setIsAdmin(true);
             }
@@ -423,7 +428,7 @@ function JobsTable() {
     if (agentName) {
       fetchNotifications();
     }
-  }, [agentName, isAdmin]);
+  }, [agentName, isAdmin, isFollowupsAll]);
 
   const fetchNotifications = async () => {
     if (!agentName) return;
@@ -434,7 +439,7 @@ function JobsTable() {
       .eq('follow_up_required', true)
       .eq('follow_up_completed', false);
 
-    if (!isAdmin) {
+    if (!isFollowupsAll && !isAdmin) {
       query = query.ilike('agent_name', agentName);
     }
 

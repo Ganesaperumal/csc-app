@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Server-only admin client — always uses service role key regardless of module cache.
-// Do NOT use the shared @/lib/supabase singleton here: it can be evaluated in the
-// client bundle context first (where SUPABASE_SERVICE_ROLE_KEY is undefined),
-// causing auth.admin calls to silently run with the anon key.
+// Server-only admin client
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -15,13 +12,12 @@ export async function GET() {
   try {
     const { data: users, error } = await supabase
       .from('profiles')
-      .select('id, name, username, role, csc_role, tracking_role, unbilled_role, branch_user_role, branches, is_approved, photo, phone, chat_access');
+      .select('id, name, username, role, csc_role, tracking_role, followups_role, all_jobs_role, unbilled_role, branches, is_approved, photo, phone');
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Fetch auth emails to enrich profiles
     const { data: authData } = await supabase.auth.admin.listUsers();
     const authMap = new Map((authData?.users || []).map(u => [u.id, u.email]));
 
@@ -40,16 +36,12 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { userId, name, username, email, phone, role, csc_role, tracking_role, unbilled_role, branches, is_approved, photo, password } = body;
+    const { userId, name, username, email, phone, role, csc_role, tracking_role, followups_role, all_jobs_role, unbilled_role, branches, is_approved, photo, password } = body;
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    // 1. Only update Supabase Auth if a new password is explicitly provided.
-    //    Email is intentionally NOT updated here — it's always the formula email
-    //    and `email` in the payload is always truthy (even when unchanged), which
-    //    caused spurious auth.admin calls that fail with empty error messages.
     if (password) {
       const { error: authError } = await supabase.auth.admin.updateUserById(userId, { password });
       if (authError) {
@@ -59,18 +51,28 @@ export async function PUT(request: Request) {
       }
     }
 
-    // 2. Update Profile fields
     const updates: any = {};
     if (name !== undefined) updates.name = name;
     if (username !== undefined) updates.username = username;
     if (phone !== undefined) updates.phone = phone;
-    if (role !== undefined) updates.role = role;
     if (csc_role !== undefined) updates.csc_role = csc_role;
-    if (tracking_role !== undefined) updates.tracking_role = tracking_role;
     if (unbilled_role !== undefined) updates.unbilled_role = unbilled_role;
+    if (followups_role !== undefined) {
+      updates.followups_role = followups_role;
+      updates.tracking_role = followups_role === 'All' ? 'Admin' : (followups_role === 'Self' ? 'Executive' : 'None');
+    } else if (tracking_role !== undefined) {
+      updates.tracking_role = tracking_role;
+      updates.followups_role = tracking_role === 'Admin' ? 'All' : (tracking_role === 'Executive' || tracking_role === 'Self' ? 'Self' : 'None');
+    }
+    if (all_jobs_role !== undefined) {
+      updates.all_jobs_role = all_jobs_role;
+      updates.role = all_jobs_role === 'View' ? 'Viewer' : 'None';
+    } else if (role !== undefined) {
+      updates.role = role;
+      updates.all_jobs_role = (role === 'None' || !role) ? 'None' : 'View';
+    }
     if (branches !== undefined) updates.branches = branches;
     if (is_approved !== undefined) updates.is_approved = is_approved;
-    // Only update photo if it's changed (avoid sending unchanged large base64 strings)
     if (photo !== undefined) updates.photo = photo;
 
     const { error: profileError } = await supabase
@@ -99,13 +101,18 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    // Delete profile first
-    await supabase.from('profiles').delete().eq('id', userId);
+    const { error: deleteAuthError } = await supabase.auth.admin.deleteUser(userId);
+    if (deleteAuthError) {
+      console.error('Error deleting auth user:', deleteAuthError);
+    }
 
-    // Delete Auth User
-    const { error } = await supabase.auth.admin.deleteUser(userId);
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+    const { error: deleteProfileError } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', userId);
+
+    if (deleteProfileError) {
+      return NextResponse.json({ error: deleteProfileError.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });

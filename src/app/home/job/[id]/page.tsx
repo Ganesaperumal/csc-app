@@ -384,23 +384,27 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const [agentName, setAgentName] = useState('Agent');
   const [agentFullName, setAgentFullName] = useState('');
   const { getAccessLevel } = usePermissions();
-  const [profileRoles, setProfileRoles] = useState<{ role?: string; csc_role?: string; tracking_role?: string; unbilled_role?: string } | null>(null);
+  const [profileRoles, setProfileRoles] = useState<any | null>(null);
 
+  const isSuperAdminUser = profileRoles ? (profileRoles.username === 'gp' || profileRoles.username === 'ganesh' || profileRoles.name?.includes('Ganesaperumal')) : false;
+
+  // Edit access for Job Details is ONLY granted by csc_role = 'Edit' or unbilled_role = 'Edit' or SuperAdmin.
+  // followups_role and all_jobs_role NEVER grant edit access to job fields!
   const hasEditAccess = profileRoles ? (
-    getAccessLevel('Active Jobs', profileRoles) === 'Edit' ||
-    getAccessLevel('All Jobs', profileRoles) === 'Edit' ||
-    getAccessLevel('Closed Jobs', profileRoles) === 'Edit' ||
-    getAccessLevel('Unbilled', profileRoles) === 'Edit' ||
-    ['Executive', 'Manager'].includes(profileRoles.csc_role || '') ||
-    ['Executive', 'Manager'].includes(profileRoles.tracking_role || '') ||
-    ['Executive', 'Manager'].includes(profileRoles.unbilled_role || '')
+    isSuperAdminUser ||
+    profileRoles.csc_role === 'Edit' ||
+    profileRoles.csc_role === 'Executive' ||
+    profileRoles.csc_role === 'Manager' ||
+    profileRoles.csc_role === 'Admin' ||
+    profileRoles.unbilled_role === 'Edit' ||
+    profileRoles.unbilled_role === 'Executive' ||
+    profileRoles.unbilled_role === 'Manager'
   ) : false;
 
-  // isReadOnly: Admin and Viewer can see everything but not edit, unless granted edit access in Permissions Matrix.
   const isReadOnly = profileRoles ? !hasEditAccess : true;
   const isViewOnly = isReadOnly;
-  const isViewer = isReadOnly; // alias for backward compat with all existing isViewer references
-  const isSPOC = false; // SPOC role removed — kept as false so old guards still compile
+  const isViewer = isReadOnly;
+  const isSPOC = false;
   const [supervisors, setSupervisors] = useState<string[]>([]);
   const [viewingAgents, setViewingAgents] = useState<string[]>([]);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);

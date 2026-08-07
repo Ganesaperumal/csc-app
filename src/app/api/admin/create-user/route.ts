@@ -8,7 +8,7 @@ const supabase = createClient(
 
 export async function POST(request: Request) {
   try {
-    const { email, password, name, username: reqUsername, role, csc_role, tracking_role, unbilled_role, branches, phone, photo, is_approved } = await request.json();
+    const { email, password, name, username: reqUsername, role, csc_role, tracking_role, followups_role, all_jobs_role, unbilled_role, branches, phone, photo, is_approved } = await request.json();
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
@@ -30,6 +30,9 @@ export async function POST(request: Request) {
 
     const userId = authData.user.id;
 
+    const finalFollowupsRole = followups_role || (tracking_role === 'Admin' ? 'All' : (tracking_role === 'Executive' || tracking_role === 'Self' ? 'Self' : 'None'));
+    const finalAllJobsRole = all_jobs_role || ((role === 'None' || !role) ? 'None' : 'View');
+
     // 2. Insert Profile into public.profiles
     const { error: profileError } = await supabase
       .from('profiles')
@@ -38,16 +41,16 @@ export async function POST(request: Request) {
           id: userId,
           name: name || username,
           username,
-          role: role || (unbilled_role === 'Branch Manager' ? 'Branch Manager' : 'Executive'),
+          role: finalAllJobsRole === 'View' ? 'Viewer' : 'None',
           csc_role: csc_role || 'None',
-          tracking_role: tracking_role || 'None',
+          tracking_role: finalFollowupsRole === 'All' ? 'Admin' : (finalFollowupsRole === 'Self' ? 'Executive' : 'None'),
+          followups_role: finalFollowupsRole,
+          all_jobs_role: finalAllJobsRole,
           unbilled_role: unbilled_role || 'None',
-          branch_user_role: (unbilled_role === 'Branch Manager') ? unbilled_role : null,
           branches: branches || [],
           phone: phone || null,
           photo: photo || null,
           is_approved: is_approved !== undefined ? is_approved : true,
-          chat_access: true
         }
       ]);
 

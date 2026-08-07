@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { PermissionsProvider, usePermissions } from '@/components/PermissionsContext';
+import { PermissionsProvider } from '@/components/PermissionsContext';
 import Link from 'next/link';
 import styles from './home.module.css';
 import ProfilePopup from './components/ProfilePopup';
@@ -15,35 +15,25 @@ import PendingApprovalsReminder from './components/PendingApprovalsReminder';
 
 function DashboardNav({ profile, user }: { profile: any; user: any }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   const userEmail = (user?.email || profile?.email || (profile?.username ? `${profile.username}@transworldintl.com` : '')).toLowerCase();
   const isSuperAdmin = userEmail === 'gp@transworldintl.com' || profile?.username === 'gp' || profile?.username === 'ganesh' || profile?.name?.includes('Ganesaperumal');
 
-  // ─── Read directly from profile columns (source of truth = User Directory) ───
-  // CSC Jobs: csc_role = 'None'|'Viewer'(View)|'Executive'/'Manager'/'Admin'(Edit)
+  // ─── Direct Profile Column Permissions (Single Source of Truth) ───
   const cscRole = profile?.csc_role || 'None';
-  const canAccessCsc = isSuperAdmin || (cscRole !== 'None' && cscRole !== '');
-  const cscAccessLevel: 'None' | 'View' | 'Edit' = isSuperAdmin || ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(cscRole) ? 'Edit' : cscRole === 'Viewer' ? 'View' : 'None';
+  const followupsRole = profile?.followups_role || (profile?.tracking_role === 'Admin' ? 'All' : (profile?.tracking_role === 'Executive' || profile?.tracking_role === 'Self' ? 'Self' : 'None'));
+  const allJobsRole = profile?.all_jobs_role || ((profile?.role === 'None' || !profile?.role) ? 'None' : 'View');
+  const unbilledRole = profile?.unbilled_role || 'None';
 
+  const canAccessCsc = isSuperAdmin || (cscRole !== 'None' && cscRole !== '');
   const canAccessActive = canAccessCsc;
   const canAccessClosed = canAccessCsc;
   const isActiveActive = pathname.startsWith('/home/active-jobs');
   const isClosedActive = pathname === '/home/closed-jobs';
 
-  // Follow-Ups: tracking_role = 'None'|'Executive'(Self)|'Admin'(All)
-  const trackingRole = profile?.tracking_role || 'None';
-  const canAccessFollowUps = canAccessCsc && trackingRole !== 'None';
-
-  // All Jobs: role = 'Viewer'|'Admin'|'None'/null
-  const mainRole = profile?.role || 'None';
-  const canAccessAllJobs = isSuperAdmin || (mainRole !== 'None' && mainRole !== '');
-
-  // Unbilled: unbilled_role = 'None'|'Viewer'(View)|'Executive'/'Manager'/'Admin'(Edit)
-  const unbilledRole = profile?.unbilled_role || 'None';
+  const canAccessFollowUps = canAccessCsc && followupsRole !== 'None';
+  const canAccessAllJobs = isSuperAdmin || (allJobsRole !== 'None' && allJobsRole !== '');
   const canAccessUnbilled = isSuperAdmin || (unbilledRole !== 'None' && unbilledRole !== '');
-
-  // Reports: visible if any CSC or Unbilled access
   const canAccessReports = canAccessCsc || canAccessUnbilled;
 
   return (
@@ -252,7 +242,6 @@ export default function DashboardLayout({
         }
       }
     );
-    
 
     return () => {
       authListener.subscription.unsubscribe();
@@ -302,9 +291,8 @@ export default function DashboardLayout({
 
 function SyncERPWrapper({ user, profile }: { user: any, profile: any }) {
   const isSuperAdmin = profile?.username === 'gp' || profile?.username === 'ganesh' || profile?.name?.includes('Ganesaperumal');
-  const isAdmin = profile?.role === 'Admin';
   const cscRole = profile?.csc_role || '';
-  const hasCscAccess = isSuperAdmin || isAdmin || (cscRole !== 'None' && cscRole !== '');
+  const hasCscAccess = isSuperAdmin || (cscRole !== 'None' && cscRole !== '');
   if (!hasCscAccess) return null;
   return <SyncERPButton user={user} profile={profile} />;
 }

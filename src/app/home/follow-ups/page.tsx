@@ -52,7 +52,6 @@ export default function FollowUpsPage() {
     const initializePage = async () => {
       setLoading(true);
       
-      // 1. Get logged-in user profile details
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         router.push('/login');
@@ -61,57 +60,46 @@ export default function FollowUpsPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, csc_role, tracking_role, name, username')
+        .select('role, csc_role, tracking_role, followups_role, name, username')
         .eq('id', user.id)
         .single();
 
       let activeName = 'Agent';
       let adminRole = false;
+      let showAll = false;
 
       if (profile) {
         activeName = profile.name || profile.username || user.email?.split('@')[0] || 'Agent';
         const isSuperAdmin = profile.username === 'gp' || profile.username === 'ganesh' || profile.name?.includes('Ganesaperumal');
-        adminRole = isSuperAdmin || profile.role === 'Admin' || profile.csc_role === 'Admin';
+        adminRole = isSuperAdmin || profile.role === 'Admin';
         setIsAdmin(adminRole);
         
         const cscRole = profile.csc_role || 'None';
-        const trackingRole = profile.tracking_role || 'None';
+        const followupsRole = profile.followups_role || (profile.tracking_role === 'Admin' ? 'All' : (profile.tracking_role === 'Executive' || profile.tracking_role === 'Self' ? 'Self' : 'None'));
 
         const hasCscAccess = isSuperAdmin || (cscRole !== 'None' && cscRole !== '');
-        const hasTrackingAccess = isSuperAdmin || (trackingRole !== 'None' && trackingRole !== '');
+        const hasFollowupsAccess = isSuperAdmin || (followupsRole !== 'None' && followupsRole !== '');
 
-        // Block only if CSC = None OR Follow-Ups (tracking_role) = None
-        if (!hasCscAccess || !hasTrackingAccess) {
+        if (!hasCscAccess || !hasFollowupsAccess) {
           router.push('/home');
           return;
         }
 
         const isViewerUser = !isSuperAdmin && (cscRole === 'Viewer' || cscRole === 'View');
         setIsViewer(isViewerUser);
-        
         setAgentName(activeName);
+
+        showAll = isSuperAdmin || followupsRole === 'All' || profile.tracking_role === 'Admin';
       } else {
         activeName = user.email?.split('@')[0] || 'Agent';
         setAgentName(activeName);
       }
-
-      // 2. Query follow-up tasks
-      //    tracking_role === 'Admin' → All agents' follow-ups
-      //    tracking_role === 'Executive' (Self) → only own follow-ups
-      const { data: profileFull } = await supabase
-        .from('profiles')
-        .select('tracking_role')
-        .eq('id', user.id)
-        .single();
-      const trackingRole = profileFull?.tracking_role || 'None';
-      const showAll = adminRole || trackingRole === 'Admin';
 
       let query = supabase
         .from('job_communications')
         .select('*')
         .eq('follow_up_required', true);
 
-      // If not admin/All, restrict to owner agent (Self)
       if (!showAll) {
         query = query.ilike('agent_name', activeName);
       }
@@ -126,7 +114,6 @@ export default function FollowUpsPage() {
 
       const activeComms = comms || [];
 
-      // 3. Fetch job details mapping for only those jobs that have active follow-ups
       const jobMap: Record<string, { customer: string; spoc: string; company: string }> = {};
       const jobNumbers = Array.from(new Set(activeComms.map(c => c.job_number)));
 
@@ -147,7 +134,6 @@ export default function FollowUpsPage() {
         }
       }
 
-      // 4. Enrich and set tasks
       const enrichedComms = activeComms.map((c: any) => ({
         ...c,
         customerName: jobMap[c.job_number]?.customer || 'Unknown Client',
@@ -156,8 +142,6 @@ export default function FollowUpsPage() {
       }));
       setTasks(enrichedComms);
 
-      // Find list of all unique agent names for filtering (if admin).
-      // DB stores agent_name in lowercase — deduplicate with a Set and display as-is.
       const agents = Array.from(
         new Set(enrichedComms.map((c: any) => c.agent_name?.toLowerCase()).filter(Boolean))
       ).sort() as string[];
@@ -169,12 +153,10 @@ export default function FollowUpsPage() {
     initializePage();
   }, [router]);
 
-  // Handle task status update
   const toggleTaskCompletion = async (taskId: number, currentCompleted: boolean) => {
     if (isViewer) return;
     const updatedStatus = !currentCompleted;
     
-    // Update local state first (optimistic UI change)
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, follow_up_completed: updatedStatus } : t));
 
     try {
@@ -183,234 +165,262 @@ export default function FollowUpsPage() {
         .update({ follow_up_completed: updatedStatus })
         .eq('id', taskId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating task:', error);
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, follow_up_completed: currentCompleted } : t));
+        showToast('Failed to update status', 'error');
+      } else {
+        showToast(updatedStatus ? 'Follow-up marked complete ✅' : 'Follow-up reopened 🔄', 'success');
+      }
     } catch (err) {
-      console.error('Error toggling follow-up:', err);
-      // Revert state on error
+      console.error(err);
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, follow_up_completed: currentCompleted } : t));
-      showToast('Failed to update task status in database.', 'error');
+      showToast('Error updating status', 'error');
     }
   };
 
-  // Date constants for column categorisation
-  const todayStr = new Date().toISOString().split('T')[0];
+  const pendingTasks = tasks.filter(t => !t.follow_up_completed);
+  const completedTasks = tasks.filter(t => t.follow_up_completed);
 
-  // Filtering logic
-  const filteredTasks = tasks.filter(task => {
-    // Admin filtering
-    if (isAdmin && selectedAgentFilter !== 'All' && task.agent_name?.toLowerCase() !== selectedAgentFilter.toLowerCase()) return false;
-    
-    // Search filtering
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      const matchJobNum = task.job_number.toLowerCase().includes(query);
-      const matchCustomer = (task.customerName || '').toLowerCase().includes(query);
-      const matchSummary = task.summary.toLowerCase().includes(query);
-      return matchJobNum || matchCustomer || matchSummary;
-    }
-    return true;
-  });
+  const filterTask = (t: Task) => {
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = !q ||
+      t.job_number.toLowerCase().includes(q) ||
+      t.regarding.toLowerCase().includes(q) ||
+      t.summary.toLowerCase().includes(q) ||
+      (t.customerName && t.customerName.toLowerCase().includes(q)) ||
+      (t.companyName && t.companyName.toLowerCase().includes(q));
 
-  // Category splits
-  const overdueTasks = filteredTasks.filter(t => !t.follow_up_completed && (t.follow_up_date === null || t.follow_up_date < todayStr));
-  const todayTasks = filteredTasks.filter(t => !t.follow_up_completed && t.follow_up_date === todayStr);
-  const upcomingTasks = filteredTasks.filter(t => !t.follow_up_completed && t.follow_up_date !== null && t.follow_up_date > todayStr);
-  const completedTasks = filteredTasks.filter(t => t.follow_up_completed);
+    const matchesAgent = selectedAgentFilter === 'All' || t.agent_name.toLowerCase() === selectedAgentFilter.toLowerCase();
 
-  const renderTaskColumn = (title: string, list: Task[], theme: 'danger' | 'warning' | 'primary' | 'success') => {
-    let headerBg = 'rgba(239, 68, 68, 0.1)';
-    let headerBorder = 'rgba(239, 68, 68, 0.2)';
-    let badgeBg = '#ef4444';
-    let icon = '🚨';
-
-    if (theme === 'warning') {
-      headerBg = 'rgba(245, 158, 11, 0.1)';
-      headerBorder = 'rgba(245, 158, 11, 0.2)';
-      badgeBg = '#f59e0b';
-      icon = '⏰';
-    } else if (theme === 'primary') {
-      headerBg = 'rgba(59, 130, 246, 0.1)';
-      headerBorder = 'rgba(59, 130, 246, 0.2)';
-      badgeBg = '#3b82f6';
-      icon = '📅';
-    } else if (theme === 'success') {
-      headerBg = 'rgba(16, 185, 129, 0.1)';
-      headerBorder = 'rgba(16, 185, 129, 0.2)';
-      badgeBg = '#10b981';
-      icon = '✅';
-    }
-
-    return (
-      <div style={{ flex: '0 0 calc((100% - 2.5rem) / 3)', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(255,255,255,0.2)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem', backdropFilter: 'blur(8px)', contentVisibility: 'auto' }}>
-        
-        {/* Column Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: headerBg, border: `1px solid ${headerBorder}`, padding: '0.6rem 1rem', borderRadius: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '0.9rem' }}>
-            <span>{icon}</span>
-            <span>{title}</span>
-          </div>
-          <span style={{ background: badgeBg, color: 'white', fontSize: '0.75rem', fontWeight: 'bold', padding: '2px 8px', borderRadius: '20px' }}>
-            {list.length}
-          </span>
-        </div>
-
-        {/* Column Card List */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', overflowY: 'auto', flex: 1, maxHeight: 'calc(100vh - 280px)', paddingRight: '4px' }}>
-          {list.length === 0 ? (
-            <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '0.8rem', fontStyle: 'italic', padding: '2rem 1rem', textAlign: 'center' }}>
-              No tasks in this category
-            </div>
-          ) : (
-            list.map(task => (
-              <div 
-                key={task.id} 
-                className="glass" 
-                style={{ 
-                  padding: '1rem', 
-                  borderRadius: '10px', 
-                  border: '1px solid var(--border-color)',
-                  boxShadow: 'var(--glass-shadow)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                  cursor: 'default',
-                  position: 'relative'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = 'var(--glass-shadow-hover)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.transform = 'none';
-                  e.currentTarget.style.boxShadow = 'var(--glass-shadow)';
-                }}
-              >
-                {/* Header: Checkbox & Job Reference */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={task.follow_up_completed} 
-                      onChange={() => toggleTaskCompletion(task.id, task.follow_up_completed)}
-                      disabled={isViewer}
-                      style={{ width: '16px', height: '16px', cursor: isViewer ? 'not-allowed' : 'pointer', accentColor: '#10b981', opacity: isViewer ? 0.5 : 1 }} 
-                    />
-                    <Link 
-                      href={`/home/job/${encodeURIComponent(task.job_number)}`}
-                      style={{ fontSize: '0.85rem', fontWeight: 700, color: '#4f46e5', textDecoration: 'underline' }}
-                    >
-                      {task.job_number}
-                    </Link>
-                  </div>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)', background: 'rgba(0,0,0,0.03)', padding: '2px 6px', borderRadius: '4px' }}>
-                    {task.regarding}
-                  </span>
-                </div>
-
-                {/* Customer & Company Details */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                  <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-                    {task.customerName}
-                  </strong>
-                  {task.companyName && (
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                      {task.companyName}
-                    </span>
-                  )}
-                </div>
-
-                {/* Call summary comment */}
-                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'var(--surface-color)', padding: '0.5rem', borderRadius: '6px', borderLeft: `3px solid ${badgeBg}`, lineClamp: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {task.summary}
-                </p>
-
-                {/* Footer: Date and Agent name */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-secondary)', borderTop: '1px solid rgba(0,0,0,0.05)', paddingTop: '6px', marginTop: '2px' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    Coordinator:{' '}
-                    <span style={{ 
-                      background: getUserColor(task.agent_name).bg, 
-                      color: getUserColor(task.agent_name).text, 
-                      padding: '1px 6px', 
-                      borderRadius: '6px', 
-                      fontWeight: 700,
-                      fontSize: '0.65rem'
-                    }}>
-                      {task.agent_name}
-                    </span>
-                  </span>
-                  <span style={{ fontWeight: 700, color: theme === 'danger' && !task.follow_up_completed ? '#ef4444' : 'var(--text-secondary)' }}>
-                    📅 {formatDate(task.follow_up_date)}
-                  </span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    );
+    return matchesSearch && matchesAgent;
   };
+
+  const filteredPending = pendingTasks.filter(filterTask);
+  const filteredCompleted = completedTasks.filter(filterTask);
+
+  const getUrgency = (dateStr: string | null) => {
+    if (!dateStr) return 'normal';
+    const date = new Date(dateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    date.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((date.getTime() - today.getTime()) / (86400000));
+    if (diffDays < 0) return 'overdue';
+    if (diffDays === 0) return 'today';
+    return 'normal';
+  };
+
+  if (loading) {
+    return <div className="glass" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading follow-ups...</div>;
+  }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '1.5rem', gap: '1.5rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       
-      {/* Page Header */}
+      {/* ─── Header & Filters Bar ─── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span>⏰</span>
-            <span style={{ backgroundImage: 'linear-gradient(45deg, #4f46e5, #7c3aed)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
-              Follow-up Tasks
-            </span>
+          <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span>⏰</span> Follow-Up Tasks
           </h1>
-
+          <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            Track and complete job communications &amp; reminders
+          </p>
         </div>
 
-        {/* Filters */}
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'nowrap' }}>
-          {/* Admin Agent filter dropdown — left of search */}
-          {isAdmin && (
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <input
+            type="text"
+            placeholder="Search job #, client, topic..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{
+              padding: '0.55rem 0.9rem',
+              borderRadius: '20px',
+              border: '1px solid var(--border-color)',
+              background: 'var(--surface-color)',
+              color: 'var(--text-primary)',
+              fontSize: '0.85rem',
+              width: '220px',
+              outline: 'none'
+            }}
+          />
+
+          {allAgents.length > 0 && (
             <CustomSelect
-              placeholder="All Operators"
+              options={[{ value: 'All', label: '👥 All Agents' }, ...allAgents.map(a => ({ value: a, label: `👤 ${a}` }))]}
               value={selectedAgentFilter}
-              onChange={(val) => setSelectedAgentFilter(val)}
-              options={[
-                { value: 'All', label: 'All Operators' },
-                ...allAgents.map(name => ({ value: name, label: name }))
-              ]}
-              style={{ width: '180px', minWidth: '180px', flexGrow: 0 }}
+              onChange={v => setSelectedAgentFilter(v)}
+              placeholder="Filter Agent"
+              style={{ minWidth: '150px' }}
             />
           )}
-
-          {/* Search bar — always right of dropdown */}
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <input
-              type="text"
-              placeholder="Search tasks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ padding: '0.5rem 2rem 0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', fontSize: '0.85rem', minWidth: '200px' }}
-            />
-            <span style={{ position: 'absolute', right: '10px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>🔍</span>
-          </div>
         </div>
       </div>
-      {loading ? (
-        <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', height: '300px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ border: '3px solid rgba(0,0,0,0.1)', borderLeftColor: '#4f46e5', borderRadius: '50%', width: '28px', height: '28px', animation: 'spin 1s linear infinite' }} />
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Loading follow-ups...</span>
-          </div>
-          <style dangerouslySetInnerHTML={{__html: `@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}} />
+
+      {/* ─── Summary Stats ─── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+        <div className="glass" style={{ padding: '1rem 1.25rem', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Total Pending</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f59e0b', marginTop: '0.2rem' }}>{filteredPending.length}</div>
         </div>
-      ) : (
-        /* Board Columns Grid */
-        <div style={{ display: 'flex', flex: 1, gap: '1.25rem', flexWrap: 'nowrap', overflowX: 'auto', minHeight: 0, paddingBottom: '0.5rem' }}>
-          {renderTaskColumn('Overdue', overdueTasks, 'danger')}
-          {renderTaskColumn('Due Today', todayTasks, 'warning')}
-          {renderTaskColumn('Upcoming Reminders', upcomingTasks, 'primary')}
-          {renderTaskColumn('Completed Tasks', completedTasks, 'success')}
+        <div className="glass" style={{ padding: '1rem 1.25rem', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Overdue</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#ef4444', marginTop: '0.2rem' }}>
+            {filteredPending.filter(t => getUrgency(t.follow_up_date) === 'overdue').length}
+          </div>
+        </div>
+        <div className="glass" style={{ padding: '1rem 1.25rem', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Completed</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#10b981', marginTop: '0.2rem' }}>{filteredCompleted.length}</div>
+        </div>
+      </div>
+
+      {/* ─── Pending Tasks Section ─── */}
+      <div className="glass" style={{ borderRadius: '16px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+            🔔 Pending Tasks ({filteredPending.length})
+          </h3>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.01)' }}>
+                {['Done', 'Job #', 'Client / Company', 'Regarding', 'Summary', 'Follow-up Date', 'Agent'].map(h => (
+                  <th key={h} style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPending.map(t => {
+                const urgency = getUrgency(t.follow_up_date);
+                const isOverdue = urgency === 'overdue';
+                const isToday = urgency === 'today';
+
+                return (
+                  <tr key={t.id} style={{ borderBottom: '1px solid var(--border-color)', background: isOverdue ? 'rgba(239,68,68,0.03)' : (isToday ? 'rgba(245,158,11,0.03)' : 'transparent') }}>
+                    <td style={{ padding: '0.75rem 1rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={t.follow_up_completed}
+                        onChange={() => toggleTaskCompletion(t.id, t.follow_up_completed)}
+                        disabled={isViewer}
+                        style={{ width: '16px', height: '16px', cursor: isViewer ? 'not-allowed' : 'pointer', accentColor: '#10b981', opacity: isViewer ? 0.5 : 1 }} 
+                      />
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem', fontWeight: 700 }}>
+                      <Link href={`/home/job/${encodeURIComponent(t.job_number)}`} style={{ color: '#4f46e5', textDecoration: 'none' }}>
+                        {t.job_number}
+                      </Link>
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem' }}>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{t.customerName}</div>
+                      {t.companyName && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{t.companyName}</div>}
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {t.regarding}
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {t.summary}
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem' }}>
+                      <span style={{
+                        padding: '0.2rem 0.55rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700,
+                        background: isOverdue ? '#fef2f2' : (isToday ? '#fffbeb' : '#f1f5f9'),
+                        color: isOverdue ? '#dc2626' : (isToday ? '#b45309' : '#475569'),
+                        border: `1px solid ${isOverdue ? '#fecaca' : (isToday ? '#fde68a' : '#cbd5e1')}`
+                      }}>
+                        {formatDate(t.follow_up_date)} {isOverdue ? '⚠️ Overdue' : (isToday ? '⏰ Today' : '')}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem' }}>
+                      <span style={{
+                        padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600,
+                        background: getUserColor(t.agent_name).bg, color: getUserColor(t.agent_name).text, border: '1px solid rgba(0,0,0,0.1)'
+                      }}>
+                        👤 {t.agent_name}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {filteredPending.length === 0 && (
+                <tr>
+                  <td colSpan={7} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                    🎉 No pending follow-up tasks!
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ─── Completed Tasks Section ─── */}
+      {filteredCompleted.length > 0 && (
+        <div className="glass" style={{ borderRadius: '16px', border: '1px solid var(--border-color)', overflow: 'hidden', opacity: 0.85 }}>
+          <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.02)' }}>
+            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+              ✅ Completed Tasks ({filteredCompleted.length})
+            </h3>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.01)' }}>
+                  {['Done', 'Job #', 'Client / Company', 'Regarding', 'Summary', 'Completed Date', 'Agent'].map(h => (
+                    <th key={h} style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCompleted.map(t => (
+                  <tr key={t.id} style={{ borderBottom: '1px solid var(--border-color)', opacity: 0.7 }}>
+                    <td style={{ padding: '0.75rem 1rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={t.follow_up_completed}
+                        onChange={() => toggleTaskCompletion(t.id, t.follow_up_completed)}
+                        disabled={isViewer}
+                        style={{ width: '16px', height: '16px', cursor: isViewer ? 'not-allowed' : 'pointer', accentColor: '#10b981', opacity: isViewer ? 0.5 : 1 }} 
+                      />
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>
+                      <Link href={`/home/job/${encodeURIComponent(t.job_number)}`} style={{ color: '#4f46e5', textDecoration: 'none' }}>
+                        {t.job_number}
+                      </Link>
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem' }}>
+                      <div style={{ color: 'var(--text-primary)' }}>{t.customerName}</div>
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)' }}>
+                      {t.regarding}
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {t.summary}
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)' }}>
+                      {formatDate(t.follow_up_date)}
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        👤 {t.agent_name}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

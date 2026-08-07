@@ -2,15 +2,12 @@
 import { showToast } from '@/components/GlobalDialogs';
 import { useState, useEffect } from 'react';
 import UserDetailsModal from './UserDetailsModal';
-import { usePermissions } from '@/components/PermissionsContext';
 
 export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
-  const { getAccessLevel } = usePermissions();
   const [users, setUsers] = useState<any[]>([]);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeModalUser, setActiveModalUser] = useState<any | null>(null);
-  const [isViewerMode, setIsViewerMode] = useState(false);
 
   useEffect(() => {
     setCheckingAuth(false);
@@ -33,13 +30,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
         const res = await fetch('/api/admin/create-user', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: formData.email, password: formData.password,
-            name: formData.name, username: formData.username, phone: formData.phone,
-            csc_role: formData.csc_role, tracking_role: formData.tracking_role,
-            unbilled_role: formData.unbilled_role, branches: formData.branches,
-            photo: formData.photo, is_approved: formData.is_approved
-          })
+          body: JSON.stringify(formData)
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to create user');
@@ -99,38 +90,30 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
     })
     .sort((a, b) => ((a.name || a.username) || '').localeCompare((b.name || b.username) || ''));
 
-  const getAccessBadge = (label: string, type: 'csc' | 'followup' | 'unbilled' | 'alljobs') => {
-    const isNone = label === 'None';
+  const getAccessBadge = (value: string, sectionName: string) => {
+    const isNone = !value || value === 'None';
     const colors: Record<string, { bg: string; color: string; border: string }> = {
-      none: { bg: '#f8fafc', color: '#94a3b8', border: '#e2e8f0' },
-      view: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
-      edit: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
-      self: { bg: '#fff7ed', color: '#ea580c', border: '#ffedd5' },
-      all:  { bg: '#faf5ff', color: '#7e22ce', border: '#e9d5ff' },
+      None: { bg: '#f8fafc', color: '#94a3b8', border: '#e2e8f0' },
+      View: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+      Edit: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+      Self: { bg: '#fff7ed', color: '#ea580c', border: '#ffedd5' },
+      All:  { bg: '#faf5ff', color: '#7e22ce', border: '#e9d5ff' },
     };
 
-    let style = colors.none;
-    let icon = '✖️';
+    const icons: Record<string, string> = {
+      None: '✖️',
+      View: '🔍',
+      Edit: '✏️',
+      Self: '👤',
+      All:  '🌐',
+    };
 
-    if (!isNone) {
-      if (type === 'csc') {
-        style = label === 'View' ? colors.view : colors.edit;
-        icon = label === 'View' ? '🔍' : '✏️';
-      } else if (type === 'followup') {
-        style = label === 'Self' ? colors.self : colors.all;
-        icon = label === 'Self' ? '👤' : '🌐';
-      } else if (type === 'unbilled') {
-        style = label === 'View' ? colors.view : colors.edit;
-        icon = label === 'View' ? '🔍' : '✏️';
-      } else if (type === 'alljobs') {
-        style = colors.view;
-        icon = '🔍';
-      }
-    }
+    const style = colors[value] || colors.None;
+    const icon = icons[value] || '✖️';
 
     return (
       <span
-        title={`Access Level: ${label}`}
+        title={`${sectionName}: ${value || 'None'}`}
         style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '20px',
@@ -184,20 +167,18 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
               outline: 'none',
             }}
           />
-          {!isViewerMode && (
-            <button
-              onClick={() => setActiveModalUser({})}
-              style={{
-                padding: '0.55rem 1.15rem', borderRadius: '20px', border: 'none',
-                background: '#4f46e5',
-                color: '#ffffff', fontWeight: 600, fontSize: '0.85rem',
-                cursor: 'pointer', whiteSpace: 'nowrap',
-                display: 'flex', alignItems: 'center', gap: '0.35rem',
-              }}
-            >
-              ＋ Add New User
-            </button>
-          )}
+          <button
+            onClick={() => setActiveModalUser({})}
+            style={{
+              padding: '0.55rem 1.15rem', borderRadius: '20px', border: 'none',
+              background: '#4f46e5',
+              color: '#ffffff', fontWeight: 600, fontSize: '0.85rem',
+              cursor: 'pointer', whiteSpace: 'nowrap',
+              display: 'flex', alignItems: 'center', gap: '0.35rem',
+            }}
+          >
+            ＋ Add New User
+          </button>
         </div>
       </div>
 
@@ -229,13 +210,9 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                 const isSuperAdmin = u.username === 'ganesh' || u.name?.includes('Ganesaperumal');
                 const isApproved = u.is_approved !== false;
 
-                const getCscLabel = (r?: string): string => (!r || r === 'None') ? 'None' : (r === 'Viewer' || r === 'View' ? 'View' : 'Edit');
-                const getAllJobsLabel = (r?: string): string => (r === 'None' ? 'None' : 'View');
-                const getUnbilledLabel = (r?: string): string => (!r || r === 'None') ? 'None' : (r === 'Viewer' || r === 'View' ? 'View' : 'Edit');
-
-                const cLabel = getCscLabel(u.csc_role);
-                const aLabel = getAllJobsLabel(u.role);
-                const uLabel = getUnbilledLabel(u.unbilled_role);
+                const cscVal = u.csc_role === 'Edit' || u.csc_role === 'Executive' || u.csc_role === 'Manager' || u.csc_role === 'Admin' ? 'Edit' : (u.csc_role === 'View' || u.csc_role === 'Viewer' ? 'View' : 'None');
+                const allJobsVal = u.all_jobs_role === 'View' || u.role === 'Viewer' || u.role === 'View' || u.role === 'Executive' || u.role === 'Admin' ? 'View' : 'None';
+                const unbilledVal = u.unbilled_role === 'Edit' || u.unbilled_role === 'Executive' || u.unbilled_role === 'Manager' || u.unbilled_role === 'Admin' ? 'Edit' : (u.unbilled_role === 'View' || u.unbilled_role === 'Viewer' ? 'View' : 'None');
 
                 return (
                   <tr
@@ -243,12 +220,10 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                     style={{ borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-hover)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    onClick={() => setActiveModalUser(u)}
                   >
                     {/* User Avatar + Name */}
-                    <td
-                      style={{ padding: '0.85rem 1rem' }}
-                      onClick={() => !isViewerMode && setActiveModalUser(u)}
-                    >
+                    <td style={{ padding: '0.85rem 1rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         <div style={{
                           width: '38px', height: '38px', borderRadius: '50%',
@@ -278,10 +253,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                     </td>
 
                     {/* Username / Email */}
-                    <td
-                      style={{ padding: '0.85rem 1rem' }}
-                      onClick={() => !isViewerMode && setActiveModalUser(u)}
-                    >
+                    <td style={{ padding: '0.85rem 1rem' }}>
                       <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{u.username}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                         {u.email || `${u.username}@transworldintl.com`}
@@ -289,19 +261,16 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                     </td>
 
                     {/* Access Badges */}
-                    <td
-                      style={{ padding: '0.85rem 1rem' }}
-                      onClick={() => !isViewerMode && setActiveModalUser(u)}
-                    >
+                    <td style={{ padding: '0.85rem 1rem' }}>
                       <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center' }}>
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700 }}>CSC</span>
-                        {getAccessBadge(cLabel, 'csc')}
+                        {getAccessBadge(cscVal, 'CSC Jobs')}
 
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700, marginLeft: '0.2rem' }}>Jobs</span>
-                        {getAccessBadge(aLabel, 'alljobs')}
+                        {getAccessBadge(allJobsVal, 'All Jobs')}
 
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700, marginLeft: '0.2rem' }}>Unbilled</span>
-                        {getAccessBadge(uLabel, 'unbilled')}
+                        {getAccessBadge(unbilledVal, 'Unbilled')}
                       </div>
                     </td>
 
@@ -310,9 +279,9 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                       <div
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (!isSuperAdmin && !isViewerMode) handleToggleApproval(u);
+                          if (!isSuperAdmin) handleToggleApproval(u);
                         }}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: isSuperAdmin || isViewerMode ? 'not-allowed' : 'pointer' }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: isSuperAdmin ? 'not-allowed' : 'pointer' }}
                       >
                         <div style={{
                           width: '38px', height: '20px', borderRadius: '10px',
@@ -338,18 +307,16 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                     {/* Actions */}
                     <td style={{ padding: '0.85rem 1rem' }}>
                       <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                        {!isViewerMode && (
-                          <button
-                            title="Reset Password & Copy Credentials"
-                            onClick={(e) => { e.stopPropagation(); handleResetPassword(u); }}
-                            style={{
-                              padding: '0.35rem 0.65rem', borderRadius: '20px',
-                              border: '1px solid var(--border-color)', background: 'var(--surface-color)',
-                              color: 'var(--text-primary)', fontSize: '0.85rem',
-                              cursor: 'pointer', fontWeight: 700,
-                            }}
-                          >🔑</button>
-                        )}
+                        <button
+                          title="Reset Password & Copy Credentials"
+                          onClick={(e) => { e.stopPropagation(); handleResetPassword(u); }}
+                          style={{
+                            padding: '0.35rem 0.65rem', borderRadius: '20px',
+                            border: '1px solid var(--border-color)', background: 'var(--surface-color)',
+                            color: 'var(--text-primary)', fontSize: '0.85rem',
+                            cursor: 'pointer', fontWeight: 700,
+                          }}
+                        >🔑</button>
                       </div>
                     </td>
                   </tr>

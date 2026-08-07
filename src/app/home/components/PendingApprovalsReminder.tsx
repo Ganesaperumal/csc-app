@@ -14,13 +14,10 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
   // - Admin: Can see all alerts across all branches
   // - Viewer: Cannot see anything (returns null)
   // - Manager & Executive: Can see only their own (filtered by assigned branch/coordinator)
-  const isSuperAdmin = profile?.role === 'Admin';
-  const cscRole = profile?.csc_role || profile?.role || 'Viewer';
-  const isViewer = !profile || cscRole === 'Viewer' || (profile?.role === 'Viewer' && cscRole !== 'Admin' && cscRole !== 'Manager' && cscRole !== 'Executive');
-  const isAdmin = isSuperAdmin || cscRole === 'Admin';
-  const isManagerOrExec = !isViewer && !isAdmin && (cscRole === 'Manager' || cscRole === 'Executive');
-
-  const canManageUsers = isAdmin || isManagerOrExec;
+  const isSuperAdmin = profile?.username === 'gp' || profile?.username === 'ganesh' || profile?.name?.includes('Ganesaperumal') || profile?.role === 'Admin';
+  const isViewer = !isSuperAdmin;
+  const isManagerOrExec = false;
+  const canManageUsers = isSuperAdmin;
 
   useEffect(() => {
     if (isViewer) return;
