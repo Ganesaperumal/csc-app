@@ -288,7 +288,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                       </div>
                     </td>
 
-                    {/* Access Badges: CSC, Jobs, Unbilled with emoji badges */}
+                    {/* Access Badges */}
                     <td
                       style={{ padding: '0.85rem 1rem' }}
                       onClick={() => !isViewerMode && setActiveModalUser(u)}
@@ -349,18 +349,6 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                               cursor: 'pointer', fontWeight: 700,
                             }}
                           >🔑</button>
-                        )}
-                        {!isViewerMode && (
-                          <button
-                            title="Edit Profile"
-                            onClick={(e) => { e.stopPropagation(); setActiveModalUser(u); }}
-                            style={{
-                              padding: '0.3rem 0.6rem', borderRadius: '20px',
-                              border: '1px solid #a5b4fc', background: '#e0e7ff',
-                              color: '#3730a3', fontSize: '0.8rem',
-                              cursor: 'pointer', fontWeight: 600,
-                            }}
-                          >✏️</button>
                         )}
                       </div>
                     </td>
