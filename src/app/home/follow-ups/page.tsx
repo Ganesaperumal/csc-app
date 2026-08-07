@@ -70,11 +70,11 @@ export default function FollowUpsPage() {
 
       if (profile) {
         activeName = profile.name || profile.username || user.email?.split('@')[0] || 'Agent';
+        const fRole = (profile.followups_role || profile.tracking_role || '').toLowerCase();
         const cscRole = profile.csc_role || 'None';
-        const followupsRole = profile.followups_role || 'None';
 
         const hasCscAccess = cscRole !== 'None' && cscRole !== '';
-        const hasFollowupsAccess = followupsRole !== 'None' && followupsRole !== '';
+        const hasFollowupsAccess = fRole !== 'none' && fRole !== '';
 
         if (!hasCscAccess || !hasFollowupsAccess) {
           router.push('/home');
@@ -85,7 +85,7 @@ export default function FollowUpsPage() {
         setIsViewer(isViewerUser);
         setAgentName(activeName);
 
-        showAll = followupsRole === 'All';
+        showAll = fRole === 'all' || fRole === 'admin';
       } else {
         activeName = user.email?.split('@')[0] || 'Agent';
         setAgentName(activeName);

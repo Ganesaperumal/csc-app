@@ -325,8 +325,8 @@ function JobsTable() {
             if (isCscView) {
               setIsViewer(true);
             }
-            const fRole = profileData.followups_role || 'None';
-            if (fRole === 'All') {
+            const fRole = (profileData.followups_role || profileData.tracking_role || '').toLowerCase();
+            if (fRole === 'all' || fRole === 'admin') {
               setIsFollowupsAll(true);
             }
             const name = profileData.name || profileData.username || data.user.email?.split('@')[0] || 'Agent';
