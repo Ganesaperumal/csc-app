@@ -262,9 +262,8 @@ export default function FollowUpsPage() {
       <div 
         className="glass"
         style={{ 
-          flex: 1,
-          minWidth: '280px',
-          maxWidth: '360px',
+          flex: '0 0 calc((100% - 2.5rem) / 3)',
+          minWidth: '320px',
           display: 'flex', 
           flexDirection: 'column', 
           borderRadius: '14px', 
