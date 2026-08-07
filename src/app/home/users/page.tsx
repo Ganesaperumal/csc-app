@@ -109,13 +109,6 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
       all:  { bg: '#faf5ff', color: '#7e22ce', border: '#e9d5ff' },
     };
 
-    const sectionMeta: Record<string, { name: string; sectionIcon: string }> = {
-      csc: { name: 'CSC Jobs', sectionIcon: '📋' },
-      alljobs: { name: 'All Jobs', sectionIcon: '📁' },
-      unbilled: { name: 'Unbilled', sectionIcon: '🧾' },
-      followup: { name: 'Follow-ups', sectionIcon: '⏰' },
-    };
-
     let style = colors.none;
     let icon = '✖️';
 
@@ -135,22 +128,19 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
       }
     }
 
-    const meta = sectionMeta[type] || { name: type, sectionIcon: '' };
-
     return (
       <span
-        title={`${meta.name}: ${label}`}
+        title={`Access Level: ${label}`}
         style={{
-          display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
-          fontSize: '0.78rem', padding: '0.2rem 0.5rem', borderRadius: '20px',
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '20px',
           background: style.bg, color: style.color,
           border: `1px solid ${style.border}`,
           opacity: isNone ? 0.6 : 1,
           fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer',
         }}
       >
-        <span style={{ fontSize: '0.72rem', opacity: 0.8 }}>{meta.sectionIcon}</span>
-        <span>{icon}</span>
+        {icon}
       </span>
     );
   };
@@ -298,14 +288,19 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                       </div>
                     </td>
 
-                    {/* Access Badges (Pure Emoji Badges) */}
+                    {/* Access Badges: CSC, Jobs, Unbilled with emoji badges */}
                     <td
                       style={{ padding: '0.85rem 1rem' }}
                       onClick={() => !isViewerMode && setActiveModalUser(u)}
                     >
-                      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700 }}>CSC</span>
                         {getAccessBadge(cLabel, 'csc')}
+
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700, marginLeft: '0.2rem' }}>Jobs</span>
                         {getAccessBadge(aLabel, 'alljobs')}
+
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700, marginLeft: '0.2rem' }}>Unbilled</span>
                         {getAccessBadge(uLabel, 'unbilled')}
                       </div>
                     </td>
