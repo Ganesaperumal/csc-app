@@ -213,16 +213,50 @@ export default function FollowUpsPage() {
   const completedTasks = filteredTasks.filter(t => t.follow_up_completed);
 
   const renderTaskColumn = (title: string, list: Task[], theme: 'danger' | 'warning' | 'primary' | 'success') => {
-    const badgeColors = {
-      danger: { bg: '#fee2e2', text: '#dc2626', border: '#fca5a5' },
-      warning: { bg: '#fef3c7', text: '#d97706', border: '#fde68a' },
-      primary: { bg: '#e0e7ff', text: '#4f46e5', border: '#c7d2fe' },
-      success: { bg: '#d1fae5', text: '#059669', border: '#6ee7b7' },
+    const columnThemes = {
+      danger: {
+        containerBg: 'rgba(254, 242, 242, 0.65)',
+        containerBorder: '#fca5a5',
+        headerBg: 'rgba(254, 226, 226, 0.55)',
+        titleColor: '#991b1b',
+        badgeBg: '#fee2e2',
+        badgeText: '#dc2626',
+        badgeBorder: '#fca5a5',
+        summaryBorderLeft: '#b91c1c'
+      },
+      warning: {
+        containerBg: 'rgba(254, 252, 232, 0.65)',
+        containerBorder: '#fde68a',
+        headerBg: 'rgba(254, 243, 199, 0.55)',
+        titleColor: '#92400e',
+        badgeBg: '#fef3c7',
+        badgeText: '#d97706',
+        badgeBorder: '#fde68a',
+        summaryBorderLeft: '#d97706'
+      },
+      primary: {
+        containerBg: 'rgba(238, 242, 255, 0.65)',
+        containerBorder: '#c7d2fe',
+        headerBg: 'rgba(224, 231, 255, 0.55)',
+        titleColor: '#3730a3',
+        badgeBg: '#e0e7ff',
+        badgeText: '#4f46e5',
+        badgeBorder: '#c7d2fe',
+        summaryBorderLeft: '#4f46e5'
+      },
+      success: {
+        containerBg: 'rgba(236, 253, 245, 0.65)',
+        containerBorder: '#a7f3d0',
+        headerBg: 'rgba(209, 250, 229, 0.55)',
+        titleColor: '#065f46',
+        badgeBg: '#d1fae5',
+        badgeText: '#059669',
+        badgeBorder: '#6ee7b7',
+        summaryBorderLeft: '#059669'
+      }
     };
-    const { bg: badgeBg, text: badgeText, border: badgeBorder } = badgeColors[theme];
 
-    // Dark red accent line on summary box left side for Overdue cards
-    const summaryBorderLeftColor = theme === 'danger' ? '#b91c1c' : badgeBg;
+    const currentTheme = columnThemes[theme];
 
     return (
       <div 
@@ -234,26 +268,26 @@ export default function FollowUpsPage() {
           display: 'flex', 
           flexDirection: 'column', 
           borderRadius: '14px', 
-          border: theme === 'danger' ? '1px solid #fca5a5' : '1px solid var(--border-color)',
+          border: `1px solid ${currentTheme.containerBorder}`,
           overflow: 'hidden',
-          background: theme === 'danger' ? 'rgba(254, 242, 242, 0.65)' : 'var(--surface-color)'
+          background: currentTheme.containerBg
         }}
       >
         {/* Column Header */}
         <div style={{ 
           padding: '0.85rem 1rem', 
-          borderBottom: '1px solid var(--border-color)', 
-          background: theme === 'danger' ? 'rgba(254, 226, 226, 0.5)' : 'rgba(0,0,0,0.02)',
+          borderBottom: `1px solid ${currentTheme.containerBorder}`, 
+          background: currentTheme.headerBg,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>{title}</span>
+            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: currentTheme.titleColor }}>{title}</span>
             <span style={{ 
-              background: badgeBg, 
-              color: badgeText, 
-              border: `1px solid ${badgeBorder}`,
+              background: currentTheme.badgeBg, 
+              color: currentTheme.badgeText, 
+              border: `1px solid ${currentTheme.badgeBorder}`,
               fontSize: '0.7rem', 
               fontWeight: 800, 
               padding: '1px 8px', 
@@ -332,7 +366,7 @@ export default function FollowUpsPage() {
                 </div>
 
                 {/* Call summary comment */}
-                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'var(--surface-color)', padding: '0.5rem', borderRadius: '6px', borderLeft: `4px solid ${summaryBorderLeftColor}`, lineClamp: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'var(--surface-color)', padding: '0.5rem', borderRadius: '6px', borderLeft: `4px solid ${currentTheme.summaryBorderLeft}`, lineClamp: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {task.summary}
                 </p>
 
