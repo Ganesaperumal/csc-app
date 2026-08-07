@@ -208,11 +208,12 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
             padding: '1rem 1.25rem',
             borderBottom: '1px solid #e2e8f0',
             background: '#ffffff',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            {/* Left: Photo + Name/Email */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden', flex: 1 }}>
               <div style={{
-                width: '40px', height: '40px', borderRadius: '50%',
+                width: '42px', height: '42px', borderRadius: '50%',
                 background: '#e0e7ff', border: '1px solid #a5b4fc',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 overflow: 'hidden', fontWeight: 700, color: '#3730a3', fontSize: '1rem',
@@ -224,26 +225,48 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                   (name?.[0] || username?.[0] || 'U').toUpperCase()
                 )}
               </div>
-              <div>
-                <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>
+              <div style={{ overflow: 'hidden' }}>
+                <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {isCreate ? 'Create New User' : (name || username)}
                 </h2>
-                <p style={{ margin: '0.1rem 0 0', fontSize: '0.75rem', color: '#64748b' }}>
-                  {isCreate ? 'Add new system user' : `@${username}`}
+                <p style={{ margin: '0.1rem 0 0', fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {isCreate ? 'Add new system user' : (email || `${username}@transworldintl.com`)}
                 </p>
               </div>
             </div>
 
-            <button
-              type="button" onClick={onClose}
-              style={{
-                width: '30px', height: '30px', borderRadius: '50%', border: 'none',
-                background: '#f1f5f9', color: '#64748b', fontSize: '0.9rem',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
-            >
-              ✕
-            </button>
+            {/* Right: Approval Toggle + Close Button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+              <button
+                type="button"
+                onClick={() => setIsApproved(!isApproved)}
+                title={isApproved ? 'Account is Active (Click to Disable)' : 'Account is Disabled (Click to Approve)'}
+                style={{
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '20px',
+                  border: isApproved ? '1px solid #bbf7d0' : '1px solid #fecaca',
+                  background: isApproved ? '#f0fdf4' : '#fef2f2',
+                  color: isApproved ? '#15803d' : '#dc2626',
+                  fontSize: '0.75rem', fontWeight: 700,
+                  cursor: 'pointer', transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {isApproved ? '✓ Active' : '⛔ Disabled'}
+              </button>
+
+              <button
+                type="button" onClick={onClose}
+                style={{
+                  width: '30px', height: '30px', borderRadius: '50%', border: 'none',
+                  background: '#f1f5f9', color: '#64748b', fontSize: '0.9rem',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
           {/* ── Drawer Content Body ── */}
