@@ -225,10 +225,10 @@ export default function FollowUpsPage() {
         summaryBorderLeft: '#b91c1c'
       },
       warning: {
-        containerBg: 'rgba(254, 252, 232, 0.65)',
-        containerBorder: '#fde68a',
-        headerBg: 'rgba(254, 243, 199, 0.55)',
-        titleColor: '#92400e',
+        containerBg: 'var(--surface-color)',
+        containerBorder: 'var(--border-color)',
+        headerBg: 'rgba(0, 0, 0, 0.02)',
+        titleColor: '#d97706',
         badgeBg: '#fef3c7',
         badgeText: '#d97706',
         badgeBorder: '#fde68a',
