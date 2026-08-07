@@ -58,22 +58,18 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
             borderRadius: '12px',
             padding: '4px',
             position: 'relative',
-            border: '1px solid var(--border-color)',
-            gap: '4px'
+            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)'
           }}>
             {canAccessActive && (
               <Link
                 href="/home/active-jobs"
                 style={{
                   flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.35rem',
-                  padding: '0.6rem 0.5rem',
-                  borderRadius: '8px',
-                  fontSize: '0.82rem',
+                  textAlign: 'center',
+                  padding: '0.45rem 0.25rem',
+                  fontSize: '0.8rem',
                   fontWeight: 600,
+                  borderRadius: '8px',
                   textDecoration: 'none',
                   transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                   color: isActiveActive ? '#ffffff' : 'var(--text-secondary)',
@@ -83,23 +79,19 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
                   boxShadow: isActiveActive ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
                 }}
               >
-                <span>📋</span> Active
+                <span>⚡</span> Active
               </Link>
             )}
-
             {canAccessClosed && (
               <Link
                 href="/home/closed-jobs"
                 style={{
                   flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.35rem',
-                  padding: '0.6rem 0.5rem',
-                  borderRadius: '8px',
-                  fontSize: '0.82rem',
+                  textAlign: 'center',
+                  padding: '0.45rem 0.25rem',
+                  fontSize: '0.8rem',
                   fontWeight: 600,
+                  borderRadius: '8px',
                   textDecoration: 'none',
                   transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                   color: isClosedActive ? '#ffffff' : 'var(--text-secondary)',
@@ -140,19 +132,19 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
         </Link>
       )}
 
-
+      {/* Admin Panel & User Directory Buttons Side-by-Side directly above Sync ERP */}
       {isSuperAdmin && (
-        <div style={{ marginTop: 'auto', paddingTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        <div style={{ marginTop: 'auto', paddingTop: '0.75rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
           <Link
             href="/home/admin"
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.35rem',
-              padding: '0.6rem 0.5rem',
+              gap: '0.3rem',
+              padding: '0.55rem 0.35rem',
               borderRadius: '8px',
-              fontSize: '0.82rem',
+              fontSize: '0.78rem',
               fontWeight: 600,
               textDecoration: 'none',
               transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -162,9 +154,10 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
                 : 'rgba(148, 163, 184, 0.12)',
               border: '1px solid var(--border-color)',
               boxShadow: pathname === '/home/admin' ? '0 4px 12px rgba(59, 130, 246, 0.35)' : 'none',
+              whiteSpace: 'nowrap',
             }}
           >
-            <span>⚙️</span> Admin Panel
+            <span>⚙️</span> Admin
           </Link>
 
           <Link
@@ -173,10 +166,10 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.35rem',
-              padding: '0.6rem 0.5rem',
+              gap: '0.3rem',
+              padding: '0.55rem 0.35rem',
               borderRadius: '8px',
-              fontSize: '0.82rem',
+              fontSize: '0.78rem',
               fontWeight: 600,
               textDecoration: 'none',
               transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -186,9 +179,10 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
                 : 'rgba(148, 163, 184, 0.12)',
               border: '1px solid var(--border-color)',
               boxShadow: pathname === '/home/users' ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
+              whiteSpace: 'nowrap',
             }}
           >
-            <span>👥</span> User Directory
+            <span>👥</span> Users
           </Link>
         </div>
       )}
@@ -231,7 +225,6 @@ export default function DashboardLayout({
         if (userProfile) {
           setProfile(userProfile);
           setRole(userProfile.role);
-          // No forced routing — everyone goes to Home
         }
         
         setLoading(false);
@@ -253,8 +246,6 @@ export default function DashboardLayout({
       authListener.subscription.unsubscribe();
     };
   }, [router]);
-
-  // Second effect removed as routing is now handled by the Home page
 
   if (loading) {
     return <div className={styles.loadingScreen}>Loading...</div>;
@@ -279,7 +270,7 @@ export default function DashboardLayout({
                 </Suspense>
               </div>
               
-              <div style={{ flexShrink: 0 }}>
+              <div style={{ flexShrink: 0, marginTop: '0.5rem' }}>
                 <SyncERPWrapper user={user} profile={profile} />
               </div>
             </div>
