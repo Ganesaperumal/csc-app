@@ -267,8 +267,8 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
             </div>
           )}
 
-          {/* Footer Actions */}
-          <div style={{ marginTop: 'auto', paddingTop: '1.25rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {/* Footer Actions Immediately Below Branches */}
+          <div style={{ marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {isCreate ? (
               <button
                 type="submit"
@@ -278,16 +278,14 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                 {saving ? 'Creating...' : '➕ Create User Account'}
               </button>
             ) : (
-              hasChanges && (
-                <button
-                  type="button"
-                  onClick={handleSaveData}
-                  disabled={saving}
-                  style={{ width: '100%', padding: '0.7rem', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: 'white', fontWeight: 700, fontSize: '0.88rem', cursor: saving ? 'not-allowed' : 'pointer', boxShadow: '0 4px 14px rgba(79,70,229,0.3)' }}
-                >
-                  {saving ? 'Saving Changes...' : '💾 Save Profile & Permissions'}
-                </button>
-              )
+              <button
+                type="button"
+                onClick={handleSaveData}
+                disabled={saving}
+                style={{ width: '100%', padding: '0.7rem', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: 'white', fontWeight: 700, fontSize: '0.88rem', cursor: saving ? 'not-allowed' : 'pointer', boxShadow: '0 4px 14px rgba(79,70,229,0.3)' }}
+              >
+                {saving ? 'Saving Changes...' : '💾 Save Profile & Permissions'}
+              </button>
             )}
 
             {!isCreate && !isSuperAdmin && onDelete && (
