@@ -539,7 +539,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
       const fetchProfile = async () => {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('username, name, role, csc_role, tracking_role, unbilled_role')
+          .select('username, name, role, csc_role, tracking_role, followups_role, all_jobs_role, unbilled_role')
           .eq('id', data.user.id)
           .single();
           

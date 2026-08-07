@@ -14,7 +14,7 @@ export default function SyncERPButton({ user: initialUser, profile: initialProfi
   useEffect(() => {
     const resolveAccess = (profile: any) => {
       const isSuperAdmin = profile?.username === 'gp' || profile?.username === 'ganesh' || profile?.name?.includes('Ganesaperumal');
-      const isEditAccess = isSuperAdmin || profile?.role === 'Admin' || ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(profile?.csc_role || '');
+      const isEditAccess = isSuperAdmin || profile?.csc_role === 'Edit' || profile?.csc_role === 'Executive' || profile?.csc_role === 'Admin' || profile?.role === 'Admin';
       setCanEdit(isEditAccess);
     };
 
