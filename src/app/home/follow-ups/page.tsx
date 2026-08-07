@@ -85,7 +85,8 @@ export default function FollowUpsPage() {
         setIsViewer(isViewerUser);
         setAgentName(activeName);
 
-        showAll = fRole === 'all' || fRole === 'admin';
+        showAll = fRole === 'all' || fRole === 'admin' || fRole.includes('all');
+        setIsAdmin(showAll);
       } else {
         activeName = user.email?.split('@')[0] || 'Agent';
         setAgentName(activeName);
@@ -150,9 +151,7 @@ export default function FollowUpsPage() {
   }, [router]);
 
   const toggleTaskCompletion = async (taskId: number, currentCompleted: boolean) => {
-    if (isViewer) return;
     const updatedStatus = !currentCompleted;
-    
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, follow_up_completed: updatedStatus } : t));
 
     try {
@@ -162,11 +161,10 @@ export default function FollowUpsPage() {
         .eq('id', taskId);
 
       if (error) {
-        console.error('Error updating task:', error);
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, follow_up_completed: currentCompleted } : t));
-        showToast('Failed to update status', 'error');
+        showToast('Failed to update follow-up status', 'error');
       } else {
-        showToast(updatedStatus ? 'Follow-up marked complete ✅' : 'Follow-up reopened 🔄', 'success');
+        showToast(updatedStatus ? 'Follow-up marked as completed ✅' : 'Follow-up reopened ⏰', 'success');
       }
     } catch (err) {
       console.error(err);
@@ -218,40 +216,37 @@ export default function FollowUpsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span>⏰</span> Follow-Up Tasks
+            <span>⏰</span> Follow-up Tasks
           </h1>
-          <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Track and complete job communications &amp; reminders
-          </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <input
-            type="text"
-            placeholder="Search job #, client, topic..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            style={{
-              padding: '0.55rem 0.9rem',
-              borderRadius: '20px',
-              border: '1px solid var(--border-color)',
-              background: 'var(--surface-color)',
-              color: 'var(--text-primary)',
-              fontSize: '0.85rem',
-              width: '220px',
-              outline: 'none'
-            }}
-          />
-
-          {allAgents.length > 0 && (
+        {/* Filters */}
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'nowrap' }}>
+          {/* Admin Agent filter dropdown — left of search */}
+          {isAdmin && (
             <CustomSelect
-              options={[{ value: 'All', label: '👥 All Agents' }, ...allAgents.map(a => ({ value: a, label: `👤 ${a}` }))]}
+              placeholder="All Operators"
               value={selectedAgentFilter}
-              onChange={v => setSelectedAgentFilter(v)}
-              placeholder="Filter Agent"
-              style={{ minWidth: '150px' }}
+              onChange={(val) => setSelectedAgentFilter(val)}
+              options={[
+                { value: 'All', label: 'All Operators' },
+                ...allAgents.map(name => ({ value: name, label: name }))
+              ]}
+              style={{ width: '180px', minWidth: '180px', flexGrow: 0 }}
             />
           )}
+
+          {/* Search bar — always right of dropdown */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ padding: '0.5rem 2rem 0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', fontSize: '0.85rem', minWidth: '200px' }}
+            />
+            <span style={{ position: 'absolute', right: '10px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>🔍</span>
+          </div>
         </div>
       </div>
 
