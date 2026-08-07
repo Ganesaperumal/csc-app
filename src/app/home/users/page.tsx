@@ -1,18 +1,43 @@
 'use client';
 import { showToast } from '@/components/GlobalDialogs';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 import UserDetailsModal from './UserDetailsModal';
 
 export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
+  const router = useRouter();
   const [users, setUsers] = useState<any[]>([]);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeModalUser, setActiveModalUser] = useState<any | null>(null);
 
   useEffect(() => {
-    setCheckingAuth(false);
-    fetchUsers();
-  }, []);
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_super_admin')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.is_super_admin !== true) {
+        showToast('⛔ Access Denied: User Directory is restricted to Super Admin only.', 'error');
+        router.push('/home');
+        return;
+      }
+
+      setCheckingAuth(false);
+      fetchUsers();
+    };
+
+    checkAuth();
+  }, [router]);
 
   const fetchUsers = async () => {
     try {

@@ -132,60 +132,60 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
       )}
 
       {/* Admin & Users segmented toggle bar directly above Sync ERP */}
-      <div style={{ marginTop: 'auto', marginBottom: '0.15rem' }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            backgroundColor: 'rgba(148, 163, 184, 0.12)',
-            borderRadius: '12px',
-            padding: '4px',
-            position: 'relative',
-            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)'
-          }}>
-          {profile?.is_super_admin === true && (
-            <Link
-              href="/home/admin"
-              style={{
-                flex: 1,
-                textAlign: 'center',
-                padding: '0.45rem 0.25rem',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                borderRadius: '8px',
-                textDecoration: 'none',
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                color: pathname === '/home/admin' ? '#ffffff' : 'var(--text-secondary)',
-                background: pathname === '/home/admin'
-                  ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
-                  : 'transparent',
-                boxShadow: pathname === '/home/admin' ? '0 4px 12px rgba(59, 130, 246, 0.35)' : 'none',
-              }}
-            >
-              <span>⚙️</span> Admin
-            </Link>
-          )}
-            <Link
-              href="/home/users"
-              style={{
-                flex: 1,
-                textAlign: 'center',
-                padding: '0.45rem 0.25rem',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                borderRadius: '8px',
-                textDecoration: 'none',
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                color: pathname === '/home/users' ? '#ffffff' : 'var(--text-secondary)',
-                background: pathname === '/home/users'
-                  ? 'linear-gradient(135deg, #10b981, #059669)'
-                  : 'transparent',
-                boxShadow: pathname === '/home/users' ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
-              }}
-            >
-              <span>👥</span> Users
-            </Link>
+        {profile?.is_super_admin === true && (
+          <div style={{ marginTop: 'auto', marginBottom: '0.15rem' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: 'rgba(148, 163, 184, 0.12)',
+              borderRadius: '12px',
+              padding: '4px',
+              position: 'relative',
+              boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)'
+            }}>
+              <Link
+                href="/home/admin"
+                style={{
+                  flex: 1,
+                  textAlign: 'center',
+                  padding: '0.45rem 0.25rem',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                  color: pathname === '/home/admin' ? '#ffffff' : 'var(--text-secondary)',
+                  background: pathname === '/home/admin'
+                    ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
+                    : 'transparent',
+                  boxShadow: pathname === '/home/admin' ? '0 4px 12px rgba(59, 130, 246, 0.35)' : 'none',
+                }}
+              >
+                <span>⚙️</span> Admin
+              </Link>
+              <Link
+                href="/home/users"
+                style={{
+                  flex: 1,
+                  textAlign: 'center',
+                  padding: '0.45rem 0.25rem',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                  color: pathname === '/home/users' ? '#ffffff' : 'var(--text-secondary)',
+                  background: pathname === '/home/users'
+                    ? 'linear-gradient(135deg, #10b981, #059669)'
+                    : 'transparent',
+                  boxShadow: pathname === '/home/users' ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
+                }}
+              >
+                <span>👥</span> Users
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
 
     </nav>
   );
