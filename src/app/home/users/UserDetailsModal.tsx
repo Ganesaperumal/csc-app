@@ -25,10 +25,10 @@ const unbilledCycle: UnbilledAccess[] = ['None', 'View', 'Edit'];
 
 function next<T>(arr: T[], cur: T): T { return arr[(arr.indexOf(cur) + 1) % arr.length]; }
 
-/* ── Emoji Map ── */
+/* ── User Preferred Emoji Map ── */
 const valueEmoji: Record<string, string> = {
-  None: '🚫',
-  View: '👁️',
+  None: '❌',
+  View: '🔍',
   Edit: '✏️',
   Self: '👤',
   All:  '🌐',
@@ -76,7 +76,7 @@ function AccessTile({
           {label}
         </span>
       </div>
-      {/* Badge — Uniform width rounded pill */}
+      {/* Badge — Uniform width rounded pill with user emojis */}
       <span style={{
         padding: '0.22rem 0.5rem',
         borderRadius: '20px',

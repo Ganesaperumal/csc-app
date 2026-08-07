@@ -113,13 +113,13 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
     const noneStyle = { bg: '#f1f5f9', color: '#64748b', border: '#cbd5e1' };
 
     let style = noneStyle;
-    let icon = '🚫';
+    let icon = '❌';
     let displayLabel = 'None';
 
     if (!isNone) {
       if (type === 'csc') {
         style = label === 'View' ? colors.csc_view : colors.csc_edit;
-        icon = label === 'View' ? '👁️' : '✏️';
+        icon = label === 'View' ? '🔍' : '✏️';
         displayLabel = label;
       } else if (type === 'followup') {
         style = label === 'Self' ? colors.followup_self : colors.followup_all;
@@ -127,11 +127,11 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
         displayLabel = label;
       } else if (type === 'unbilled') {
         style = label === 'View' ? colors.unbilled_view : colors.unbilled_edit;
-        icon = label === 'View' ? '👁️' : '✏️';
+        icon = label === 'View' ? '🔍' : '✏️';
         displayLabel = label;
       } else if (type === 'alljobs') {
         style = colors.alljobs_view;
-        icon = '👁️';
+        icon = '🔍';
         displayLabel = label;
       }
     }
