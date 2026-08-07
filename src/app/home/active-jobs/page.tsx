@@ -325,8 +325,9 @@ function JobsTable() {
             if (isCscView) {
               setIsViewer(true);
             }
+            const isSuper = profileData.is_super_admin === true;
             const fRole = (profileData.followups_role || profileData.tracking_role || '').toLowerCase();
-            if (fRole === 'all' || fRole === 'admin') {
+            if (isSuper || fRole === 'all' || fRole === 'admin' || fRole.includes('all')) {
               setIsFollowupsAll(true);
             }
             const name = profileData.name || profileData.username || data.user.email?.split('@')[0] || 'Agent';
@@ -992,26 +993,20 @@ function JobsTable() {
                             </div>
                           </div>
                           
-                          <div style={{ fontSize: '0.75rem', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
-                            <div style={{ flex: 1, textAlign: 'left' }}>
+                          <div style={{ fontSize: '0.75rem', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                            <div>
                               {n.branch && <span style={{ padding: '0.15rem 0.6rem', borderRadius: '12px', background: 'rgba(139, 92, 246, 0.08)', color: '#7c3aed', border: '1px solid rgba(139, 92, 246, 0.2)' }}>🏢 {n.branch}</span>}
                             </div>
-                            <div style={{ flex: 1, textAlign: 'center' }}>
-                              <span style={{ color: n.call_type === 'Customer' ? '#d97706' : '#0284c7' }}>{n.call_type === 'Customer' ? '👤 Customer' : '🏢 Internal'}</span>
+                            <div>
+                              <span style={{ padding: '0.15rem 0.6rem', borderRadius: '12px', background: 'rgba(79, 70, 229, 0.1)', color: '#4f46e5', border: '1px solid rgba(79, 70, 229, 0.25)', fontWeight: 700 }}>👤 {n.agent_name || 'Agent'}</span>
                             </div>
-                            <div style={{ flex: 1, textAlign: 'right' }}>
+                            <div>
                               {n.regarding && <span style={{ padding: '0.15rem 0.6rem', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.08)', color: '#059669', border: '1px solid rgba(16, 185, 129, 0.2)' }}>{n.regarding}</span>}
                             </div>
                           </div>
 
-                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: isFollowupsAll || isAdmin ? 2 : 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontStyle: 'italic', marginTop: '0.2rem' }}>
-                            {isFollowupsAll || isAdmin ? (
-                              <>
-                                <strong style={{ fontStyle: 'normal', color: 'var(--text-primary)' }}>{n.agent_name || 'Agent'}:</strong> "{n.summary.split('\n')[0]}"
-                              </>
-                            ) : (
-                              `"${n.summary.split('\n')[0]}"`
-                            )}
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontStyle: 'italic', marginTop: '0.2rem' }}>
+                            <strong style={{ fontStyle: 'normal', color: 'var(--text-primary)' }}>{n.agent_name || 'Agent'}:</strong> "{n.summary ? n.summary.split('\n')[0] : ''}"
                           </div>
                         </div>
                       )
