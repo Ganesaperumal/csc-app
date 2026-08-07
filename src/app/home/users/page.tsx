@@ -110,7 +110,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
     };
 
     let style = colors.none;
-    let icon = '❌';
+    let icon = '';
     let displayLabel = 'None';
 
     if (!isNone) {
@@ -142,7 +142,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
         opacity: isNone ? 0.75 : 1,
         fontWeight: 600, whiteSpace: 'nowrap',
       }}>
-        {icon} {displayLabel}
+        {icon ? `${icon} ` : ''}{displayLabel}
       </span>
     );
   };
