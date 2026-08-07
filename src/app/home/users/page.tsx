@@ -305,6 +305,12 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                                 </span>
                               )}
 
+                              {tRole !== 'None' && (
+                                <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '6px', background: 'rgba(59,130,246,0.12)', color: '#3b82f6', fontWeight: 700 }}>
+                                  All Jobs: {getRoleIcon(tRole)}
+                                </span>
+                              )}
+
                               {uRole !== 'None' && (
                                 <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: '6px', background: 'rgba(16,185,129,0.12)', color: '#10b981', fontWeight: 700 }}>
                                   Unbilled: {getRoleIcon(uRole)}

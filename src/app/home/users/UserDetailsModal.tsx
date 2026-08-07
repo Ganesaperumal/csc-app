@@ -208,7 +208,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
             </div>
           )}
 
-          {/* Module Access 2-Column Row: CSC Portal Access (Left) | Unbilled Management Access (Right) */}
+          {/* Module Access Row 1: CSC Portal Access (Left) | All Jobs Access (Right) */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#4f46e5', marginBottom: '0.4rem' }}>📋 CSC Portal Access</label>
@@ -223,6 +223,21 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
             </div>
 
             <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#3b82f6', marginBottom: '0.4rem' }}>📁 All Jobs Access</label>
+              <CustomSelect
+                value={trackingRole}
+                onChange={(val) => {
+                  setTrackingRole(val);
+                  setHasChanges(true);
+                }}
+                options={ROLE_OPTIONS}
+              />
+            </div>
+          </div>
+
+          {/* Module Access Row 2: Unbilled Management Access (Left) | Branches Pills (Right) */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', alignItems: 'center' }}>
+            <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#10b981', marginBottom: '0.4rem' }}>🧾 Unbilled Management Access</label>
               <CustomSelect
                 value={unbilledRole}
@@ -233,14 +248,8 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                 options={ROLE_OPTIONS}
               />
             </div>
-          </div>
 
-          {/* Branch Multi-Select Pills (Below) */}
-          {unbilledRole !== 'None' && (
-            <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
-                📍 Assigned Unbilled Branches:
-              </label>
+            <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '10px', border: '1px solid #e2e8f0', minHeight: '66px', display: 'flex', alignItems: 'center' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                 {BRANCH_CODES.map(code => {
                   const isSelected = selectedBranches.includes(code);
@@ -265,7 +274,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                 })}
               </div>
             </div>
-          )}
+          </div>
 
           {/* Footer Actions Immediately Below Branches */}
           <div style={{ marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
