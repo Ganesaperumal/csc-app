@@ -313,15 +313,19 @@ function JobsTable() {
       if (data.user) {
         supabase.from('profiles').select('*').eq('id', data.user.id).single().then(({ data: profileData }) => {
           if (profileData) {
-            const level = getAccessLevel('Active Jobs', profileData);
-            if (level === 'None') {
+            const cscRole = profileData.csc_role || 'None';
+            const isSuperAdmin = profileData.username === 'gp' || profileData.username === 'ganesh' || profileData.name?.includes('Ganesaperumal');
+            const isCscEdit = isSuperAdmin || ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(cscRole);
+            const isCscView = cscRole === 'Viewer' || cscRole === 'View';
+
+            if (!isCscEdit && !isCscView && cscRole === 'None' && !isSuperAdmin) {
               router.push('/home');
               return;
             }
-            if (level === 'View') {
+            if (isCscView && !isCscEdit) {
               setIsViewer(true);
             }
-            if (profileData.role === 'Admin') {
+            if (profileData.role === 'Admin' || isSuperAdmin) {
               setIsAdmin(true);
             }
             const name = profileData.name || profileData.username || data.user.email?.split('@')[0] || 'Agent';

@@ -418,18 +418,23 @@ export default function UnbilledManagementPage() {
     fetchInitialData();
   }, []);
 
-  // Enforce access control once permissions have fully loaded from DB
+  // Enforce access control once user profile has loaded
   useEffect(() => {
-    if (permissionsLoading || !userProfile) return;
-    const level = getAccessLevel('Unbilled', userProfile);
-    if (level === 'None') {
+    if (!userProfile) return;
+    const unbilledRole = userProfile.unbilled_role || 'None';
+    const isSuperAdmin = userProfile.username === 'gp' || userProfile.username === 'ganesh' || userProfile.name?.includes('Ganesaperumal');
+    const isUnbilledEdit = isSuperAdmin || ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(unbilledRole);
+    const isUnbilledView = unbilledRole === 'Viewer' || unbilledRole === 'View';
+
+    if (!isUnbilledEdit && !isUnbilledView && unbilledRole === 'None' && !isSuperAdmin) {
       router.push('/home');
       return;
     }
-    setIsViewer(level === 'View');
+    const isViewerUser = !isUnbilledEdit && isUnbilledView;
+    setIsViewer(isViewerUser);
     setCanExportUnbilled(true);
     setCanSeeReminders(true);
-  }, [permissionsLoading, userProfile]);
+  }, [userProfile]);
 
   // Handle ESC key to close drawer
   useEffect(() => {

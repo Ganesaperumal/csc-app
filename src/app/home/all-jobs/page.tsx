@@ -258,9 +258,14 @@ function AllJobsContent() {
       const { data: profileData } = await supabase
         .from('profiles').select('*').eq('id', session.user.id).single();
       if (!profileData) { router.push('/home'); return; }
-      const level = getAccessLevel('All Jobs', profileData);
-      if (level === 'None') { router.push('/home'); return; }
-      if (level === 'View') setIsViewer(true);
+      const mainRole = profileData.role || 'None';
+      const isSuperAdmin = profileData.username === 'gp' || profileData.username === 'ganesh' || profileData.name?.includes('Ganesaperumal');
+
+      if ((mainRole === 'None' || !mainRole) && !isSuperAdmin) {
+        router.push('/home');
+        return;
+      }
+      setIsViewer(true);
       setCanExportJobs(true);
     };
     checkAccess();
