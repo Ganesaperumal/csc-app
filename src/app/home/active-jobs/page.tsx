@@ -313,6 +313,10 @@ function JobsTable() {
       if (data.user) {
         supabase.from('profiles').select('*').eq('id', data.user.id).single().then(({ data: profileData }) => {
           if (profileData) {
+            if (profileData.is_super_admin !== true) {
+              router.push('/home');
+              return;
+            }
             const cscRole = profileData.csc_role || 'None';
             const isCscEdit = cscRole === 'Edit';
             const isCscView = cscRole === 'View';
@@ -325,7 +329,7 @@ function JobsTable() {
               setIsViewer(true);
             }
             const fRole = (profileData.followups_role || profileData.tracking_role || '').toLowerCase();
-            if (fRole === 'all' || fRole === 'admin' || fRole.includes('all')) {
+            if (fRole === 'all' || fRole.includes('all')) {
               setIsFollowupsAll(true);
             }
             const name = profileData.name || profileData.username || data.user.email?.split('@')[0] || 'Agent';

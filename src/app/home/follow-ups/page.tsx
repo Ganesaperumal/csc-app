@@ -95,7 +95,7 @@ export default function FollowUpsPage() {
         setIsViewer(isViewerUser);
         setAgentName(activeName);
 
-        showAll = fRole === 'all' || fRole === 'admin' || fRole.includes('all');
+        showAll = fRole === 'all' || fRole.includes('all');
         setHasAllAccess(showAll);
       } else {
         activeName = user.email?.split('@')[0] || 'Agent';
