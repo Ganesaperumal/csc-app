@@ -423,8 +423,8 @@ export default function UnbilledManagementPage() {
     if (!userProfile) return;
     const unbilledRole = userProfile.unbilled_role || 'None';
     const isSuperAdmin = userProfile.username === 'gp' || userProfile.username === 'ganesh' || userProfile.name?.includes('Ganesaperumal');
-    const isUnbilledEdit = isSuperAdmin || ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(unbilledRole);
-    const isUnbilledView = unbilledRole === 'Viewer' || unbilledRole === 'View';
+    const isUnbilledEdit = isSuperAdmin || unbilledRole === 'Edit';
+    const isUnbilledView = unbilledRole === 'View';
 
     if (!isUnbilledEdit && !isUnbilledView && unbilledRole === 'None' && !isSuperAdmin) {
       router.push('/home');
@@ -482,12 +482,8 @@ export default function UnbilledManagementPage() {
     let legacyBranchesToFetch = null;
 
     // Enforce Branch Isolation for specific roles
-    const restrictedRoles = ['Viewer', 'Executive', 'Manager'];
-    const requiresSlicing = profile && (
-      restrictedRoles.includes(profile.role) || 
-      restrictedRoles.includes(profile.branch_user_role) || 
-      restrictedRoles.includes(profile.unbilled_role)
-    );
+    const isSuperAdmin = profile && (profile.username === 'gp' || profile.username === 'ganesh' || profile.name?.includes('Ganesaperumal'));
+    const requiresSlicing = !isSuperAdmin;
 
     if (requiresSlicing) {
       if (profile.branches && profile.branches.includes('ALL')) {
@@ -607,7 +603,7 @@ export default function UnbilledManagementPage() {
 
     setDrawerSubmitting(true);
     try {
-      const userName = userProfile?.name || userProfile?.username || currentUser?.email?.split('@')[0] || 'Executive';
+      const userName = userProfile?.name || userProfile?.username || currentUser?.email?.split('@')[0] || 'Agent';
 
       const { error } = await supabase.from('unbilled_followups').insert([
         {
@@ -622,14 +618,14 @@ export default function UnbilledManagementPage() {
 
       if (error) throw error;
 
-      showToast('Daily follow-up note logged successfully!', 'success');
+      showToast('Follow-up note added ✅', 'success');
       setNewNote('');
       setNextFollowupDate('');
 
       handleOpenFollowupDrawer(activeDrawerJob);
       fetchUpcomingReminders();
     } catch (err: any) {
-      showToast(`Error saving follow-up note: ${err.message}`, 'error');
+      showToast(`❌ ${err.message}`, 'error');
     } finally {
       setDrawerSubmitting(false);
     }
@@ -888,7 +884,7 @@ export default function UnbilledManagementPage() {
       {/* Line 1: Header Bar with Back Button, Title, Search, Clear Funnels, Export XLSX, Reminders */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'nowrap', overflowX: 'auto', marginBottom: '1.5rem', paddingBottom: '0.2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 1, minWidth: 0, maxWidth: '100%' }}>
-          {((userProfile?.role === 'Admin' || userProfile?.csc_role === 'Admin') || (userProfile?.csc_role && userProfile.csc_role !== 'None') || (userProfile?.tracking_role && userProfile.tracking_role !== 'None')) && (
+          {((userProfile?.csc_role && userProfile.csc_role !== 'None') || (userProfile?.followups_role && userProfile.followups_role !== 'None')) && (
           <button
             onClick={() => router.push('/home')}
             style={{

@@ -59,11 +59,12 @@ export default function ActivityLogPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('*')
         .eq('id', user.id)
         .single();
 
-      if (!profile || profile.role !== 'Admin') {
+      const isSuperAdmin = profile?.username === 'gp' || profile?.username === 'ganesh' || profile?.name?.includes('Ganesaperumal');
+      if (!isSuperAdmin) {
         router.push('/home');
         return;
       }

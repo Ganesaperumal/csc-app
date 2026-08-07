@@ -316,8 +316,8 @@ function JobsTable() {
           if (profileData) {
             const cscRole = profileData.csc_role || 'None';
             const isSuperAdmin = profileData.username === 'gp' || profileData.username === 'ganesh' || profileData.name?.includes('Ganesaperumal');
-            const isCscEdit = isSuperAdmin || ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(cscRole);
-            const isCscView = cscRole === 'Viewer' || cscRole === 'View';
+            const isCscEdit = isSuperAdmin || cscRole === 'Edit';
+            const isCscView = cscRole === 'View';
 
             if (!isCscEdit && !isCscView && cscRole === 'None' && !isSuperAdmin) {
               router.push('/home');
@@ -326,11 +326,11 @@ function JobsTable() {
             if (isCscView && !isCscEdit) {
               setIsViewer(true);
             }
-            const fRole = profileData.followups_role || (profileData.tracking_role === 'Admin' ? 'All' : 'Self');
-            if (fRole === 'All' || isSuperAdmin || profileData.role === 'Admin') {
+            const fRole = profileData.followups_role || 'None';
+            if (fRole === 'All' || isSuperAdmin) {
               setIsFollowupsAll(true);
             }
-            if (profileData.role === 'Admin' || isSuperAdmin) {
+            if (isSuperAdmin) {
               setIsAdmin(true);
             }
             const name = profileData.name || profileData.username || data.user.email?.split('@')[0] || 'Agent';

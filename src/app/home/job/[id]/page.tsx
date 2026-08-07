@@ -393,12 +393,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const hasEditAccess = profileRoles ? (
     isSuperAdminUser ||
     profileRoles.csc_role === 'Edit' ||
-    profileRoles.csc_role === 'Executive' ||
-    profileRoles.csc_role === 'Manager' ||
-    profileRoles.csc_role === 'Admin' ||
-    profileRoles.unbilled_role === 'Edit' ||
-    profileRoles.unbilled_role === 'Executive' ||
-    profileRoles.unbilled_role === 'Manager'
+    profileRoles.unbilled_role === 'Edit'
   ) : false;
 
   const isReadOnly = profileRoles ? !hasEditAccess : true;

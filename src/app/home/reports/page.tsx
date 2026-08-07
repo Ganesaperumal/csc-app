@@ -650,12 +650,8 @@ export default function ReportsPage() {
       setProfiles(pData || []);
 
       // Branch Isolation check
-      const restrictedRoles = ['Viewer', 'Executive', 'Manager'];
-      const requiresSlicing = profile && (
-        restrictedRoles.includes(profile.role) || 
-        restrictedRoles.includes(profile.branch_user_role) || 
-        restrictedRoles.includes(profile.unbilled_role)
-      );
+      const isSuperAdmin = profile && (profile.username === 'gp' || profile.username === 'ganesh' || profile.name?.includes('Ganesaperumal'));
+      const requiresSlicing = !isSuperAdmin;
 
       let branchFilter: string[] | null = null;
       let legacyBranchesToFetch: string[] | null = ['ALL'];

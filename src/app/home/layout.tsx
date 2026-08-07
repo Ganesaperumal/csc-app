@@ -21,8 +21,8 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
 
   // ─── Direct Profile Column Permissions (Single Source of Truth) ───
   const cscRole = profile?.csc_role || 'None';
-  const followupsRole = profile?.followups_role || (profile?.tracking_role === 'Admin' ? 'All' : (profile?.tracking_role === 'Executive' || profile?.tracking_role === 'Self' ? 'Self' : 'None'));
-  const allJobsRole = profile?.all_jobs_role || ((profile?.role === 'None' || !profile?.role) ? 'None' : 'View');
+  const followupsRole = profile?.followups_role || 'None';
+  const allJobsRole = profile?.all_jobs_role || 'None';
   const unbilledRole = profile?.unbilled_role || 'None';
 
   const canAccessCsc = isSuperAdmin || (cscRole !== 'None' && cscRole !== '');

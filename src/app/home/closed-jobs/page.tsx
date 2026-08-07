@@ -170,8 +170,8 @@ export default function ClosedJobsPage() {
       if (!profileData) { router.push('/home'); return; }
       const cscRole = profileData.csc_role || 'None';
       const isSuperAdmin = profileData.username === 'gp' || profileData.username === 'ganesh' || profileData.name?.includes('Ganesaperumal');
-      const isCscEdit = isSuperAdmin || ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(cscRole);
-      const isCscView = cscRole === 'Viewer' || cscRole === 'View';
+      const isCscEdit = isSuperAdmin || cscRole === 'Edit';
+      const isCscView = cscRole === 'View';
 
       if (!isCscEdit && !isCscView && cscRole === 'None' && !isSuperAdmin) {
         router.push('/home');

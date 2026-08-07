@@ -71,11 +71,11 @@ export default function FollowUpsPage() {
       if (profile) {
         activeName = profile.name || profile.username || user.email?.split('@')[0] || 'Agent';
         const isSuperAdmin = profile.username === 'gp' || profile.username === 'ganesh' || profile.name?.includes('Ganesaperumal');
-        adminRole = isSuperAdmin || profile.role === 'Admin';
+        adminRole = isSuperAdmin;
         setIsAdmin(adminRole);
         
         const cscRole = profile.csc_role || 'None';
-        const followupsRole = profile.followups_role || (profile.tracking_role === 'Admin' ? 'All' : (profile.tracking_role === 'Executive' || profile.tracking_role === 'Self' ? 'Self' : 'None'));
+        const followupsRole = profile.followups_role || 'None';
 
         const hasCscAccess = isSuperAdmin || (cscRole !== 'None' && cscRole !== '');
         const hasFollowupsAccess = isSuperAdmin || (followupsRole !== 'None' && followupsRole !== '');
@@ -85,11 +85,11 @@ export default function FollowUpsPage() {
           return;
         }
 
-        const isViewerUser = !isSuperAdmin && (cscRole === 'Viewer' || cscRole === 'View');
+        const isViewerUser = !isSuperAdmin && cscRole === 'View';
         setIsViewer(isViewerUser);
         setAgentName(activeName);
 
-        showAll = isSuperAdmin || followupsRole === 'All' || profile.tracking_role === 'Admin';
+        showAll = isSuperAdmin || followupsRole === 'All';
       } else {
         activeName = user.email?.split('@')[0] || 'Agent';
         setAgentName(activeName);

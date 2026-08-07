@@ -115,16 +115,16 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
   const [password, setPassword] = useState('');
 
   /* Init from DB roles */
-  const initCsc      = (r?: string): CscAccess      => (!r || r === 'None') ? 'None' : (r === 'Viewer' || r === 'View' ? 'View' : 'Edit');
+  const initCsc      = (r?: string): CscAccess      => (!r || r === 'None') ? 'None' : (r === 'Edit' ? 'Edit' : 'View');
   const initFollowup = (f?: string, t?: string): FollowupAccess => {
     const r = f || t;
-    return (!r || r === 'None') ? 'None' : (r === 'Executive' || r === 'Self' || r === 'Viewer' ? 'Self' : 'All');
+    return (!r || r === 'None') ? 'None' : (r === 'All' ? 'All' : 'Self');
   };
   const initAllJobs  = (a?: string, r?: string): AllJobsAccess  => {
     const val = a || r;
     return (!val || val === 'None') ? 'None' : 'View';
   };
-  const initUnbilled = (r?: string): UnbilledAccess => (!r || r === 'None') ? 'None' : (r === 'Viewer' || r === 'View' ? 'View' : 'Edit');
+  const initUnbilled = (r?: string): UnbilledAccess => (!r || r === 'None') ? 'None' : (r === 'Edit' ? 'Edit' : 'View');
 
   const [cscAccess,     setCscAccess]     = useState<CscAccess>(initCsc(user?.csc_role));
   const [followupAccess,setFollowupAccess]= useState<FollowupAccess>(initFollowup(user?.followups_role, user?.tracking_role));

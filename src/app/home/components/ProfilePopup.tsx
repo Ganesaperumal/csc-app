@@ -57,8 +57,8 @@ export default function ProfilePopup({ user }: { user: any }) {
   const username = user?.email?.split('@')[0] || 'User';
   
   // Use profile data if available, fallback to user_metadata or defaults
-  let rawRole = profile?.role || user?.user_metadata?.role || 'Executive';
-  const role = rawRole.charAt(0).toUpperCase() + rawRole.slice(1); // Ensure capitalized like "Admin"
+  const isSuperAdmin = profile?.username === 'gp' || profile?.username === 'ganesh' || profile?.name?.includes('Ganesaperumal');
+  const role = isSuperAdmin ? 'Super Admin' : 'Team Member';
   const displayAvatar = avatar || profile?.photo || user?.user_metadata?.avatar_url || null;
   const displayName = fullName || profile?.name || user?.user_metadata?.full_name || username;
 
@@ -218,9 +218,7 @@ export default function ProfilePopup({ user }: { user: any }) {
                 <AvatarComponent size={140} showPencil={true} />
               </label>
               <h3 style={{ marginTop: '1rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>{displayName}!</h3>
-              {role && role !== 'Executive' && role !== 'Manager' && (
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: profile?.phone ? '0.25rem' : '1.5rem' }}>{role}</p>
-              )}
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: profile?.phone ? '0.25rem' : '1.5rem' }}>{role}</p>
               {profile?.phone && (
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span>📞</span> <span>{profile.phone}</span>
