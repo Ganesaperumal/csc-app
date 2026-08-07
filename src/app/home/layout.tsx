@@ -36,7 +36,7 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
   const canAccessReports = canCscReports || canUnbilledReports;
 
   return (
-    <nav className={styles.nav} style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '0.35rem' }}>
+    <nav className={styles.nav} style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', gap: '0.35rem' }}>
       
       {(canAccessActive || canAccessClosed) && (
         <div style={{ marginBottom: '0.4rem' }}>
@@ -132,6 +132,62 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
         </Link>
       )}
 
+      {/* Admin & Users segmented toggle bar directly above Sync ERP */}
+      {isSuperAdmin && (
+        <div style={{ marginTop: 'auto', marginBottom: '0.15rem' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            backgroundColor: 'rgba(148, 163, 184, 0.12)',
+            borderRadius: '12px',
+            padding: '4px',
+            position: 'relative',
+            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)'
+          }}>
+            <Link
+              href="/home/admin"
+              style={{
+                flex: 1,
+                textAlign: 'center',
+                padding: '0.45rem 0.25rem',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                borderRadius: '8px',
+                textDecoration: 'none',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                color: pathname === '/home/admin' ? '#ffffff' : 'var(--text-secondary)',
+                background: pathname === '/home/admin'
+                  ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
+                  : 'transparent',
+                boxShadow: pathname === '/home/admin' ? '0 4px 12px rgba(59, 130, 246, 0.35)' : 'none',
+              }}
+            >
+              <span>⚙️</span> Admin
+            </Link>
+            <Link
+              href="/home/users"
+              style={{
+                flex: 1,
+                textAlign: 'center',
+                padding: '0.45rem 0.25rem',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                borderRadius: '8px',
+                textDecoration: 'none',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                color: pathname === '/home/users' ? '#ffffff' : 'var(--text-secondary)',
+                background: pathname === '/home/users'
+                  ? 'linear-gradient(135deg, #10b981, #059669)'
+                  : 'transparent',
+                boxShadow: pathname === '/home/users' ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
+              }}
+            >
+              <span>👥</span> Users
+            </Link>
+          </div>
+        </div>
+      )}
+
     </nav>
   );
 }
@@ -196,9 +252,6 @@ export default function DashboardLayout({
     return <div className={styles.loadingScreen}>Loading...</div>;
   }
 
-  const userEmail = (user?.email || profile?.email || (profile?.username ? `${profile.username}@transworldintl.com` : '')).toLowerCase();
-  const isSuperAdmin = userEmail === 'gp@transworldintl.com' || profile?.username === 'gp' || profile?.username === 'ganesh' || profile?.name?.includes('Ganesaperumal');
-
   return (
     <PermissionsProvider>
       <div className="app-container">
@@ -218,60 +271,7 @@ export default function DashboardLayout({
                 </Suspense>
               </div>
               
-              {/* Bottom sidebar actions with ultra-tight 1px gap */}
-              <div style={{ flexShrink: 0, marginTop: '0.25rem', display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                {isSuperAdmin && (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    backgroundColor: 'rgba(148, 163, 184, 0.12)',
-                    borderRadius: '12px',
-                    padding: '4px',
-                    position: 'relative',
-                    boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)'
-                  }}>
-                    <Link
-                      href="/home/admin"
-                      style={{
-                        flex: 1,
-                        textAlign: 'center',
-                        padding: '0.45rem 0.25rem',
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        borderRadius: '8px',
-                        textDecoration: 'none',
-                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                        color: pathname === '/home/admin' ? '#ffffff' : 'var(--text-secondary)',
-                        background: pathname === '/home/admin'
-                          ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
-                          : 'transparent',
-                        boxShadow: pathname === '/home/admin' ? '0 4px 12px rgba(59, 130, 246, 0.35)' : 'none',
-                      }}
-                    >
-                      <span>⚙️</span> Admin
-                    </Link>
-                    <Link
-                      href="/home/users"
-                      style={{
-                        flex: 1,
-                        textAlign: 'center',
-                        padding: '0.45rem 0.25rem',
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        borderRadius: '8px',
-                        textDecoration: 'none',
-                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                        color: pathname === '/home/users' ? '#ffffff' : 'var(--text-secondary)',
-                        background: pathname === '/home/users'
-                          ? 'linear-gradient(135deg, #10b981, #059669)'
-                          : 'transparent',
-                        boxShadow: pathname === '/home/users' ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
-                      }}
-                    >
-                      <span>👥</span> Users
-                    </Link>
-                  </div>
-                )}
+              <div style={{ flexShrink: 0, marginTop: '0.25rem' }}>
                 <SyncERPWrapper user={user} profile={profile} />
               </div>
             </div>
