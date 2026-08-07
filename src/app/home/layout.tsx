@@ -290,7 +290,10 @@ export default function DashboardLayout({
 }
 
 function SyncERPWrapper({ user, profile }: { user: any, profile: any }) {
-  const isAllowed = profile?.role === 'Admin' || ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(profile?.csc_role || '');
-  if (!isAllowed) return null;
+  const isSuperAdmin = profile?.username === 'gp' || profile?.username === 'ganesh' || profile?.name?.includes('Ganesaperumal');
+  const isAdmin = profile?.role === 'Admin';
+  const cscRole = profile?.csc_role || '';
+  const hasCscAccess = isSuperAdmin || isAdmin || (cscRole !== 'None' && cscRole !== '');
+  if (!hasCscAccess) return null;
   return <SyncERPButton user={user} profile={profile} />;
 }

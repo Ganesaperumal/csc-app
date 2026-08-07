@@ -8,21 +8,21 @@ export default function SyncERPButton({ user: initialUser, profile: initialProfi
   const [user, setUser] = useState(initialUser);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncingBy, setSyncingBy] = useState('');
-  const [isViewer, setIsViewer] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
   const { getAccessLevel } = usePermissions();
 
   useEffect(() => {
-    // Derive viewer status from permission matrix
     const resolveAccess = (profile: any) => {
-      const isAllowed = profile?.role === 'Admin' || ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(profile?.csc_role || '');
-      setIsViewer(!isAllowed);
+      const isSuperAdmin = profile?.username === 'gp' || profile?.username === 'ganesh' || profile?.name?.includes('Ganesaperumal');
+      const isEditAccess = isSuperAdmin || profile?.role === 'Admin' || ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(profile?.csc_role || '');
+      setCanEdit(isEditAccess);
     };
 
     if (initialProfile) {
       resolveAccess(initialProfile);
       return;
     }
-    // Fallback: fetch profile from Supabase
+    
     const fetchRole = async (userId: string) => {
       const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
       if (data) resolveAccess(data);
@@ -87,7 +87,6 @@ export default function SyncERPButton({ user: initialUser, profile: initialProfi
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isSyncing) {
-      // Poll every 3 seconds to check if the lock has been cleared by the backend or is expired
       interval = setInterval(async () => {
         const { data } = await supabase.from('sync_lock').select('*').eq('id', 1).single();
         if (data) {
@@ -109,11 +108,10 @@ export default function SyncERPButton({ user: initialUser, profile: initialProfi
   }, [isSyncing]);
 
   const triggerSync = async () => {
-    if (isSyncing) return;
+    if (isSyncing || !canEdit) return;
     
     setIsSyncing(true);
     setSyncingBy('You');
-    // Lock is now handled by the backend API
 
     try {
       const username = user?.email?.split('@')[0] || 'User';
@@ -132,7 +130,6 @@ export default function SyncERPButton({ user: initialUser, profile: initialProfi
       console.error(err);
       showToast('Error triggering sync: ' + err.message, 'error');
       
-      // Only unlock immediately if the initial trigger failed
       await supabase.from('sync_lock').update({
         is_syncing: false
       }).eq('id', 1);
@@ -140,20 +137,26 @@ export default function SyncERPButton({ user: initialUser, profile: initialProfi
     }
   };
 
+  const isBtnDisabled = isSyncing || !canEdit;
+
   return (
-    <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
+    <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)' }}>
       <button 
-        onClick={isViewer ? undefined : triggerSync}
-        disabled={isSyncing || isViewer}
+        onClick={canEdit ? triggerSync : undefined}
+        disabled={isBtnDisabled}
+        title={!canEdit ? 'Requires CSC Jobs Edit permission to Sync ERP' : undefined}
         style={{
           width: '100%',
           padding: '0.6rem 1rem',
           borderRadius: '8px',
           border: 'none',
-          background: (isSyncing || isViewer) ? 'var(--surface-color)' : 'linear-gradient(45deg, #fde047, #fef08a)',
-          color: (isSyncing || isViewer) ? 'var(--text-secondary)' : '#1e293b',
+          background: isBtnDisabled
+            ? 'rgba(148, 163, 184, 0.16)'
+            : 'linear-gradient(45deg, #fde047, #fef08a)',
+          color: isBtnDisabled ? 'var(--text-secondary)' : '#1e293b',
           fontWeight: 'bold',
-          cursor: (isSyncing || isViewer) ? 'not-allowed' : 'pointer',
+          cursor: isBtnDisabled ? 'not-allowed' : 'pointer',
+          opacity: !canEdit ? 0.65 : 1,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -172,7 +175,7 @@ export default function SyncERPButton({ user: initialUser, profile: initialProfi
         ) : (
           <>
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path><path d="M16 21v-5h5"></path></svg>
-            {isViewer ? '🔒 Sync ERP Jobs' : 'Sync ERP Jobs'}
+            {!canEdit ? '🔒 Sync ERP Jobs' : 'Sync ERP Jobs'}
           </>
         )}
       </button>
