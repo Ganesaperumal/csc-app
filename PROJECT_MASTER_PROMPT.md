@@ -101,8 +101,8 @@ Users have **one primary role** + **two category roles**:
 - `csc_role`: `Admin` | `Manager` | `Executive` | `Viewer` | `None`
 - `unbilled_role`: `Admin` | `Manager` | `Executive` | `Viewer` | `None`
 
-### Key Access Rules
-- **Executive / Manager** (csc_role) → Full edit access to job detail, communications, WhatsApp, docs
+- **csc_role === 'Edit'** → Strictly required for edit access on CSC Job Details (`/home/job/[id]`). `unbilled_role`, `followups_role`, and `all_jobs_role` NEVER grant edit rights on CSC Job Details.
+- **unbilled_role === 'Edit'** → Strictly required for edit access on Unbilled Jobs (`/home/unbilled`). Does NOT grant edit access to CSC Job Details.
 - **Admin** (csc_role) → Read-only on job pages (same as Viewer). Full access to Admin panel.
 - **Viewer** (csc_role) → Read-only everywhere. Can filter/search lists. Can see all fields whether empty or not. Cannot edit fields, add logs, send WhatsApp, trigger Sync ERP, or use Group Chat.
 - `branches` (TEXT[]) → `['ALL']` = super admin, else branch-filtered queries
