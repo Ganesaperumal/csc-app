@@ -25,7 +25,16 @@ const unbilledCycle: UnbilledAccess[] = ['None', 'View', 'Edit'];
 
 function next<T>(arr: T[], cur: T): T { return arr[(arr.indexOf(cur) + 1) % arr.length]; }
 
-/* ── Badge solid colors (Clean, Crisp & Rounded) ── */
+/* ── Emoji Map ── */
+const valueEmoji: Record<string, string> = {
+  None: '🚫',
+  View: '👁️',
+  Edit: '✏️',
+  Self: '👤',
+  All:  '🌐',
+};
+
+/* ── Badge solid colors (Clean, Crisp & Curved Rectangle) ── */
 const badgeColor: Record<string, { bg: string; color: string; border: string }> = {
   None:  { bg: '#f1f5f9', color: '#64748b', border: '#cbd5e1' },
   View:  { bg: '#e0e7ff', color: '#3730a3', border: '#a5b4fc' },
@@ -39,6 +48,7 @@ function AccessTile({
   label, icon, value, onClick, dim,
 }: { label: string; icon: string; value: string; onClick: () => void; dim?: boolean }) {
   const c = badgeColor[value] ?? badgeColor.None;
+  const emoji = valueEmoji[value] ?? '';
   return (
     <button
       type="button"
@@ -48,7 +58,7 @@ function AccessTile({
         flex: 1,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0.65rem 0.9rem',
-        borderRadius: '12px',
+        borderRadius: '10px',
         border: '1px solid #e2e8f0',
         background: '#ffffff',
         cursor: 'pointer',
@@ -65,16 +75,17 @@ function AccessTile({
           {label}
         </span>
       </div>
-      {/* Badge — rounded pill shape */}
+      {/* Badge with Emoji */}
       <span style={{
-        padding: '0.22rem 0.65rem',
-        borderRadius: '20px',
-        fontSize: '0.7rem', fontWeight: 700,
-        letterSpacing: '0.03em', textTransform: 'uppercase',
+        padding: '0.22rem 0.6rem',
+        borderRadius: '6px',
+        fontSize: '0.72rem', fontWeight: 700,
+        letterSpacing: '0.02em',
         background: c.bg, color: c.color, border: `1px solid ${c.border}`,
         flexShrink: 0, transition: 'all 0.15s ease',
+        display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
       }}>
-        {value}
+        <span>{emoji}</span> {value}
       </span>
     </button>
   );
@@ -136,7 +147,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '0.6rem 0.85rem',
-    borderRadius: '10px', border: '1px solid #cbd5e1',
+    borderRadius: '8px', border: '1px solid #cbd5e1',
     background: '#ffffff', color: '#0f172a',
     fontSize: '0.85rem',
     outline: 'none', transition: 'border-color 0.2s',
@@ -146,10 +157,10 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
   return (
     <>
       <style>{`
-        .udm-field:focus { border-color: #4f46e5 !important; }
+        .udm-field:focus { border-color: #16a34a !important; }
         .udm-tile:hover  { background: #f8fafc !important; border-color: #cbd5e1 !important; }
-        .udm-save:hover:not(:disabled) { background: #4338ca !important; }
-        .udm-delete:hover { background: #fee2e2 !important; }
+        .udm-save:hover:not(:disabled) { background: #15803d !important; }
+        .udm-delete:hover { background: #fee2e2 !important; border-color: #fca5a5 !important; }
         .udm-branch:hover { border-color: #16a34a !important; }
       `}</style>
 
@@ -159,7 +170,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
         background: 'rgba(15, 23, 42, 0.5)',
         zIndex: 9999, display: 'flex', justifyContent: 'flex-end',
       }}>
-        {/* Drawer — Solid White Background, No Transparency */}
+        {/* Drawer — Solid White Background */}
         <div onClick={e => e.stopPropagation()} style={{
           width: '480px', maxWidth: '100vw', height: '100vh',
           background: '#ffffff',
@@ -169,7 +180,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
           overflowY: 'auto',
         }}>
 
-          {/* ── Solid White Header ── */}
+          {/* ── Header ── */}
           <div style={{
             background: '#ffffff',
             borderBottom: '1px solid #e2e8f0',
@@ -187,9 +198,9 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
               <div style={{ position: 'relative', flexShrink: 0 }}>
                 <div style={{
                   width: '56px', height: '56px', borderRadius: '50%',
-                  background: '#e0e7ff', border: '2px solid #c7d2fe',
+                  background: '#dcfce7', border: '2px solid #86efac',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  overflow: 'hidden', fontSize: '1.4rem', color: '#4338ca', fontWeight: 700,
+                  overflow: 'hidden', fontSize: '1.4rem', color: '#166534', fontWeight: 700,
                 }}>
                   {photo
                     ? <img src={photo} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -219,7 +230,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                   cursor: isSuperAdmin ? 'not-allowed' : 'pointer',
                   background: isApproved ? '#f0fdf4' : '#fef2f2',
                   border: `1px solid ${isApproved ? '#bbf7d0' : '#fecaca'}`,
-                  borderRadius: '20px', padding: '0.2rem 0.6rem 0.2rem 0.4rem',
+                  borderRadius: '16px', padding: '0.2rem 0.6rem 0.2rem 0.4rem',
                 }}>
                   <div style={{
                     width: '30px', height: '16px', borderRadius: '10px',
@@ -242,7 +253,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
             </div>
           </div>
 
-          {/* ── Body (Solid White) ── */}
+          {/* ── Body ── */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', background: '#ffffff' }}>
 
             {/* Profile fields */}
@@ -328,7 +339,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                 <div style={{
                   marginTop: '0.65rem',
                   padding: '0.75rem',
-                  borderRadius: '14px',
+                  borderRadius: '10px',
                   border: '1px solid #e2e8f0',
                   background: '#f8fafc',
                 }}>
@@ -345,7 +356,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                         <button key={code} type="button" className="udm-branch"
                           onClick={() => toggleBranch(code)}
                           style={{
-                            padding: '0.25rem 0.65rem', borderRadius: '20px',
+                            padding: '0.25rem 0.65rem', borderRadius: '6px',
                             fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer',
                             border: `1px solid ${active ? '#16a34a' : '#cbd5e1'}`,
                             background: active ? '#dcfce7' : '#ffffff',
@@ -364,21 +375,24 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
 
             {/* ── Action Buttons ── */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', marginTop: 'auto', paddingTop: '0.5rem' }}>
+              {/* Positive Green Curved Rectangle Save Button */}
               <button
                 type="button" disabled={saving} onClick={handleSave}
                 className="udm-save"
                 style={{
                   width: '100%', padding: '0.75rem',
-                  borderRadius: '20px', border: 'none',
-                  background: '#4f46e5',
+                  borderRadius: '8px', border: 'none',
+                  background: '#16a34a',
                   color: '#ffffff', fontWeight: 700, fontSize: '0.88rem',
                   cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1,
                   transition: 'background 0.15s ease',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
                 }}
               >
-                {saving ? 'Saving...' : isCreate ? 'Create User Account' : 'Save Profile & Permissions'}
+                {saving ? '⏳ Saving...' : isCreate ? '➕ Create User Account' : '💾 Save Profile & Permissions'}
               </button>
 
+              {/* Delete Button (Curved Rectangle) */}
               {!isCreate && !isSuperAdmin && onDelete && (
                 <button
                   type="button" className="udm-delete"
@@ -388,13 +402,14 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                   }}
                   style={{
                     width: '100%', padding: '0.65rem',
-                    borderRadius: '20px', border: '1px solid #fecaca',
+                    borderRadius: '8px', border: '1px solid #fecaca',
                     background: '#fef2f2', color: '#dc2626',
                     fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer',
-                    transition: 'background 0.15s ease',
+                    transition: 'all 0.15s ease',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
                   }}
                 >
-                  Permanently Delete User Account
+                  🗑️ Permanently Delete User Account
                 </button>
               )}
             </div>
