@@ -1,4 +1,5 @@
 'use client';
+import { isSuperAdmin } from '@/lib/authUtils';
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -63,8 +64,8 @@ export default function ActivityLogPage() {
         .eq('id', user.id)
         .single();
 
-      const isSuperAdmin = profile?.username === 'gp' || profile?.username === 'ganesh' || profile?.name?.includes('Ganesaperumal');
-      if (!isSuperAdmin) {
+      const isSuper = isSuperAdmin(profile);
+      if (!isSuper) {
         router.push('/home');
         return;
       }

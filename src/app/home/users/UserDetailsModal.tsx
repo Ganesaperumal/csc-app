@@ -1,4 +1,5 @@
 'use client';
+import { isSuperAdmin } from '@/lib/authUtils';
 
 import { useState, useEffect } from 'react';
 import { customConfirm } from '@/components/GlobalDialogs';
@@ -135,7 +136,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
   const [photo,         setPhoto]         = useState<string | null>(user?.photo || null);
   const [saving,        setSaving]        = useState(false);
 
-  const isSuperAdmin = user?.username === 'ganesh' || user?.name?.includes('Ganesaperumal');
+  const isSuper = isSuperAdmin(user);
 
   const handleSave = async () => {
     setSaving(true);
@@ -412,7 +413,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
               </button>
 
               {/* Curved Rectangle Delete Button */}
-              {!isCreate && !isSuperAdmin && onDelete && (
+              {!isCreate && !isSuper && onDelete && (
                 <button
                   type="button" className="udm-delete"
                   onClick={async () => {

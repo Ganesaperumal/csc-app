@@ -1,4 +1,5 @@
 'use client';
+import { isSuperAdmin } from '@/lib/authUtils';
 import { showToast } from '@/components/GlobalDialogs';
 import { useState, useEffect } from 'react';
 import UserDetailsModal from './UserDetailsModal';
@@ -207,7 +208,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
             </thead>
             <tbody>
               {filteredUsers.map((u) => {
-                const isSuperAdmin = u.username === 'ganesh' || u.name?.includes('Ganesaperumal');
+                const isSuper = isSuperAdmin(u);
                 const isApproved = u.is_approved !== false;
 
                 const cscVal = u.csc_role || 'None';
@@ -239,7 +240,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                         <div>
                           <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                             {u.name || u.username}
-                            {isSuperAdmin && (
+                            {isSuper && (
                               <span style={{
                                 marginLeft: '0.4rem', fontSize: '0.65rem', padding: '0.12rem 0.45rem',
                                 background: '#fef3c7', color: '#92400e', borderRadius: '12px',
@@ -279,9 +280,9 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                       <div
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (!isSuperAdmin) handleToggleApproval(u);
+                          if (!isSuper) handleToggleApproval(u);
                         }}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: isSuperAdmin ? 'not-allowed' : 'pointer' }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: isSuper ? 'not-allowed' : 'pointer' }}
                       >
                         <div style={{
                           width: '38px', height: '20px', borderRadius: '10px',

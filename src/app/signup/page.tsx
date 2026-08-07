@@ -128,7 +128,7 @@ export default function SignupPage() {
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f59e0b', margin: '0 0 0.5rem' }}>Account Pending Approval!</h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.5 }}>
-              Thank you <strong>{name}</strong>. Your registration request has been sent to Super Admin <strong>Ganesaperumal</strong> for approval and role assignment.
+              Thank you <strong>{name}</strong>. Your registration request has been sent to Super Admin for approval and role assignment.
             </p>
             <Link href="/login" style={{ display: 'inline-block', marginTop: '1.5rem', padding: '0.65rem 1.5rem', borderRadius: '8px', background: '#4f46e5', color: 'white', fontWeight: 700, textDecoration: 'none' }}>
               Return to Login

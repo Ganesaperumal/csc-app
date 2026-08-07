@@ -1,4 +1,5 @@
 'use client';
+import { isSuperAdmin } from '@/lib/authUtils';
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -14,10 +15,10 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
   // - Admin: Can see all alerts across all branches
   // - Viewer: Cannot see anything (returns null)
   // - Manager & Executive: Can see only their own (filtered by assigned branch/coordinator)
-  const isSuperAdmin = profile?.username === 'gp' || profile?.username === 'ganesh' || profile?.name?.includes('Ganesaperumal');
-  const isViewer = !isSuperAdmin;
+  const isSuper = isSuperAdmin(profile);
+  const isViewer = !isSuper;
   const isManagerOrExec = false;
-  const canManageUsers = isSuperAdmin;
+  const canManageUsers = isSuper;
 
   useEffect(() => {
     if (isViewer) return;

@@ -1,4 +1,5 @@
 'use client';
+import { isSuperAdmin } from '@/lib/authUtils';
 import { showToast } from '@/components/GlobalDialogs';
 
 import { useEffect, useState, Suspense, useRef } from 'react';
@@ -258,10 +259,10 @@ function AllJobsContent() {
       const { data: profileData } = await supabase
         .from('profiles').select('*').eq('id', session.user.id).single();
       if (!profileData) { router.push('/home'); return; }
-      const mainRole = profileData.role || 'None';
-      const isSuperAdmin = profileData.username === 'gp' || profileData.username === 'ganesh' || profileData.name?.includes('Ganesaperumal');
+      const allJobsRole = profileData.all_jobs_role || 'None';
+      const isSuper = isSuperAdmin(profileData);
 
-      if ((mainRole === 'None' || !mainRole) && !isSuperAdmin) {
+      if ((allJobsRole === 'None' || !allJobsRole) && !isSuper) {
         router.push('/home');
         return;
       }

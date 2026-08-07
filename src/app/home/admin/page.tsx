@@ -1,4 +1,5 @@
 'use client';
+import { isSuperAdmin } from '@/lib/authUtils';
 import { showToast, customConfirm } from '@/components/GlobalDialogs';
 
 import { useState, useEffect } from 'react';
@@ -243,10 +244,9 @@ export default function AdminPage() {
       setCurrentUser(data.user);
       supabase.from('profiles').select('*').eq('id', data.user.id).single()
         .then(({ data: profile }) => {
-          const userEmail = (data.user.email || profile?.email || (profile?.username ? `${profile.username}@transworldintl.com` : '')).toLowerCase();
-          const isSuperAdmin = userEmail === 'gp@transworldintl.com' || profile?.username === 'gp' || profile?.username === 'ganesh' || profile?.name?.includes('Ganesaperumal');
+          const isSuper = isSuperAdmin(profile);
 
-          if (profile && isSuperAdmin) {
+          if (profile && isSuper) {
             setUserRole(profile.role);
             setCheckingAuth(false);
           } else {

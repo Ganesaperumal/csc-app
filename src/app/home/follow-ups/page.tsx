@@ -1,4 +1,5 @@
 'use client';
+import { isSuperAdmin } from '@/lib/authUtils';
 import { showToast } from '@/components/GlobalDialogs';
 
 import { useEffect, useState } from 'react';
@@ -70,26 +71,26 @@ export default function FollowUpsPage() {
 
       if (profile) {
         activeName = profile.name || profile.username || user.email?.split('@')[0] || 'Agent';
-        const isSuperAdmin = profile.username === 'gp' || profile.username === 'ganesh' || profile.name?.includes('Ganesaperumal');
-        adminRole = isSuperAdmin;
+        const isSuper = isSuperAdmin(profile);
+        adminRole = isSuper;
         setIsAdmin(adminRole);
         
         const cscRole = profile.csc_role || 'None';
         const followupsRole = profile.followups_role || 'None';
 
-        const hasCscAccess = isSuperAdmin || (cscRole !== 'None' && cscRole !== '');
-        const hasFollowupsAccess = isSuperAdmin || (followupsRole !== 'None' && followupsRole !== '');
+        const hasCscAccess = isSuper || (cscRole !== 'None' && cscRole !== '');
+        const hasFollowupsAccess = isSuper || (followupsRole !== 'None' && followupsRole !== '');
 
         if (!hasCscAccess || !hasFollowupsAccess) {
           router.push('/home');
           return;
         }
 
-        const isViewerUser = !isSuperAdmin && cscRole === 'View';
+        const isViewerUser = !isSuper && cscRole === 'View';
         setIsViewer(isViewerUser);
         setAgentName(activeName);
 
-        showAll = isSuperAdmin || followupsRole === 'All';
+        showAll = isSuper || followupsRole === 'All';
       } else {
         activeName = user.email?.split('@')[0] || 'Agent';
         setAgentName(activeName);

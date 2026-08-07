@@ -67,9 +67,6 @@ export default function LoginPage() {
     // 3. Fallback: Search profiles table by username, phone, or name to find associated email
     if (authError) {
       let candidateEmails: string[] = [];
-      if (cleanInput === 'admin' || cleanInput === 'ganesh' || cleanInput === 'ganesaperumal') {
-        candidateEmails.push('gp@transworldintl.com');
-      }
 
       try {
         const res = await fetch('/api/auth/resolve', {
@@ -114,7 +111,7 @@ export default function LoginPage() {
 
         if (profile && profile.is_approved === false) {
           await supabase.auth.signOut();
-          setError('⏳ Account Pending Admin Approval. Please contact Super Admin Ganesaperumal.');
+          setError('⏳ Account Pending Admin Approval. Please contact Super Admin.');
           setLoading(false);
           return;
         }

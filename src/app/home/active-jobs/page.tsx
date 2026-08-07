@@ -1,4 +1,5 @@
 'use client';
+import { isSuperAdmin } from '@/lib/authUtils';
 
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -315,11 +316,11 @@ function JobsTable() {
         supabase.from('profiles').select('*').eq('id', data.user.id).single().then(({ data: profileData }) => {
           if (profileData) {
             const cscRole = profileData.csc_role || 'None';
-            const isSuperAdmin = profileData.username === 'gp' || profileData.username === 'ganesh' || profileData.name?.includes('Ganesaperumal');
-            const isCscEdit = isSuperAdmin || cscRole === 'Edit';
+            const isSuper = isSuperAdmin(profileData);
+            const isCscEdit = isSuper || cscRole === 'Edit';
             const isCscView = cscRole === 'View';
 
-            if (!isCscEdit && !isCscView && cscRole === 'None' && !isSuperAdmin) {
+            if (!isCscEdit && !isCscView && cscRole === 'None' && !isSuper) {
               router.push('/home');
               return;
             }
@@ -327,10 +328,10 @@ function JobsTable() {
               setIsViewer(true);
             }
             const fRole = profileData.followups_role || 'None';
-            if (fRole === 'All' || isSuperAdmin) {
+            if (fRole === 'All' || isSuper) {
               setIsFollowupsAll(true);
             }
-            if (isSuperAdmin) {
+            if (isSuper) {
               setIsAdmin(true);
             }
             const name = profileData.name || profileData.username || data.user.email?.split('@')[0] || 'Agent';
