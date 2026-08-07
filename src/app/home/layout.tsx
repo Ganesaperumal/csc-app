@@ -134,18 +134,7 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
 
       {/* Admin & Users segmented toggle bar directly above Sync ERP */}
       {isSuperAdmin && (
-        <div style={{ marginTop: 'auto', marginBottom: '0.4rem' }}>
-          <div style={{
-            fontSize: '0.7rem',
-            fontWeight: 800,
-            color: 'var(--text-secondary)',
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-            paddingLeft: '0.5rem',
-            marginBottom: '0.4rem'
-          }}>
-            Control Center
-          </div>
+        <div style={{ marginTop: 'auto', marginBottom: '0.15rem' }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -282,7 +271,7 @@ export default function DashboardLayout({
                 </Suspense>
               </div>
               
-              <div style={{ flexShrink: 0, marginTop: '0.5rem' }}>
+              <div style={{ flexShrink: 0, marginTop: '0.25rem' }}>
                 <SyncERPWrapper user={user} profile={profile} />
               </div>
             </div>
