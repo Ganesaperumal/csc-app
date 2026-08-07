@@ -109,40 +109,48 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
       all:  { bg: '#faf5ff', color: '#7e22ce', border: '#e9d5ff' },
     };
 
+    const sectionMeta: Record<string, { name: string; sectionIcon: string }> = {
+      csc: { name: 'CSC Jobs', sectionIcon: '📋' },
+      alljobs: { name: 'All Jobs', sectionIcon: '📁' },
+      unbilled: { name: 'Unbilled', sectionIcon: '🧾' },
+      followup: { name: 'Follow-ups', sectionIcon: '⏰' },
+    };
+
     let style = colors.none;
-    let icon = '';
-    let displayLabel = 'None';
+    let icon = '✖️';
 
     if (!isNone) {
       if (type === 'csc') {
         style = label === 'View' ? colors.view : colors.edit;
         icon = label === 'View' ? '🔍' : '✏️';
-        displayLabel = label;
       } else if (type === 'followup') {
         style = label === 'Self' ? colors.self : colors.all;
         icon = label === 'Self' ? '👤' : '🌐';
-        displayLabel = label;
       } else if (type === 'unbilled') {
         style = label === 'View' ? colors.view : colors.edit;
         icon = label === 'View' ? '🔍' : '✏️';
-        displayLabel = label;
       } else if (type === 'alljobs') {
         style = colors.view;
         icon = '🔍';
-        displayLabel = label;
       }
     }
 
+    const meta = sectionMeta[type] || { name: type, sectionIcon: '' };
+
     return (
-      <span style={{
-        display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
-        fontSize: '0.72rem', padding: '0.2rem 0.65rem', borderRadius: '20px',
-        background: style.bg, color: style.color,
-        border: `1px solid ${style.border}`,
-        opacity: isNone ? 0.75 : 1,
-        fontWeight: 600, whiteSpace: 'nowrap',
-      }}>
-        {icon ? `${icon} ` : ''}{displayLabel}
+      <span
+        title={`${meta.name}: ${label}`}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+          fontSize: '0.78rem', padding: '0.2rem 0.5rem', borderRadius: '20px',
+          background: style.bg, color: style.color,
+          border: `1px solid ${style.border}`,
+          opacity: isNone ? 0.6 : 1,
+          fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer',
+        }}
+      >
+        <span style={{ fontSize: '0.72rem', opacity: 0.8 }}>{meta.sectionIcon}</span>
+        <span>{icon}</span>
       </span>
     );
   };
@@ -290,19 +298,14 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                       </div>
                     </td>
 
-                    {/* Access Badges: CSC, All Jobs, Unbilled */}
+                    {/* Access Badges (Pure Emoji Badges) */}
                     <td
                       style={{ padding: '0.85rem 1rem' }}
                       onClick={() => !isViewerMode && setActiveModalUser(u)}
                     >
-                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontWeight: 700, marginRight: '0.05rem' }}>CSC</span>
+                      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                         {getAccessBadge(cLabel, 'csc')}
-
-                        <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontWeight: 700, marginLeft: '0.15rem', marginRight: '0.05rem' }}>All Jobs</span>
                         {getAccessBadge(aLabel, 'alljobs')}
-
-                        <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontWeight: 700, marginLeft: '0.15rem', marginRight: '0.05rem' }}>Unbilled</span>
                         {getAccessBadge(uLabel, 'unbilled')}
                       </div>
                     </td>
