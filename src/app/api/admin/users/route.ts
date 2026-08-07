@@ -66,46 +66,48 @@ export async function PUT(request: Request) {
     if (phone !== undefined) updates.phone = phone;
     if (csc_role !== undefined) updates.csc_role = csc_role;
     if (unbilled_role !== undefined) updates.unbilled_role = unbilled_role;
+
+    if (followups_role !== undefined) updates.followups_role = followups_role;
+    if (tracking_role !== undefined) updates.tracking_role = tracking_role;
     
-    // Save both direct columns and legacy fallback columns for full safety
-    if (followups_role !== undefined) {
-      updates.followups_role = followups_role;
-      updates.tracking_role = followups_role === 'All' ? 'Admin' : (followups_role === 'Self' ? 'Executive' : 'None');
-    } else if (tracking_role !== undefined) {
-      updates.tracking_role = tracking_role;
-      updates.followups_role = tracking_role === 'Admin' ? 'All' : (tracking_role === 'Executive' || tracking_role === 'Self' ? 'Self' : 'None');
-    }
-    
-    if (all_jobs_role !== undefined) {
-      updates.all_jobs_role = all_jobs_role;
-      updates.role = all_jobs_role === 'View' ? 'Viewer' : 'None';
-    } else if (role !== undefined) {
-      updates.role = role;
-      updates.all_jobs_role = (role === 'None' || !role) ? 'None' : 'View';
-    }
+    if (all_jobs_role !== undefined) updates.all_jobs_role = all_jobs_role;
+    if (role !== undefined) updates.role = role;
     
     if (branches !== undefined) updates.branches = branches;
     if (is_approved !== undefined) updates.is_approved = is_approved;
     if (photo !== undefined) updates.photo = photo;
 
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('id', userId);
+    // Resilient update loop: automatically strip any column that does not exist in Supabase schema cache
+    let currentUpdates = { ...updates };
+    let updateSuccess = false;
+    let lastErrorMessage = '';
 
-    if (profileError) {
-      console.error('[PUT /api/admin/users] Profile update error:', profileError);
-      // Fallback: if new columns don't exist in DB schema yet, remove them and retry with legacy columns
-      delete updates.followups_role;
-      delete updates.all_jobs_role;
-      const { error: fallbackError } = await supabase
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { error: err } = await supabase
         .from('profiles')
-        .update(updates)
+        .update(currentUpdates)
         .eq('id', userId);
-      
-      if (fallbackError) {
-        return NextResponse.json({ error: fallbackError.message }, { status: 400 });
+
+      if (!err) {
+        updateSuccess = true;
+        break;
       }
+
+      lastErrorMessage = err.message || JSON.stringify(err);
+      console.warn(`[PUT /api/admin/users] Attempt ${attempt + 1} error:`, lastErrorMessage);
+
+      // Check if error is due to a missing column in schema cache: "Could not find the '...' column of 'profiles' in the schema cache"
+      const match = lastErrorMessage.match(/Could not find the '([^']+)' column/i);
+      if (match && match[1] && match[1] in currentUpdates) {
+        const missingCol = match[1];
+        delete currentUpdates[missingCol];
+      } else {
+        break;
+      }
+    }
+
+    if (!updateSuccess) {
+      return NextResponse.json({ error: lastErrorMessage }, { status: 400 });
     }
 
     return NextResponse.json({ success: true });

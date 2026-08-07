@@ -30,32 +30,51 @@ export async function POST(request: Request) {
 
     const userId = authData.user.id;
 
-    const finalFollowupsRole = followups_role || (tracking_role === 'Admin' ? 'All' : (tracking_role === 'Executive' || tracking_role === 'Self' ? 'Self' : 'None'));
-    const finalAllJobsRole = all_jobs_role || ((role === 'None' || !role) ? 'None' : 'View');
+    let insertPayload: any = {
+      id: userId,
+      name: name || username,
+      username,
+      csc_role: csc_role || 'None',
+      unbilled_role: unbilled_role || 'None',
+      branches: branches || [],
+      phone: phone || null,
+      photo: photo || null,
+      is_approved: is_approved !== undefined ? is_approved : true,
+    };
 
-    // 2. Insert Profile into public.profiles
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert([
-        {
-          id: userId,
-          name: name || username,
-          username,
-          role: finalAllJobsRole === 'View' ? 'Viewer' : 'None',
-          csc_role: csc_role || 'None',
-          tracking_role: finalFollowupsRole === 'All' ? 'Admin' : (finalFollowupsRole === 'Self' ? 'Executive' : 'None'),
-          followups_role: finalFollowupsRole,
-          all_jobs_role: finalAllJobsRole,
-          unbilled_role: unbilled_role || 'None',
-          branches: branches || [],
-          phone: phone || null,
-          photo: photo || null,
-          is_approved: is_approved !== undefined ? is_approved : true,
-        }
-      ]);
+    if (followups_role !== undefined) insertPayload.followups_role = followups_role;
+    if (tracking_role !== undefined) insertPayload.tracking_role = tracking_role;
+    if (all_jobs_role !== undefined) insertPayload.all_jobs_role = all_jobs_role;
+    if (role !== undefined) insertPayload.role = role;
 
-    if (profileError) {
-      return NextResponse.json({ error: profileError.message }, { status: 400 });
+    // Resilient insert loop: automatically strip any column that does not exist in Supabase schema cache
+    let insertSuccess = false;
+    let lastErrorMessage = '';
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { error: err } = await supabase
+        .from('profiles')
+        .insert([insertPayload]);
+
+      if (!err) {
+        insertSuccess = true;
+        break;
+      }
+
+      lastErrorMessage = err.message || JSON.stringify(err);
+      console.warn(`[POST /api/admin/create-user] Attempt ${attempt + 1} error:`, lastErrorMessage);
+
+      const match = lastErrorMessage.match(/Could not find the '([^']+)' column/i);
+      if (match && match[1] && match[1] in insertPayload) {
+        const missingCol = match[1];
+        delete insertPayload[missingCol];
+      } else {
+        break;
+      }
+    }
+
+    if (!insertSuccess) {
+      return NextResponse.json({ error: lastErrorMessage }, { status: 400 });
     }
 
     return NextResponse.json({ success: true, user: authData.user });
