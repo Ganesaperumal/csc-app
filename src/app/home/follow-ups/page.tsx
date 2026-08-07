@@ -1,19 +1,17 @@
 'use client';
 import { showToast } from '@/components/GlobalDialogs';
-
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import CustomSelect from '@/app/home/components/CustomSelect';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface Task {
   id: number;
-  created_at: string;
   job_number: string;
   call_type: string;
   regarding: string;
   summary: string;
+  created_at: string;
   agent_name: string;
   follow_up_required: boolean;
   follow_up_date: string | null;
@@ -27,14 +25,12 @@ export default function FollowUpsPage() {
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [agentName, setAgentName] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isViewer, setIsViewer] = useState(false);
-
-  // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAgentFilter, setSelectedAgentFilter] = useState('All');
   const [allAgents, setAllAgents] = useState<string[]>([]);
+  const [agentName, setAgentName] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isViewer, setIsViewer] = useState(false);
 
   useEffect(() => {
     const initializePage = async () => {
@@ -48,7 +44,7 @@ export default function FollowUpsPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, csc_role, tracking_role, followups_role, name, username')
+        .select('*')
         .eq('id', user.id)
         .single();
 
@@ -126,7 +122,6 @@ export default function FollowUpsPage() {
       }));
       setTasks(enrichedComms);
 
-      // Find list of all unique agent names for filtering
       const agents = Array.from(
         new Set(enrichedComms.map((c: any) => c.agent_name?.toLowerCase()).filter(Boolean))
       ).sort() as string[];
@@ -152,9 +147,9 @@ export default function FollowUpsPage() {
 
       if (error) {
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, follow_up_completed: currentCompleted } : t));
-        showToast('Failed to update follow-up status', 'error');
+        showToast('Failed to update status', 'error');
       } else {
-        showToast(updatedStatus ? 'Follow-up marked as completed ✅' : 'Follow-up reopened ⏰', 'success');
+        showToast(updatedStatus ? 'Follow-up marked complete ✅' : 'Follow-up reopened 🔄', 'success');
       }
     } catch (err) {
       console.error(err);
@@ -163,37 +158,12 @@ export default function FollowUpsPage() {
     }
   };
 
-  // Helper for dates and urgency
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return 'No Date';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-  };
+  // Helper date functions for Board Columns
+  const todayStr = new Date().toISOString().split('T')[0];
 
-  // Helper for agent badge colors
-  const getUserColor = (name: string) => {
-    if (!name) return { bg: 'rgba(0,0,0,0.05)', text: 'var(--text-primary)' };
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const colors = [
-      { bg: 'rgba(79, 70, 229, 0.15)', text: '#4f46e5' },
-      { bg: 'rgba(16, 185, 129, 0.15)', text: '#059669' },
-      { bg: 'rgba(217, 70, 239, 0.15)', text: '#c026d3' },
-      { bg: 'rgba(245, 158, 11, 0.15)', text: '#d97706' },
-      { bg: 'rgba(14, 165, 233, 0.15)', text: '#0284c7' },
-      { bg: 'rgba(236, 72, 153, 0.15)', text: '#db2777' },
-    ];
-    return colors[Math.abs(hash) % colors.length];
-  };
-
-  // Filtering logic
   const filteredTasks = tasks.filter(task => {
-    // Agent filtering when showAll is active
     if (isAdmin && selectedAgentFilter !== 'All' && task.agent_name?.toLowerCase() !== selectedAgentFilter.toLowerCase()) return false;
     
-    // Search filtering
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const matchJob = task.job_number?.toLowerCase().includes(q);
@@ -209,104 +179,87 @@ export default function FollowUpsPage() {
     return true;
   });
 
-  // Categorize tasks for Kanban columns
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const pending = filteredTasks.filter(t => !t.follow_up_completed);
+  const overdueTasks = filteredTasks.filter(t => !t.follow_up_completed && t.follow_up_date && t.follow_up_date < todayStr);
+  const todayTasks = filteredTasks.filter(t => !t.follow_up_completed && t.follow_up_date && t.follow_up_date === todayStr);
+  const upcomingTasks = filteredTasks.filter(t => !t.follow_up_completed && (!t.follow_up_date || t.follow_up_date > todayStr));
   const completedTasks = filteredTasks.filter(t => t.follow_up_completed);
 
-  const overdueTasks: Task[] = [];
-  const todayTasks: Task[] = [];
-  const upcomingTasks: Task[] = [];
-
-  pending.forEach(t => {
-    if (!t.follow_up_date) {
-      upcomingTasks.push(t);
-      return;
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'No Date';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch {
+      return dateString;
     }
-    const taskDate = new Date(t.follow_up_date);
-    taskDate.setHours(0, 0, 0, 0);
+  };
 
-    if (taskDate < today) {
-      overdueTasks.push(t);
-    } else if (taskDate.getTime() === today.getTime()) {
-      todayTasks.push(t);
-    } else {
-      upcomingTasks.push(t);
-    }
-  });
+  const getUserColor = (name: string) => {
+    const colors = [
+      { bg: 'rgba(79, 70, 229, 0.12)', text: '#4f46e5' },
+      { bg: 'rgba(16, 185, 129, 0.12)', text: '#059669' },
+      { bg: 'rgba(217, 119, 6, 0.12)', text: '#d97706' },
+      { bg: 'rgba(225, 29, 72, 0.12)', text: '#e11d48' },
+      { bg: 'rgba(147, 51, 234, 0.12)', text: '#9333ea' },
+    ];
+    let hash = 0;
+    for (let i = 0; i < (name || '').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return colors[Math.abs(hash) % colors.length];
+  };
 
-  // Render a Kanban Column
   const renderTaskColumn = (title: string, list: Task[], theme: 'danger' | 'warning' | 'primary' | 'success') => {
-    const themeStyles = {
-      danger:  { border: '#fecaca', bg: '#fef2f2', headerText: '#dc2626', badgeBg: '#ef4444' },
-      warning: { border: '#fde68a', bg: '#fffbeb', headerText: '#b45309', badgeBg: '#f59e0b' },
-      primary: { border: '#c7d2fe', bg: '#e0e7ff', headerText: '#3730a3', badgeBg: '#4f46e5' },
-      success: { border: '#bbf7d0', bg: '#f0fdf4', headerText: '#15803d', badgeBg: '#10b981' },
-    }[theme];
+    const badgeColors = {
+      danger: { bg: '#fee2e2', text: '#dc2626', border: '#fca5a5' },
+      warning: { bg: '#fef3c7', text: '#d97706', border: '#fde68a' },
+      primary: { bg: '#e0e7ff', text: '#4f46e5', border: '#c7d2fe' },
+      success: { bg: '#d1fae5', text: '#059669', border: '#6ee7b7' },
+    };
+    const { bg: badgeBg, text: badgeText, border: badgeBorder } = badgeColors[theme];
 
     return (
       <div 
-        style={{
+        className="glass"
+        style={{ 
           flex: 1,
           minWidth: '280px',
           maxWidth: '360px',
-          display: 'flex',
-          flexDirection: 'column',
-          background: 'var(--surface-color)',
-          borderRadius: '12px',
-          border: `1px solid ${themeStyles.border}`,
-          height: 'calc(100vh - 12rem)',
-          overflow: 'hidden'
+          display: 'flex', 
+          flexDirection: 'column', 
+          borderRadius: '14px', 
+          border: '1px solid var(--border-color)',
+          overflow: 'hidden',
+          background: 'var(--surface-color)'
         }}
       >
         {/* Column Header */}
-        <div style={{
-          padding: '0.85rem 1rem',
-          background: themeStyles.bg,
-          borderBottom: `1px solid ${themeStyles.border}`,
+        <div style={{ 
+          padding: '0.85rem 1rem', 
+          borderBottom: '1px solid var(--border-color)', 
+          background: 'rgba(0,0,0,0.02)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1rem' }}>
-              {theme === 'danger' ? '🚨' : theme === 'warning' ? '⏰' : theme === 'primary' ? '📅' : '✅'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>{title}</span>
+            <span style={{ 
+              background: badgeBg, 
+              color: badgeText, 
+              border: `1px solid ${badgeBorder}`,
+              fontSize: '0.7rem', 
+              fontWeight: 800, 
+              padding: '1px 8px', 
+              borderRadius: '12px' 
+            }}>
+              {list.length}
             </span>
-            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: themeStyles.headerText }}>
-              {title}
-            </h3>
           </div>
-          <span style={{
-            background: themeStyles.badgeBg,
-            color: 'white',
-            borderRadius: '12px',
-            padding: '2px 8px',
-            fontSize: '0.75rem',
-            fontWeight: 800
-          }}>
-            {list.length}
-          </span>
         </div>
 
-        {/* Task Cards List */}
-        <div style={{
-          padding: '0.85rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.85rem',
-          overflowY: 'auto',
-          flex: 1
-        }}>
+        {/* Column Task Cards Scroll Container */}
+        <div style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', overflowY: 'auto', maxHeight: 'calc(100vh - 230px)' }}>
           {list.length === 0 ? (
-            <div style={{
-              padding: '2rem 1rem',
-              textAlign: 'center',
-              color: 'var(--text-secondary)',
-              fontSize: '0.85rem',
-              fontStyle: 'italic'
-            }}>
+            <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8rem', fontStyle: 'italic' }}>
               No tasks in this category
             </div>
           ) : (
@@ -370,7 +323,7 @@ export default function FollowUpsPage() {
                 </div>
 
                 {/* Call summary comment */}
-                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'var(--surface-color)', padding: '0.5rem', borderRadius: '6px', borderLeft: `3px solid ${themeStyles.badgeBg}`, lineClamp: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'var(--surface-color)', padding: '0.5rem', borderRadius: '6px', borderLeft: `3px solid ${badgeBg}`, lineClamp: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {task.summary}
                 </p>
 
@@ -379,14 +332,14 @@ export default function FollowUpsPage() {
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                     Coordinator:{' '}
                     <span style={{ 
-                      background: getUserColor(task.agent_name).bg, 
-                      color: getUserColor(task.agent_name).text, 
+                      background: getUserColor(task.agent_name || 'Agent').bg, 
+                      color: getUserColor(task.agent_name || 'Agent').text, 
                       padding: '1px 6px', 
                       borderRadius: '6px', 
                       fontWeight: 700,
                       fontSize: '0.65rem'
                     }}>
-                      {task.agent_name}
+                      {task.agent_name || 'Agent'}
                     </span>
                   </span>
                   <span style={{ fontWeight: 700, color: theme === 'danger' && !task.follow_up_completed ? '#ef4444' : 'var(--text-secondary)' }}>
@@ -402,7 +355,7 @@ export default function FollowUpsPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '0.5rem 0.25rem', gap: '1.25rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '1.5rem', gap: '1.5rem' }}>
       
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
@@ -419,16 +372,26 @@ export default function FollowUpsPage() {
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'nowrap' }}>
           {/* Admin Agent filter dropdown — left of search */}
           {isAdmin && (
-            <CustomSelect
-              placeholder="All Operators"
+            <select
               value={selectedAgentFilter}
-              onChange={(val) => setSelectedAgentFilter(val)}
-              options={[
-                { value: 'All', label: 'All Operators' },
-                ...allAgents.map(name => ({ value: name, label: name }))
-              ]}
-              style={{ width: '180px', minWidth: '180px', flexGrow: 0 }}
-            />
+              onChange={(e) => setSelectedAgentFilter(e.target.value)}
+              style={{
+                padding: '0.5rem 0.75rem',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                background: 'var(--surface-color)',
+                color: 'var(--text-primary)',
+                fontSize: '0.85rem',
+                width: '180px',
+                outline: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="All">All Operators</option>
+              {allAgents.map(name => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
           )}
 
           {/* Search bar — always right of dropdown */}
@@ -444,7 +407,6 @@ export default function FollowUpsPage() {
           </div>
         </div>
       </div>
-
       {loading ? (
         <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', height: '300px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
