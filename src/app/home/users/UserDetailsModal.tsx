@@ -34,13 +34,15 @@ const valueEmoji: Record<string, string> = {
   All:  '🌐',
 };
 
-/* ── Badge solid colors (Clean & Rounded Pills) ── */
+/* ── Access Badge Colors ──
+   None: Greyed light opacity | View: Bluish | Edit: Greenish | Self: Orange | All: Purplish
+*/
 const badgeColor: Record<string, { bg: string; color: string; border: string }> = {
-  None:  { bg: '#f1f5f9', color: '#64748b', border: '#cbd5e1' },
-  View:  { bg: '#e0e7ff', color: '#3730a3', border: '#a5b4fc' },
-  Edit:  { bg: '#dcfce7', color: '#166534', border: '#86efac' },
-  Self:  { bg: '#f3e8ff', color: '#6b21a8', border: '#d8b4fe' },
-  All:   { bg: '#ede9fe', color: '#5b21b6', border: '#c4b5fd' },
+  None: { bg: '#f8fafc', color: '#94a3b8', border: '#e2e8f0' },
+  View: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+  Edit: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+  Self: { bg: '#fff7ed', color: '#ea580c', border: '#ffedd5' },
+  All:  { bg: '#faf5ff', color: '#7e22ce', border: '#e9d5ff' },
 };
 
 /* ── Access Tile ── */
@@ -49,6 +51,7 @@ function AccessTile({
 }: { label: string; icon: string; value: string; onClick: () => void; dim?: boolean }) {
   const c = badgeColor[value] ?? badgeColor.None;
   const emoji = valueEmoji[value] ?? '';
+  const isNone = value === 'None';
   return (
     <button
       type="button"
@@ -76,13 +79,14 @@ function AccessTile({
           {label}
         </span>
       </div>
-      {/* Badge — Uniform width rounded pill with user emojis */}
+      {/* Badge — Uniform width rounded pill with custom colors & light opacity for None */}
       <span style={{
         padding: '0.22rem 0.5rem',
         borderRadius: '20px',
         fontSize: '0.72rem', fontWeight: 700,
         letterSpacing: '0.02em',
         background: c.bg, color: c.color, border: `1px solid ${c.border}`,
+        opacity: isNone ? 0.75 : 1,
         flexShrink: 0, transition: 'all 0.15s ease',
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem',
         width: '76px', textAlign: 'center',

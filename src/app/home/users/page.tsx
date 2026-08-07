@@ -102,35 +102,32 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
   const getAccessBadge = (label: string, type: 'csc' | 'followup' | 'unbilled' | 'alljobs') => {
     const isNone = label === 'None';
     const colors: Record<string, { bg: string; color: string; border: string }> = {
-      csc_view: { bg: '#e0e7ff', color: '#3730a3', border: '#a5b4fc' },
-      csc_edit: { bg: '#c7d2fe', color: '#312e81', border: '#818cf8' },
-      followup_self: { bg: '#f3e8ff', color: '#6b21a8', border: '#d8b4fe' },
-      followup_all: { bg: '#e9d5ff', color: '#581c87', border: '#c084fc' },
-      unbilled_view: { bg: '#dcfce7', color: '#166534', border: '#86efac' },
-      unbilled_edit: { bg: '#bbf7d0', color: '#14532d', border: '#4ade80' },
-      alljobs_view: { bg: '#e0f2fe', color: '#075985', border: '#7dd3fc' },
+      none: { bg: '#f8fafc', color: '#94a3b8', border: '#e2e8f0' },
+      view: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+      edit: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+      self: { bg: '#fff7ed', color: '#ea580c', border: '#ffedd5' },
+      all:  { bg: '#faf5ff', color: '#7e22ce', border: '#e9d5ff' },
     };
-    const noneStyle = { bg: '#f1f5f9', color: '#64748b', border: '#cbd5e1' };
 
-    let style = noneStyle;
+    let style = colors.none;
     let icon = '❌';
     let displayLabel = 'None';
 
     if (!isNone) {
       if (type === 'csc') {
-        style = label === 'View' ? colors.csc_view : colors.csc_edit;
+        style = label === 'View' ? colors.view : colors.edit;
         icon = label === 'View' ? '🔍' : '✏️';
         displayLabel = label;
       } else if (type === 'followup') {
-        style = label === 'Self' ? colors.followup_self : colors.followup_all;
+        style = label === 'Self' ? colors.self : colors.all;
         icon = label === 'Self' ? '👤' : '🌐';
         displayLabel = label;
       } else if (type === 'unbilled') {
-        style = label === 'View' ? colors.unbilled_view : colors.unbilled_edit;
+        style = label === 'View' ? colors.view : colors.edit;
         icon = label === 'View' ? '🔍' : '✏️';
         displayLabel = label;
       } else if (type === 'alljobs') {
-        style = colors.alljobs_view;
+        style = colors.view;
         icon = '🔍';
         displayLabel = label;
       }
@@ -142,6 +139,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
         fontSize: '0.72rem', padding: '0.2rem 0.65rem', borderRadius: '20px',
         background: style.bg, color: style.color,
         border: `1px solid ${style.border}`,
+        opacity: isNone ? 0.75 : 1,
         fontWeight: 600, whiteSpace: 'nowrap',
       }}>
         {icon} {displayLabel}
