@@ -388,10 +388,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
   // Edit access for Job Details is ONLY granted by csc_role = 'Edit' or unbilled_role = 'Edit'.
   // followups_role and all_jobs_role NEVER grant edit access to job fields!
-  const hasEditAccess = profileRoles ? (
-    profileRoles.csc_role === 'Edit' ||
-    profileRoles.unbilled_role === 'Edit'
-  ) : false;
+  const cRole = (profileRoles?.csc_role || '').toString().trim().toLowerCase();
+  const uRole = (profileRoles?.unbilled_role || '').toString().trim().toLowerCase();
+  const hasEditAccess = profileRoles ? (cRole === 'edit' || uRole === 'edit') : false;
 
   const isReadOnly = profileRoles ? !hasEditAccess : true;
   const isViewOnly = isReadOnly;
