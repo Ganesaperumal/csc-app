@@ -142,7 +142,31 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
 
 
       {isSuperAdmin && (
-        <div style={{ marginTop: 'auto', paddingTop: '0.75rem' }}>
+        <div style={{ marginTop: 'auto', paddingTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <Link
+            href="/home/admin"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.35rem',
+              padding: '0.6rem 0.5rem',
+              borderRadius: '8px',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              textDecoration: 'none',
+              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+              color: pathname === '/home/admin' ? '#ffffff' : 'var(--text-secondary)',
+              background: pathname === '/home/admin'
+                ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
+                : 'rgba(148, 163, 184, 0.12)',
+              border: '1px solid var(--border-color)',
+              boxShadow: pathname === '/home/admin' ? '0 4px 12px rgba(59, 130, 246, 0.35)' : 'none',
+            }}
+          >
+            <span>⚙️</span> Admin Panel
+          </Link>
+
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -151,11 +175,10 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
             padding: '4px',
             position: 'relative',
             border: '1px solid var(--border-color)',
-            gap: '4px',
-            marginBottom: '0.4rem'
+            gap: '4px'
           }}>
             <Link
-              href="/home/admin"
+              href="/home/permissions"
               style={{
                 flex: 1,
                 display: 'flex',
@@ -168,18 +191,18 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
                 fontWeight: 600,
                 textDecoration: 'none',
                 transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                color: pathname === '/home/admin' ? '#ffffff' : 'var(--text-secondary)',
-                background: pathname === '/home/admin'
-                  ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
+                color: pathname === '/home/permissions' ? '#ffffff' : 'var(--text-secondary)',
+                background: pathname === '/home/permissions'
+                  ? 'linear-gradient(135deg, #6366f1, #4f46e5)'
                   : 'transparent',
-                boxShadow: pathname === '/home/admin' ? '0 4px 12px rgba(59, 130, 246, 0.35)' : 'none',
+                boxShadow: pathname === '/home/permissions' ? '0 4px 12px rgba(99, 102, 241, 0.35)' : 'none',
               }}
             >
-              <span>⚙️</span> Admin
+              <span>🛡️</span> Roles
             </Link>
 
             <Link
-              href="/home/data"
+              href="/home/users"
               style={{
                 flex: 1,
                 display: 'flex',
@@ -192,78 +215,16 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
                 fontWeight: 600,
                 textDecoration: 'none',
                 transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                color: pathname === '/home/data' ? '#ffffff' : 'var(--text-secondary)',
-                background: pathname === '/home/data'
-                  ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+                color: pathname === '/home/users' ? '#ffffff' : 'var(--text-secondary)',
+                background: pathname === '/home/users'
+                  ? 'linear-gradient(135deg, #10b981, #059669)'
                   : 'transparent',
-                boxShadow: pathname === '/home/data' ? '0 4px 12px rgba(245, 158, 11, 0.35)' : 'none',
+                boxShadow: pathname === '/home/users' ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
               }}
             >
-              <span>📑</span> Data
+              <span>👥</span> Users
             </Link>
           </div>
-
-          {isSuperAdmin && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              backgroundColor: 'rgba(148, 163, 184, 0.12)',
-              borderRadius: '12px',
-              padding: '4px',
-              position: 'relative',
-              border: '1px solid var(--border-color)',
-              gap: '4px',
-              marginTop: '0.4rem'
-            }}>
-              <Link
-                href="/home/permissions"
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.35rem',
-                  padding: '0.6rem 0.5rem',
-                  borderRadius: '8px',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                  color: pathname === '/home/permissions' ? '#ffffff' : 'var(--text-secondary)',
-                  background: pathname === '/home/permissions'
-                    ? 'linear-gradient(135deg, #6366f1, #4f46e5)'
-                    : 'transparent',
-                  boxShadow: pathname === '/home/permissions' ? '0 4px 12px rgba(99, 102, 241, 0.35)' : 'none',
-                }}
-              >
-                <span>🛡️</span> Roles
-              </Link>
-
-              <Link
-                href="/home/users"
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.35rem',
-                  padding: '0.6rem 0.5rem',
-                  borderRadius: '8px',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                  color: pathname === '/home/users' ? '#ffffff' : 'var(--text-secondary)',
-                  background: pathname === '/home/users'
-                    ? 'linear-gradient(135deg, #10b981, #059669)'
-                    : 'transparent',
-                  boxShadow: pathname === '/home/users' ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
-                }}
-              >
-                <span>👥</span> Users
-              </Link>
-            </div>
-          )}
         </div>
       )}
 

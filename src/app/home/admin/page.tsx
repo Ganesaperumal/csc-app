@@ -8,6 +8,7 @@ import CustomSelect from '../components/CustomSelect';
 import { useRouter } from 'next/navigation';
 import BulkPodUploadModal from '../components/BulkPodUploadModal';
 import { usePermissions } from '@/components/PermissionsContext';
+import MissingDataSection from './MissingDataSection';
 
 const cardStyle: React.CSSProperties = {
   background: 'var(--surface-color)',
@@ -638,6 +639,9 @@ export default function AdminPage() {
           Bulk Data Management
         </h2>
         
+        {/* ⚠️ Missing Data Management: Missing Quote Value & Missing Unbilled SPOC */}
+        <MissingDataSection />
+
         {/* 1. CSV Data Export & Import Center */}
         <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}>
           <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>

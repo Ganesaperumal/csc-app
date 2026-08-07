@@ -185,8 +185,8 @@ Users have **one primary role** + **two category roles**:
 /home/reports         → Reports (csc_role ≠ None)
 /home/legacy-jobs     → Legacy jobs (unbilled_role ≠ None)
 /home/job/[id]        → Job detail (edit or read-only based on role)
-/home/admin           → Admin: Bulk Data Management (Admin & Super Admin sidebar link: Admin)
-/home/data           → Missing Data Management (Admin link to fill Quote Value, Sales SPOC, Unbilled SPOC)
+/home/admin           → Admin: Bulk Data Management & Missing Data Editor (Missing Quote Value & Missing Unbilled SPOC)
+/home/data            → Redirects to /home/admin
 /home/permissions     → Roles matrix (Super Admin sidebar link: Roles)
 /home/users           → Users directory (Super Admin sidebar link: Users)
 /home/activity-log    → Audit log (Admin only) — field-level edit history from jobs table
