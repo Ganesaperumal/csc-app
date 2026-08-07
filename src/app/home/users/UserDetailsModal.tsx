@@ -57,7 +57,7 @@ function AccessTile({
       style={{
         flex: 1,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0.65rem 0.9rem',
+        padding: '0.65rem 0.85rem',
         borderRadius: '12px',
         border: '1px solid #e2e8f0',
         background: '#ffffff',
@@ -66,6 +66,7 @@ function AccessTile({
         opacity: dim ? 0.4 : 1,
         pointerEvents: dim ? 'none' : 'auto',
         gap: '0.5rem',
+        height: '46px',
       }}
     >
       {/* Label */}
@@ -75,15 +76,16 @@ function AccessTile({
           {label}
         </span>
       </div>
-      {/* Badge — Rounded Pill */}
+      {/* Badge — Uniform width rounded pill */}
       <span style={{
-        padding: '0.22rem 0.65rem',
+        padding: '0.22rem 0.5rem',
         borderRadius: '20px',
         fontSize: '0.72rem', fontWeight: 700,
         letterSpacing: '0.02em',
         background: c.bg, color: c.color, border: `1px solid ${c.border}`,
         flexShrink: 0, transition: 'all 0.15s ease',
-        display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem',
+        width: '76px', textAlign: 'center',
       }}>
         <span>{emoji}</span> {value}
       </span>
@@ -364,7 +366,7 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                             transition: 'all 0.15s ease',
                           }}
                         >
-                          {active ? `✓ ${code}` : code}
+                          {active ? `✓ ${code}` : `+ ${code}`}
                         </button>
                       );
                     })}
