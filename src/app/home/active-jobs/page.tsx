@@ -324,9 +324,8 @@ function JobsTable() {
             if (isCscView) {
               setIsViewer(true);
             }
-            const isSuper = profileData.is_super_admin === true;
             const fRole = (profileData.followups_role || profileData.tracking_role || '').toLowerCase();
-            if (isSuper || fRole === 'all' || fRole === 'admin' || fRole.includes('all')) {
+            if (fRole === 'all' || fRole === 'admin' || fRole.includes('all')) {
               setIsFollowupsAll(true);
             }
             const name = profileData.name || profileData.username || data.user.email?.split('@')[0] || 'Agent';
