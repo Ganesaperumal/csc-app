@@ -68,7 +68,7 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
           background: 'linear-gradient(135deg, #f59e0b, #d97706)',
           color: 'white',
           padding: '0.5rem 0.75rem',
-          borderRadius: '10px',
+          borderRadius: '50px',
           boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
           display: 'flex',
           alignItems: 'center',
