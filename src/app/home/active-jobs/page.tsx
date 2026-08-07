@@ -191,7 +191,6 @@ function JobsTable() {
   const { getAccessLevel } = usePermissions();
   const [isViewer, setIsViewer] = useState(false);
   const [accessChecked, setAccessChecked] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [isFollowupsAll, setIsFollowupsAll] = useState(false);
   const [agentName, setAgentName] = useState<string>('');
   const [filters, setFilters] = useState<Record<string, string[]>>(() => {
@@ -425,7 +424,7 @@ function JobsTable() {
     if (agentName) {
       fetchNotifications();
     }
-  }, [agentName, isAdmin, isFollowupsAll]);
+  }, [agentName, isFollowupsAll]);
 
   const fetchNotifications = async () => {
     if (!agentName) return;
@@ -436,7 +435,7 @@ function JobsTable() {
       .eq('follow_up_required', true)
       .eq('follow_up_completed', false);
 
-    if (!isFollowupsAll && !isAdmin) {
+    if (!isFollowupsAll) {
       query = query.ilike('agent_name', agentName);
     }
 

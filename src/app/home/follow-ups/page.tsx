@@ -50,7 +50,7 @@ export default function FollowUpsPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [agentName, setAgentName] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [hasAllAccess, setHasAllAccess] = useState(false);
   const [isViewer, setIsViewer] = useState(false);
   const [selectedAgentFilter, setSelectedAgentFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -95,8 +95,8 @@ export default function FollowUpsPage() {
         setIsViewer(isViewerUser);
         setAgentName(activeName);
 
-        showAll = fRole === 'all' || fRole === 'admin' || fRole.includes('all');
-        setIsAdmin(showAll);
+        showAll = profile.is_super_admin === true || fRole === 'all' || fRole === 'admin' || fRole.includes('all');
+        setHasAllAccess(showAll);
       } else {
         activeName = user.email?.split('@')[0] || 'Agent';
         setAgentName(activeName);
@@ -193,8 +193,8 @@ export default function FollowUpsPage() {
 
   // Filtering logic
   const filteredTasks = tasks.filter(task => {
-    // Admin filtering
-    if (isAdmin && selectedAgentFilter !== 'All' && task.agent_name?.toLowerCase() !== selectedAgentFilter.toLowerCase()) return false;
+    // Operator filter for users with All access
+    if (hasAllAccess && selectedAgentFilter !== 'All' && task.agent_name?.toLowerCase() !== selectedAgentFilter.toLowerCase()) return false;
     
     // Search filtering
     if (searchQuery.trim()) {
@@ -413,8 +413,8 @@ export default function FollowUpsPage() {
 
         {/* Filters */}
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'nowrap' }}>
-          {/* Admin Agent filter dropdown — left of search */}
-          {isAdmin && (
+          {/* Operators filter dropdown for users with All access — left of search */}
+          {hasAllAccess && (
             <CustomSelect
               placeholder="All Operators"
               value={selectedAgentFilter}
