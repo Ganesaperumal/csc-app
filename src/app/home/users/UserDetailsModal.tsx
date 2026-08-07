@@ -142,12 +142,10 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
     await onSave({
       userId: user?.id, name, username, email, phone,
       password: isCreate ? password : (password || undefined),
-      csc_role:      cscAccess === 'None' ? 'None' : (cscAccess === 'View' ? 'Viewer' : 'Executive'),
-      tracking_role: cscAccess === 'None' ? 'None' : (followupAccess === 'None' ? 'None' : (followupAccess === 'Self' ? 'Executive' : 'Admin')),
+      csc_role:       cscAccess,
       followups_role: cscAccess === 'None' ? 'None' : followupAccess,
       all_jobs_role:  allJobsAccess,
-      unbilled_role: unbilledAccess === 'None' ? 'None' : (unbilledAccess === 'View' ? 'Viewer' : 'Executive'),
-      role: allJobsAccess === 'None' ? 'None' : ((cscAccess === 'Edit' || unbilledAccess === 'Edit') ? 'Executive' : 'Viewer'),
+      unbilled_role:  unbilledAccess,
       branches: unbilledAccess === 'None' ? [] : (branches.length ? branches : ['ALL']),
       is_approved: isApproved, photo,
     });

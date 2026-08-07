@@ -210,9 +210,9 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                 const isSuperAdmin = u.username === 'ganesh' || u.name?.includes('Ganesaperumal');
                 const isApproved = u.is_approved !== false;
 
-                const cscVal = u.csc_role === 'Edit' || u.csc_role === 'Executive' || u.csc_role === 'Manager' || u.csc_role === 'Admin' ? 'Edit' : (u.csc_role === 'View' || u.csc_role === 'Viewer' ? 'View' : 'None');
-                const allJobsVal = u.all_jobs_role === 'View' || u.role === 'Viewer' || u.role === 'View' || u.role === 'Executive' || u.role === 'Admin' ? 'View' : 'None';
-                const unbilledVal = u.unbilled_role === 'Edit' || u.unbilled_role === 'Executive' || u.unbilled_role === 'Manager' || u.unbilled_role === 'Admin' ? 'Edit' : (u.unbilled_role === 'View' || u.unbilled_role === 'Viewer' ? 'View' : 'None');
+                const cscVal = u.csc_role || 'None';
+                const allJobsVal = u.all_jobs_role || 'None';
+                const unbilledVal = u.unbilled_role || 'None';
 
                 return (
                   <tr
