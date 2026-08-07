@@ -63,8 +63,8 @@ export default function ActivityLogPage() {
         .eq('id', user.id)
         .single();
 
-      const hasAccess = (profile?.csc_role && profile.csc_role !== 'None') || (profile?.unbilled_role && profile.unbilled_role !== 'None');
-      if (!hasAccess) {
+      const isSuperAdmin = profile?.is_super_admin === true;
+      if (!isSuperAdmin) {
         router.push('/home');
         return;
       }
