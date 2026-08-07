@@ -418,20 +418,28 @@ export default function FollowUpsPage() {
               value={selectedAgentFilter}
               onChange={(e) => setSelectedAgentFilter(e.target.value)}
               style={{
-                padding: '0.5rem 0.75rem',
-                borderRadius: '8px',
+                padding: '0.55rem 2.4rem 0.55rem 1rem',
+                borderRadius: '20px',
                 border: '1px solid var(--border-color)',
                 background: 'var(--surface-color)',
                 color: 'var(--text-primary)',
                 fontSize: '0.85rem',
-                width: '180px',
+                fontWeight: 600,
+                minWidth: '185px',
                 outline: 'none',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 0.85rem center',
+                backgroundSize: '1rem'
               }}
             >
-              <option value="All">All Operators</option>
+              <option value="All">👥 All Operators</option>
               {allAgents.map(name => (
-                <option key={name} value={name}>{name}</option>
+                <option key={name} value={name}>👤 {name}</option>
               ))}
             </select>
           )}
@@ -443,9 +451,19 @@ export default function FollowUpsPage() {
               placeholder="Search tasks..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ padding: '0.5rem 2rem 0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', fontSize: '0.85rem', minWidth: '200px' }}
+              style={{
+                padding: '0.55rem 2.2rem 0.55rem 1rem',
+                borderRadius: '20px',
+                border: '1px solid var(--border-color)',
+                background: 'var(--surface-color)',
+                color: 'var(--text-primary)',
+                fontSize: '0.85rem',
+                minWidth: '220px',
+                outline: 'none',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+              }}
             />
-            <span style={{ position: 'absolute', right: '10px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>🔍</span>
+            <span style={{ position: 'absolute', right: '12px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>🔍</span>
           </div>
         </div>
       </div>

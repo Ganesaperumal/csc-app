@@ -259,35 +259,22 @@ export default function DashboardLayout({
     <PermissionsProvider>
       <div className="app-container">
         {showSidebar && (
-          <aside 
-            className={`glass ${styles.sidebar}`} 
-            style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              padding: 0, 
-              zIndex: 50, 
-              height: '100vh', 
-              maxHeight: '100vh',
-              position: 'sticky', 
-              top: 0,
-              overflowY: 'auto',
-              WebkitOverflowScrolling: 'touch'
-            }}
-          >
-            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+          <aside className={`glass ${styles.sidebar}`} style={{ display: 'flex', flexDirection: 'column', padding: 0, zIndex: 50, height: '100vh', position: 'sticky', top: 0 }}>
+            
+            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0 }}>
               
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1rem', flexShrink: 0 }}>
                 <ProfilePopup user={user} />
                 <h2 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 'bold', backgroundImage: 'linear-gradient(45deg, #059669, #10b981)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', letterSpacing: '-0.02em' }}>Jobs Portal</h2>
               </div>
 
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, paddingRight: '4px', display: 'flex', flexDirection: 'column' }}>
                 <Suspense fallback={<nav className={styles.nav}>Loading...</nav>}>
                   <DashboardNav profile={profile} user={user} />
                 </Suspense>
               </div>
               
-              <div style={{ flexShrink: 0, marginTop: '0.75rem', paddingTop: '0.25rem' }}>
+              <div style={{ flexShrink: 0, marginTop: '0.25rem' }}>
                 <SyncERPWrapper user={user} profile={profile} />
               </div>
             </div>
