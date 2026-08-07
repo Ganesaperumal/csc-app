@@ -16,26 +16,35 @@ import PendingApprovalsReminder from './components/PendingApprovalsReminder';
 function DashboardNav({ profile, user }: { profile: any; user: any }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { getAccessLevel } = usePermissions();
 
   const userEmail = (user?.email || profile?.email || (profile?.username ? `${profile.username}@transworldintl.com` : '')).toLowerCase();
   const isSuperAdmin = userEmail === 'gp@transworldintl.com' || profile?.username === 'gp' || profile?.username === 'ganesh' || profile?.name?.includes('Ganesaperumal');
-  const isAdmin = profile?.role === 'Admin';
-  const hasControlCenterAccess = isSuperAdmin || isAdmin;
 
-  const canAccessActive = getAccessLevel('Active Jobs', profile) !== 'None';
-  const canAccessClosed = getAccessLevel('Closed Jobs', profile) !== 'None';
+  // ─── Read directly from profile columns (source of truth = User Directory) ───
+  // CSC Jobs: csc_role = 'None'|'Viewer'(View)|'Executive'/'Manager'/'Admin'(Edit)
+  const cscRole = profile?.csc_role || 'None';
+  const canAccessCsc = isSuperAdmin || (cscRole !== 'None' && cscRole !== '');
+  const cscAccessLevel: 'None' | 'View' | 'Edit' = isSuperAdmin || ['Admin', 'Branch Manager', 'Manager', 'Executive'].includes(cscRole) ? 'Edit' : cscRole === 'Viewer' ? 'View' : 'None';
+
+  const canAccessActive = canAccessCsc;
+  const canAccessClosed = canAccessCsc;
   const isActiveActive = pathname.startsWith('/home/active-jobs');
   const isClosedActive = pathname === '/home/closed-jobs';
 
-  const cscAccessLevel = getAccessLevel('CSC Jobs', profile);
-  // Follow-Ups: visible when CSC ≠ None AND tracking_role ≠ None (tracking_role controls Self vs All)
+  // Follow-Ups: tracking_role = 'None'|'Executive'(Self)|'Admin'(All)
   const trackingRole = profile?.tracking_role || 'None';
-  const canAccessFollowUps = cscAccessLevel !== 'None' && trackingRole !== 'None';
-  // Reports: visible for ANY CSC access (View or Edit) or ANY Unbilled access
-  const canCscReports = cscAccessLevel !== 'None';
-  const canUnbilledReports = getAccessLevel('Unbilled', profile) !== 'None';
-  const canAccessReports = canCscReports || canUnbilledReports;
+  const canAccessFollowUps = canAccessCsc && trackingRole !== 'None';
+
+  // All Jobs: role = 'Viewer'|'Admin'|'None'/null
+  const mainRole = profile?.role || 'None';
+  const canAccessAllJobs = isSuperAdmin || (mainRole !== 'None' && mainRole !== '');
+
+  // Unbilled: unbilled_role = 'None'|'Viewer'(View)|'Executive'/'Manager'/'Admin'(Edit)
+  const unbilledRole = profile?.unbilled_role || 'None';
+  const canAccessUnbilled = isSuperAdmin || (unbilledRole !== 'None' && unbilledRole !== '');
+
+  // Reports: visible if any CSC or Unbilled access
+  const canAccessReports = canAccessCsc || canAccessUnbilled;
 
   return (
     <nav className={styles.nav} style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', gap: '0.35rem' }}>
@@ -116,13 +125,13 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
         </Link>
       )}
 
-      {getAccessLevel('All Jobs', profile) !== 'None' && (
+      {canAccessAllJobs && (
         <Link href="/home/all-jobs" className={`${styles.navItem} ${pathname === '/home/all-jobs' ? styles.active : ''}`}>
           <span>📁</span> All Jobs
         </Link>
       )}
 
-      {getAccessLevel('Unbilled', profile) !== 'None' && (
+      {canAccessUnbilled && (
         <Link href="/home/unbilled" className={`${styles.navItem} ${pathname.startsWith('/home/unbilled') ? styles.active : ''}`}>
           <span>🧾</span> Unbilled
         </Link>
