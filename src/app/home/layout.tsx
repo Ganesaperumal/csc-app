@@ -24,7 +24,7 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
   const unbilledRole = profile?.unbilled_role || 'None';
 
   const canAccessCsc = cscRole !== 'None' && cscRole !== '';
-  const canAccessActive = profile?.is_super_admin === true;
+  const canAccessActive = canAccessCsc;
   const canAccessClosed = canAccessCsc;
   const isActiveActive = pathname.startsWith('/home/active-jobs');
   const isClosedActive = pathname === '/home/closed-jobs';
