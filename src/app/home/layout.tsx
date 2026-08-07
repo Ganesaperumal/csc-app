@@ -218,8 +218,8 @@ export default function DashboardLayout({
                 </Suspense>
               </div>
               
-              {/* Bottom sidebar actions with ultra-tight 3px gap */}
-              <div style={{ flexShrink: 0, marginTop: '0.25rem', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              {/* Bottom sidebar actions with ultra-tight 1px gap */}
+              <div style={{ flexShrink: 0, marginTop: '0.25rem', display: 'flex', flexDirection: 'column', gap: '1px' }}>
                 {isSuperAdmin && (
                   <div style={{
                     display: 'flex',
