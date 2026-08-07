@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import CustomSelect from '../components/CustomSelect';
 
 interface Task {
   id: number;
@@ -414,34 +415,16 @@ export default function FollowUpsPage() {
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'nowrap' }}>
           {/* Admin Agent filter dropdown — left of search */}
           {isAdmin && (
-            <select
+            <CustomSelect
+              placeholder="All Operators"
               value={selectedAgentFilter}
-              onChange={(e) => setSelectedAgentFilter(e.target.value)}
-              style={{
-                padding: '0.55rem 2.4rem 0.55rem 1rem',
-                borderRadius: '20px',
-                border: '1px solid var(--border-color)',
-                background: 'var(--surface-color)',
-                color: 'var(--text-primary)',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                minWidth: '185px',
-                outline: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                appearance: 'none',
-                WebkitAppearance: 'none',
-                backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 0.85rem center',
-                backgroundSize: '1rem'
-              }}
-            >
-              <option value="All">👥 All Operators</option>
-              {allAgents.map(name => (
-                <option key={name} value={name}>👤 {name}</option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedAgentFilter(val)}
+              options={[
+                { value: 'All', label: 'All Operators' },
+                ...allAgents.map(name => ({ value: name, label: name }))
+              ]}
+              style={{ width: '180px', minWidth: '180px', flexGrow: 0 }}
+            />
           )}
 
           {/* Search bar — always right of dropdown */}
