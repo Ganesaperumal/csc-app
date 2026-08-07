@@ -142,6 +142,7 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
             position: 'relative',
             boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)'
           }}>
+          {profile?.is_super_admin === true && (
             <Link
               href="/home/admin"
               style={{
@@ -162,6 +163,7 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
             >
               <span>⚙️</span> Admin
             </Link>
+          )}
             <Link
               href="/home/users"
               style={{

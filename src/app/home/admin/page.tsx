@@ -243,13 +243,13 @@ export default function AdminPage() {
       setCurrentUser(data.user);
       supabase.from('profiles').select('*').eq('id', data.user.id).single()
         .then(({ data: profile }) => {
-          const hasAccess = profile && (profile.csc_role === 'Edit' || profile.unbilled_role === 'Edit' || (profile.csc_role && profile.csc_role !== 'None'));
+          const isSuperAdmin = profile?.is_super_admin === true;
 
-          if (profile && hasAccess) {
+          if (profile && isSuperAdmin) {
             setUserRole(profile.csc_role || 'View');
             setCheckingAuth(false);
           } else {
-            showToast('⛔ Access Denied: Admin Center is restricted.', 'error');
+            showToast('⛔ Access Denied: Admin Center is restricted to Super Admin only.', 'error');
             router.push('/home/active-jobs');
           }
         });
