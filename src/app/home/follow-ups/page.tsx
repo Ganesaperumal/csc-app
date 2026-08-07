@@ -2,51 +2,39 @@
 import { showToast } from '@/components/GlobalDialogs';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getUserColor } from '@/lib/colorUtils';
-import CustomSelect from '../components/CustomSelect';
-import { usePermissions } from '@/components/PermissionsContext';
+import { supabase } from '@/lib/supabase';
+import CustomSelect from '@/app/home/components/CustomSelect';
 
 interface Task {
   id: number;
+  created_at: string;
   job_number: string;
-  agent_name: string;
   call_type: string;
   regarding: string;
   summary: string;
+  agent_name: string;
   follow_up_required: boolean;
   follow_up_date: string | null;
   follow_up_completed: boolean;
-  created_at: string;
   customerName?: string;
   spocName?: string;
   companyName?: string;
 }
 
-const formatDate = (dateStr: string | null) => {
-  if (!dateStr) return 'No Date';
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return dateStr;
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = date.toLocaleString('en-US', { month: 'short' });
-  const year = date.getFullYear().toString().slice(-2);
-  return `${day}-${month}-${year}`;
-};
-
 export default function FollowUpsPage() {
-  const { getAccessLevel } = usePermissions();
+  const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [agentName, setAgentName] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [isViewer, setIsViewer] = useState(false);
-  const [selectedAgentFilter, setSelectedAgentFilter] = useState('All');
+
+  // Filters
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedAgentFilter, setSelectedAgentFilter] = useState('All');
   const [allAgents, setAllAgents] = useState<string[]>([]);
-  
-  const router = useRouter();
 
   useEffect(() => {
     const initializePage = async () => {
@@ -65,7 +53,6 @@ export default function FollowUpsPage() {
         .single();
 
       let activeName = 'Agent';
-      let adminRole = false;
       let showAll = false;
 
       if (profile) {
@@ -139,6 +126,7 @@ export default function FollowUpsPage() {
       }));
       setTasks(enrichedComms);
 
+      // Find list of all unique agent names for filtering
       const agents = Array.from(
         new Set(enrichedComms.map((c: any) => c.agent_name?.toLowerCase()).filter(Boolean))
       ).sort() as string[];
@@ -151,7 +139,9 @@ export default function FollowUpsPage() {
   }, [router]);
 
   const toggleTaskCompletion = async (taskId: number, currentCompleted: boolean) => {
+    if (isViewer) return;
     const updatedStatus = !currentCompleted;
+    
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, follow_up_completed: updatedStatus } : t));
 
     try {
@@ -173,50 +163,255 @@ export default function FollowUpsPage() {
     }
   };
 
-  const pendingTasks = tasks.filter(t => !t.follow_up_completed);
-  const completedTasks = tasks.filter(t => t.follow_up_completed);
-
-  const filterTask = (t: Task) => {
-    const q = searchQuery.toLowerCase();
-    const matchesSearch = !q ||
-      t.job_number.toLowerCase().includes(q) ||
-      t.regarding.toLowerCase().includes(q) ||
-      t.summary.toLowerCase().includes(q) ||
-      (t.customerName && t.customerName.toLowerCase().includes(q)) ||
-      (t.companyName && t.companyName.toLowerCase().includes(q));
-
-    const matchesAgent = selectedAgentFilter === 'All' || t.agent_name.toLowerCase() === selectedAgentFilter.toLowerCase();
-
-    return matchesSearch && matchesAgent;
+  // Helper for dates and urgency
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return 'No Date';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  const filteredPending = pendingTasks.filter(filterTask);
-  const filteredCompleted = completedTasks.filter(filterTask);
-
-  const getUrgency = (dateStr: string | null) => {
-    if (!dateStr) return 'normal';
-    const date = new Date(dateStr);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    date.setHours(0, 0, 0, 0);
-    const diffDays = Math.round((date.getTime() - today.getTime()) / (86400000));
-    if (diffDays < 0) return 'overdue';
-    if (diffDays === 0) return 'today';
-    return 'normal';
+  // Helper for agent badge colors
+  const getUserColor = (name: string) => {
+    if (!name) return { bg: 'rgba(0,0,0,0.05)', text: 'var(--text-primary)' };
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const colors = [
+      { bg: 'rgba(79, 70, 229, 0.15)', text: '#4f46e5' },
+      { bg: 'rgba(16, 185, 129, 0.15)', text: '#059669' },
+      { bg: 'rgba(217, 70, 239, 0.15)', text: '#c026d3' },
+      { bg: 'rgba(245, 158, 11, 0.15)', text: '#d97706' },
+      { bg: 'rgba(14, 165, 233, 0.15)', text: '#0284c7' },
+      { bg: 'rgba(236, 72, 153, 0.15)', text: '#db2777' },
+    ];
+    return colors[Math.abs(hash) % colors.length];
   };
 
-  if (loading) {
-    return <div className="glass" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading follow-ups...</div>;
-  }
+  // Filtering logic
+  const filteredTasks = tasks.filter(task => {
+    // Agent filtering when showAll is active
+    if (isAdmin && selectedAgentFilter !== 'All' && task.agent_name?.toLowerCase() !== selectedAgentFilter.toLowerCase()) return false;
+    
+    // Search filtering
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchJob = task.job_number?.toLowerCase().includes(q);
+      const matchCustomer = task.customerName?.toLowerCase().includes(q);
+      const matchCompany = task.companyName?.toLowerCase().includes(q);
+      const matchRegarding = task.regarding?.toLowerCase().includes(q);
+      const matchSummary = task.summary?.toLowerCase().includes(q);
+      const matchAgent = task.agent_name?.toLowerCase().includes(q);
+      if (!matchJob && !matchCustomer && !matchCompany && !matchRegarding && !matchSummary && !matchAgent) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  // Categorize tasks for Kanban columns
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const pending = filteredTasks.filter(t => !t.follow_up_completed);
+  const completedTasks = filteredTasks.filter(t => t.follow_up_completed);
+
+  const overdueTasks: Task[] = [];
+  const todayTasks: Task[] = [];
+  const upcomingTasks: Task[] = [];
+
+  pending.forEach(t => {
+    if (!t.follow_up_date) {
+      upcomingTasks.push(t);
+      return;
+    }
+    const taskDate = new Date(t.follow_up_date);
+    taskDate.setHours(0, 0, 0, 0);
+
+    if (taskDate < today) {
+      overdueTasks.push(t);
+    } else if (taskDate.getTime() === today.getTime()) {
+      todayTasks.push(t);
+    } else {
+      upcomingTasks.push(t);
+    }
+  });
+
+  // Render a Kanban Column
+  const renderTaskColumn = (title: string, list: Task[], theme: 'danger' | 'warning' | 'primary' | 'success') => {
+    const themeStyles = {
+      danger:  { border: '#fecaca', bg: '#fef2f2', headerText: '#dc2626', badgeBg: '#ef4444' },
+      warning: { border: '#fde68a', bg: '#fffbeb', headerText: '#b45309', badgeBg: '#f59e0b' },
+      primary: { border: '#c7d2fe', bg: '#e0e7ff', headerText: '#3730a3', badgeBg: '#4f46e5' },
+      success: { border: '#bbf7d0', bg: '#f0fdf4', headerText: '#15803d', badgeBg: '#10b981' },
+    }[theme];
+
+    return (
+      <div 
+        style={{
+          flex: 1,
+          minWidth: '280px',
+          maxWidth: '360px',
+          display: 'flex',
+          flexDirection: 'column',
+          background: 'var(--surface-color)',
+          borderRadius: '12px',
+          border: `1px solid ${themeStyles.border}`,
+          height: 'calc(100vh - 12rem)',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Column Header */}
+        <div style={{
+          padding: '0.85rem 1rem',
+          background: themeStyles.bg,
+          borderBottom: `1px solid ${themeStyles.border}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1rem' }}>
+              {theme === 'danger' ? '🚨' : theme === 'warning' ? '⏰' : theme === 'primary' ? '📅' : '✅'}
+            </span>
+            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: themeStyles.headerText }}>
+              {title}
+            </h3>
+          </div>
+          <span style={{
+            background: themeStyles.badgeBg,
+            color: 'white',
+            borderRadius: '12px',
+            padding: '2px 8px',
+            fontSize: '0.75rem',
+            fontWeight: 800
+          }}>
+            {list.length}
+          </span>
+        </div>
+
+        {/* Task Cards List */}
+        <div style={{
+          padding: '0.85rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.85rem',
+          overflowY: 'auto',
+          flex: 1
+        }}>
+          {list.length === 0 ? (
+            <div style={{
+              padding: '2rem 1rem',
+              textAlign: 'center',
+              color: 'var(--text-secondary)',
+              fontSize: '0.85rem',
+              fontStyle: 'italic'
+            }}>
+              No tasks in this category
+            </div>
+          ) : (
+            list.map(task => (
+              <div 
+                key={task.id} 
+                className="glass" 
+                style={{ 
+                  padding: '1rem', 
+                  borderRadius: '10px', 
+                  border: '1px solid var(--border-color)',
+                  boxShadow: 'var(--glass-shadow)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  cursor: 'default',
+                  position: 'relative'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = 'var(--glass-shadow-hover)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'none';
+                  e.currentTarget.style.boxShadow = 'var(--glass-shadow)';
+                }}
+              >
+                {/* Header: Checkbox & Job Reference */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={task.follow_up_completed} 
+                      onChange={() => toggleTaskCompletion(task.id, task.follow_up_completed)}
+                      disabled={isViewer}
+                      style={{ width: '16px', height: '16px', cursor: isViewer ? 'not-allowed' : 'pointer', accentColor: '#10b981', opacity: isViewer ? 0.5 : 1 }} 
+                    />
+                    <Link 
+                      href={`/home/job/${encodeURIComponent(task.job_number)}`}
+                      style={{ fontSize: '0.85rem', fontWeight: 700, color: '#4f46e5', textDecoration: 'underline' }}
+                    >
+                      {task.job_number}
+                    </Link>
+                  </div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)', background: 'rgba(0,0,0,0.03)', padding: '2px 6px', borderRadius: '4px' }}>
+                    {task.regarding}
+                  </span>
+                </div>
+
+                {/* Customer & Company Details */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                  <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                    {task.customerName}
+                  </strong>
+                  {task.companyName && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                      {task.companyName}
+                    </span>
+                  )}
+                </div>
+
+                {/* Call summary comment */}
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'var(--surface-color)', padding: '0.5rem', borderRadius: '6px', borderLeft: `3px solid ${themeStyles.badgeBg}`, lineClamp: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {task.summary}
+                </p>
+
+                {/* Footer: Date and Agent name */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-secondary)', borderTop: '1px solid rgba(0,0,0,0.05)', paddingTop: '6px', marginTop: '2px' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    Coordinator:{' '}
+                    <span style={{ 
+                      background: getUserColor(task.agent_name).bg, 
+                      color: getUserColor(task.agent_name).text, 
+                      padding: '1px 6px', 
+                      borderRadius: '6px', 
+                      fontWeight: 700,
+                      fontSize: '0.65rem'
+                    }}>
+                      {task.agent_name}
+                    </span>
+                  </span>
+                  <span style={{ fontWeight: 700, color: theme === 'danger' && !task.follow_up_completed ? '#ef4444' : 'var(--text-secondary)' }}>
+                    📅 {formatDate(task.follow_up_date)}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '0.5rem 0.25rem', gap: '1.25rem' }}>
       
-      {/* ─── Header & Filters Bar ─── */}
+      {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span>⏰</span> Follow-up Tasks
+          <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span>⏰</span>
+            <span style={{ backgroundImage: 'linear-gradient(45deg, #4f46e5, #7c3aed)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
+              Follow-up Tasks
+            </span>
           </h1>
         </div>
 
@@ -250,168 +445,21 @@ export default function FollowUpsPage() {
         </div>
       </div>
 
-      {/* ─── Summary Stats ─── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-        <div className="glass" style={{ padding: '1rem 1.25rem', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Total Pending</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f59e0b', marginTop: '0.2rem' }}>{filteredPending.length}</div>
-        </div>
-        <div className="glass" style={{ padding: '1rem 1.25rem', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Overdue</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#ef4444', marginTop: '0.2rem' }}>
-            {filteredPending.filter(t => getUrgency(t.follow_up_date) === 'overdue').length}
+      {loading ? (
+        <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', height: '300px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ border: '3px solid rgba(0,0,0,0.1)', borderLeftColor: '#4f46e5', borderRadius: '50%', width: '28px', height: '28px', animation: 'spin 1s linear infinite' }} />
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Loading follow-ups...</span>
           </div>
+          <style dangerouslySetInnerHTML={{__html: `@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}} />
         </div>
-        <div className="glass" style={{ padding: '1rem 1.25rem', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Completed</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#10b981', marginTop: '0.2rem' }}>{filteredCompleted.length}</div>
-        </div>
-      </div>
-
-      {/* ─── Pending Tasks Section ─── */}
-      <div className="glass" style={{ borderRadius: '16px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
-        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-            🔔 Pending Tasks ({filteredPending.length})
-          </h3>
-        </div>
-
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.01)' }}>
-                {['Done', 'Job #', 'Client / Company', 'Regarding', 'Summary', 'Follow-up Date', 'Agent'].map(h => (
-                  <th key={h} style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPending.map(t => {
-                const urgency = getUrgency(t.follow_up_date);
-                const isOverdue = urgency === 'overdue';
-                const isToday = urgency === 'today';
-
-                return (
-                  <tr key={t.id} style={{ borderBottom: '1px solid var(--border-color)', background: isOverdue ? 'rgba(239,68,68,0.03)' : (isToday ? 'rgba(245,158,11,0.03)' : 'transparent') }}>
-                    <td style={{ padding: '0.75rem 1rem' }}>
-                      <input
-                        type="checkbox"
-                        checked={t.follow_up_completed}
-                        onChange={() => toggleTaskCompletion(t.id, t.follow_up_completed)}
-                        disabled={isViewer}
-                        style={{ width: '16px', height: '16px', cursor: isViewer ? 'not-allowed' : 'pointer', accentColor: '#10b981', opacity: isViewer ? 0.5 : 1 }} 
-                      />
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem', fontWeight: 700 }}>
-                      <Link href={`/home/job/${encodeURIComponent(t.job_number)}`} style={{ color: '#4f46e5', textDecoration: 'none' }}>
-                        {t.job_number}
-                      </Link>
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem' }}>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{t.customerName}</div>
-                      {t.companyName && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{t.companyName}</div>}
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {t.regarding}
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {t.summary}
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem' }}>
-                      <span style={{
-                        padding: '0.2rem 0.55rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700,
-                        background: isOverdue ? '#fef2f2' : (isToday ? '#fffbeb' : '#f1f5f9'),
-                        color: isOverdue ? '#dc2626' : (isToday ? '#b45309' : '#475569'),
-                        border: `1px solid ${isOverdue ? '#fecaca' : (isToday ? '#fde68a' : '#cbd5e1')}`
-                      }}>
-                        {formatDate(t.follow_up_date)} {isOverdue ? '⚠️ Overdue' : (isToday ? '⏰ Today' : '')}
-                      </span>
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem' }}>
-                      <span style={{
-                        padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600,
-                        background: getUserColor(t.agent_name).bg, color: getUserColor(t.agent_name).text, border: '1px solid rgba(0,0,0,0.1)'
-                      }}>
-                        👤 {t.agent_name}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-
-              {filteredPending.length === 0 && (
-                <tr>
-                  <td colSpan={7} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    🎉 No pending follow-up tasks!
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* ─── Completed Tasks Section ─── */}
-      {filteredCompleted.length > 0 && (
-        <div className="glass" style={{ borderRadius: '16px', border: '1px solid var(--border-color)', overflow: 'hidden', opacity: 0.85 }}>
-          <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.02)' }}>
-            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-              ✅ Completed Tasks ({filteredCompleted.length})
-            </h3>
-          </div>
-
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.01)' }}>
-                  {['Done', 'Job #', 'Client / Company', 'Regarding', 'Summary', 'Completed Date', 'Agent'].map(h => (
-                    <th key={h} style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase' }}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCompleted.map(t => (
-                  <tr key={t.id} style={{ borderBottom: '1px solid var(--border-color)', opacity: 0.7 }}>
-                    <td style={{ padding: '0.75rem 1rem' }}>
-                      <input
-                        type="checkbox"
-                        checked={t.follow_up_completed}
-                        onChange={() => toggleTaskCompletion(t.id, t.follow_up_completed)}
-                        disabled={isViewer}
-                        style={{ width: '16px', height: '16px', cursor: isViewer ? 'not-allowed' : 'pointer', accentColor: '#10b981', opacity: isViewer ? 0.5 : 1 }} 
-                      />
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>
-                      <Link href={`/home/job/${encodeURIComponent(t.job_number)}`} style={{ color: '#4f46e5', textDecoration: 'none' }}>
-                        {t.job_number}
-                      </Link>
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem' }}>
-                      <div style={{ color: 'var(--text-primary)' }}>{t.customerName}</div>
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)' }}>
-                      {t.regarding}
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {t.summary}
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)' }}>
-                      {formatDate(t.follow_up_date)}
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem' }}>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        👤 {t.agent_name}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      ) : (
+        /* Board Columns Grid */
+        <div style={{ display: 'flex', flex: 1, gap: '1.25rem', flexWrap: 'nowrap', overflowX: 'auto', minHeight: 0, paddingBottom: '0.5rem' }}>
+          {renderTaskColumn('Overdue', overdueTasks, 'danger')}
+          {renderTaskColumn('Due Today', todayTasks, 'warning')}
+          {renderTaskColumn('Upcoming Reminders', upcomingTasks, 'primary')}
+          {renderTaskColumn('Completed Tasks', completedTasks, 'success')}
         </div>
       )}
     </div>
