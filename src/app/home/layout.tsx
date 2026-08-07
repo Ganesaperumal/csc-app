@@ -132,58 +132,70 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
         </Link>
       )}
 
-      {/* Admin Panel & User Directory Buttons Side-by-Side directly above Sync ERP */}
+      {/* Admin & Users segmented toggle bar directly above Sync ERP */}
       {isSuperAdmin && (
-        <div style={{ marginTop: 'auto', paddingTop: '0.75rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-          <Link
-            href="/home/admin"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.3rem',
-              padding: '0.55rem 0.35rem',
-              borderRadius: '8px',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              textDecoration: 'none',
-              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-              color: pathname === '/home/admin' ? '#ffffff' : 'var(--text-secondary)',
-              background: pathname === '/home/admin'
-                ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
-                : 'rgba(148, 163, 184, 0.12)',
-              border: '1px solid var(--border-color)',
-              boxShadow: pathname === '/home/admin' ? '0 4px 12px rgba(59, 130, 246, 0.35)' : 'none',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <span>⚙️</span> Admin
-          </Link>
-
-          <Link
-            href="/home/users"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.3rem',
-              padding: '0.55rem 0.35rem',
-              borderRadius: '8px',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              textDecoration: 'none',
-              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-              color: pathname === '/home/users' ? '#ffffff' : 'var(--text-secondary)',
-              background: pathname === '/home/users'
-                ? 'linear-gradient(135deg, #10b981, #059669)'
-                : 'rgba(148, 163, 184, 0.12)',
-              border: '1px solid var(--border-color)',
-              boxShadow: pathname === '/home/users' ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <span>👥</span> Users
-          </Link>
+        <div style={{ marginTop: 'auto', marginBottom: '0.4rem' }}>
+          <div style={{
+            fontSize: '0.7rem',
+            fontWeight: 800,
+            color: 'var(--text-secondary)',
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+            paddingLeft: '0.5rem',
+            marginBottom: '0.4rem'
+          }}>
+            Control Center
+          </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            backgroundColor: 'rgba(148, 163, 184, 0.12)',
+            borderRadius: '12px',
+            padding: '4px',
+            position: 'relative',
+            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)'
+          }}>
+            <Link
+              href="/home/admin"
+              style={{
+                flex: 1,
+                textAlign: 'center',
+                padding: '0.45rem 0.25rem',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                borderRadius: '8px',
+                textDecoration: 'none',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                color: pathname === '/home/admin' ? '#ffffff' : 'var(--text-secondary)',
+                background: pathname === '/home/admin'
+                  ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
+                  : 'transparent',
+                boxShadow: pathname === '/home/admin' ? '0 4px 12px rgba(59, 130, 246, 0.35)' : 'none',
+              }}
+            >
+              <span>⚙️</span> Admin
+            </Link>
+            <Link
+              href="/home/users"
+              style={{
+                flex: 1,
+                textAlign: 'center',
+                padding: '0.45rem 0.25rem',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                borderRadius: '8px',
+                textDecoration: 'none',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                color: pathname === '/home/users' ? '#ffffff' : 'var(--text-secondary)',
+                background: pathname === '/home/users'
+                  ? 'linear-gradient(135deg, #10b981, #059669)'
+                  : 'transparent',
+                boxShadow: pathname === '/home/users' ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
+              }}
+            >
+              <span>👥</span> Users
+            </Link>
+          </div>
         </div>
       )}
 
