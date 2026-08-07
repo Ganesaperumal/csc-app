@@ -12,296 +12,232 @@ interface UserDetailsModalProps {
   onDelete?: (userId: string) => Promise<void>;
 }
 
-type CscAccess = 'None' | 'View' | 'Edit';
+type CscAccess     = 'None' | 'View' | 'Edit';
 type FollowupAccess = 'None' | 'Self' | 'All';
 type AllJobsAccess = 'None' | 'View';
 type UnbilledAccess = 'None' | 'View' | 'Edit';
 
-/* ─────────────────────────── Permission Option Button ─────────────────────── */
-interface PermOptProps {
-  label: string;
-  icon: string;
-  active: boolean;
-  activeColor: string;
-  activeGlow: string;
-  onClick: () => void;
-}
-function PermOpt({ label, icon, active, activeColor, activeGlow, onClick }: PermOptProps) {
+/* ── Cycle helpers ── */
+const cscCycle:      CscAccess[]      = ['None', 'View', 'Edit'];
+const followupCycle: FollowupAccess[] = ['None', 'Self', 'All'];
+const allJobsCycle:  AllJobsAccess[]  = ['None', 'View'];
+const unbilledCycle: UnbilledAccess[] = ['None', 'View', 'Edit'];
+
+function next<T>(arr: T[], cur: T): T { return arr[(arr.indexOf(cur) + 1) % arr.length]; }
+
+/* ── Badge colors ── */
+const badgeColor: Record<string, { bg: string; color: string; border: string }> = {
+  None:  { bg: 'rgba(100,116,139,0.1)', color: '#64748b', border: 'rgba(100,116,139,0.25)' },
+  View:  { bg: 'rgba(99,102,241,0.14)', color: '#818cf8', border: 'rgba(99,102,241,0.35)' },
+  Edit:  { bg: 'rgba(16,185,129,0.14)', color: '#10b981', border: 'rgba(16,185,129,0.35)' },
+  Self:  { bg: 'rgba(139,92,246,0.14)', color: '#a78bfa', border: 'rgba(139,92,246,0.35)' },
+  All:   { bg: 'rgba(124,58,237,0.14)', color: '#8b5cf6', border: 'rgba(124,58,237,0.35)' },
+};
+
+/* ── Access Tile ── */
+function AccessTile({
+  label, icon, value, onClick, dim,
+}: { label: string; icon: string; value: string; onClick: () => void; dim?: boolean }) {
+  const c = badgeColor[value] ?? badgeColor.None;
   return (
     <button
       type="button"
       onClick={onClick}
+      title={`Click to cycle (currently: ${value})`}
       style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '4px',
-        padding: '0.55rem 0.9rem',
-        borderRadius: '12px',
-        border: active ? `2px solid ${activeColor}` : '2px solid var(--border-color)',
-        background: active ? `${activeColor}18` : 'var(--bg-color)',
-        color: active ? activeColor : 'var(--text-secondary)',
+        flex: 1,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0.6rem 0.75rem',
+        borderRadius: '10px',
+        border: '1px solid var(--border-color)',
+        background: 'var(--bg-color)',
         cursor: 'pointer',
-        transition: 'all 0.18s cubic-bezier(.4,0,.2,1)',
-        boxShadow: active ? `0 0 16px ${activeGlow}, inset 0 1px 0 ${activeColor}22` : 'none',
-        minWidth: '58px',
+        transition: 'background 0.15s, box-shadow 0.15s',
+        opacity: dim ? 0.38 : 1,
+        pointerEvents: dim ? 'none' : 'auto',
+        gap: '0.5rem',
         fontFamily: "'Outfit', sans-serif",
       }}
     >
-      <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>{icon}</span>
-      <span style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-        {label}
+      {/* Label */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', overflow: 'hidden' }}>
+        <span style={{ fontSize: '0.88rem', flexShrink: 0 }}>{icon}</span>
+        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+          {label}
+        </span>
+      </div>
+      {/* Badge — rectangular, small */}
+      <span style={{
+        padding: '0.18rem 0.55rem',
+        borderRadius: '5px',
+        fontSize: '0.68rem', fontWeight: 800,
+        letterSpacing: '0.04em', textTransform: 'uppercase',
+        background: c.bg, color: c.color, border: `1px solid ${c.border}`,
+        flexShrink: 0, transition: 'all 0.18s ease',
+        boxShadow: value !== 'None' ? `0 0 8px ${c.border}` : 'none',
+      }}>
+        {value}
       </span>
     </button>
   );
 }
 
-/* ─────────────────────────── Permission Card ──────────────────────────────── */
-interface PermCardProps {
-  emoji: string;
-  iconBg: string;
-  title: string;
-  subtitle: string;
-  children: React.ReactNode;
-  indented?: boolean;
-}
-function PermCard({ emoji, iconBg, title, subtitle, children, indented }: PermCardProps) {
-  return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.85rem',
-      padding: '0.9rem 1rem',
-      borderRadius: '14px',
-      border: '1px solid var(--border-color)',
-      background: 'var(--surface-color)',
-      marginLeft: indented ? '1.5rem' : 0,
-      boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
-      transition: 'box-shadow 0.2s',
-    }}>
-      {/* Icon pill */}
-      <div style={{
-        width: '42px', height: '42px', borderRadius: '12px',
-        background: iconBg,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '1.2rem', flexShrink: 0,
-        boxShadow: `0 4px 12px ${iconBg}80`,
-      }}>
-        {emoji}
-      </div>
-
-      {/* Title + subtitle */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-primary)', lineHeight: 1.2 }}>{title}</div>
-        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.1rem', opacity: 0.8 }}>{subtitle}</div>
-      </div>
-
-      {/* Options */}
-      <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-/* ─────────────────────────── Main Modal ──────────────────────────────────── */
+/* ── Main Modal ── */
 export default function UserDetailsModal({ user, onClose, onSave, onDelete }: UserDetailsModalProps) {
   const isCreate = !user || !user.id;
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const [name, setName] = useState(user?.name || '');
+  const [name,     setName]     = useState(user?.name     || '');
   const [username, setUsername] = useState(user?.username || '');
-  const [email, setEmail] = useState(user?.email || (user?.username ? `${user.username}@transworldintl.com` : ''));
-  const [phone, setPhone] = useState(user?.phone || '');
+  const [email,    setEmail]    = useState(user?.email    || (user?.username ? `${user.username}@transworldintl.com` : ''));
+  const [phone,    setPhone]    = useState(user?.phone    || '');
   const [password, setPassword] = useState('');
 
-  const getInitialCscAccess = (r?: string): CscAccess => {
-    if (!r || r === 'None') return 'None';
-    if (r === 'Viewer' || r === 'View') return 'View';
-    return 'Edit';
-  };
-  const getInitialFollowupAccess = (r?: string): FollowupAccess => {
-    if (!r || r === 'None') return 'None';
-    if (r === 'Executive' || r === 'Self' || r === 'Viewer') return 'Self';
-    return 'All';
-  };
-  const getInitialAllJobsAccess = (r?: string): AllJobsAccess => {
-    if (r === 'None') return 'None';
-    return 'View';
-  };
-  const getInitialUnbilledAccess = (r?: string): UnbilledAccess => {
-    if (!r || r === 'None') return 'None';
-    if (r === 'Viewer' || r === 'View') return 'View';
-    return 'Edit';
-  };
+  /* Init from DB roles */
+  const initCsc      = (r?: string): CscAccess      => (!r || r === 'None') ? 'None' : (r === 'Viewer' || r === 'View' ? 'View' : 'Edit');
+  const initFollowup = (r?: string): FollowupAccess => (!r || r === 'None') ? 'None' : (r === 'Executive' || r === 'Self' || r === 'Viewer' ? 'Self' : 'All');
+  const initAllJobs  = (r?: string): AllJobsAccess  => (!r || r === 'None') ? 'None' : 'View';
+  const initUnbilled = (r?: string): UnbilledAccess => (!r || r === 'None') ? 'None' : (r === 'Viewer' || r === 'View' ? 'View' : 'Edit');
 
-  const [cscAccess, setCscAccess] = useState<CscAccess>(getInitialCscAccess(user?.csc_role));
-  const [followupAccess, setFollowupAccess] = useState<FollowupAccess>(getInitialFollowupAccess(user?.tracking_role));
-  const [allJobsAccess, setAllJobsAccess] = useState<AllJobsAccess>(getInitialAllJobsAccess(user?.role));
-  const [unbilledAccess, setUnbilledAccess] = useState<UnbilledAccess>(getInitialUnbilledAccess(user?.unbilled_role));
-  const [selectedBranches, setSelectedBranches] = useState<string[]>(
-    user?.branches && user?.branches.length > 0 ? user.branches : ['ALL']
-  );
-  const [isApproved, setIsApproved] = useState<boolean>(user?.is_approved !== false);
-  const [photo, setPhoto] = useState<string | null>(user?.photo || null);
-  const [saving, setSaving] = useState(false);
+  const [cscAccess,     setCscAccess]     = useState<CscAccess>(initCsc(user?.csc_role));
+  const [followupAccess,setFollowupAccess]= useState<FollowupAccess>(initFollowup(user?.tracking_role));
+  const [allJobsAccess, setAllJobsAccess] = useState<AllJobsAccess>(initAllJobs(user?.role));
+  const [unbilledAccess,setUnbilledAccess]= useState<UnbilledAccess>(initUnbilled(user?.unbilled_role));
+  const [branches,      setBranches]      = useState<string[]>(user?.branches?.length ? user.branches : ['ALL']);
+  const [isApproved,    setIsApproved]    = useState<boolean>(user?.is_approved !== false);
+  const [photo,         setPhoto]         = useState<string | null>(user?.photo || null);
+  const [saving,        setSaving]        = useState(false);
 
   const isSuperAdmin = user?.username === 'ganesh' || user?.name?.includes('Ganesaperumal');
 
-  const handleSaveData = async () => {
+  const handleSave = async () => {
     setSaving(true);
-    const csc_role = cscAccess === 'None' ? 'None' : (cscAccess === 'View' ? 'Viewer' : 'Executive');
-    const tracking_role = cscAccess === 'None' ? 'None' : (followupAccess === 'None' ? 'None' : (followupAccess === 'Self' ? 'Executive' : 'Admin'));
-    const unbilled_role = unbilledAccess === 'None' ? 'None' : (unbilledAccess === 'View' ? 'Viewer' : 'Executive');
-    const role = (cscAccess === 'Edit' || unbilledAccess === 'Edit') ? 'Executive' : (cscAccess === 'View' || unbilledAccess === 'View' || allJobsAccess === 'View' ? 'Viewer' : 'None');
-    const branches = unbilledAccess === 'None' ? [] : (selectedBranches.length > 0 ? selectedBranches : ['ALL']);
     await onSave({
       userId: user?.id, name, username, email, phone,
       password: isCreate ? password : (password || undefined),
-      csc_role, tracking_role, unbilled_role, role, branches,
-      is_approved: isApproved, photo
+      csc_role:      cscAccess === 'None' ? 'None' : (cscAccess === 'View' ? 'Viewer' : 'Executive'),
+      tracking_role: cscAccess === 'None' ? 'None' : (followupAccess === 'None' ? 'None' : (followupAccess === 'Self' ? 'Executive' : 'Admin')),
+      unbilled_role: unbilledAccess === 'None' ? 'None' : (unbilledAccess === 'View' ? 'Viewer' : 'Executive'),
+      role: (cscAccess === 'Edit' || unbilledAccess === 'Edit') ? 'Executive' : (cscAccess === 'View' || unbilledAccess === 'View' || allJobsAccess === 'View' ? 'Viewer' : 'None'),
+      branches: unbilledAccess === 'None' ? [] : (branches.length ? branches : ['ALL']),
+      is_approved: isApproved, photo,
     });
     setSaving(false);
   };
 
   const toggleBranch = (code: string) => {
-    let updated: string[];
-    if (code === 'ALL') {
-      updated = selectedBranches.includes('ALL') ? [] : ['ALL'];
-    } else {
-      updated = selectedBranches.filter(b => b !== 'ALL');
-      updated = updated.includes(code) ? updated.filter(b => b !== code) : [...updated, code];
-    }
-    setSelectedBranches(updated);
-  };
-
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => setPhoto(reader.result as string);
-    reader.readAsDataURL(file);
+    if (code === 'ALL') { setBranches(branches.includes('ALL') ? [] : ['ALL']); return; }
+    const without = branches.filter(b => b !== 'ALL');
+    setBranches(without.includes(code) ? without.filter(b => b !== code) : [...without, code]);
   };
 
   const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '0.65rem 0.85rem',
-    borderRadius: '10px', border: '1px solid var(--border-color)',
+    width: '100%', padding: '0.6rem 0.8rem',
+    borderRadius: '9px', border: '1px solid var(--border-color)',
     background: 'var(--bg-color)', color: 'var(--text-primary)',
-    fontSize: '0.875rem', fontFamily: "'Outfit', sans-serif",
+    fontSize: '0.85rem', fontFamily: "'Outfit', sans-serif",
     outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s',
-  };
-
-  const labelStyle: React.CSSProperties = {
-    fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)',
-    textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem', display: 'block',
+    boxSizing: 'border-box',
   };
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
-        .udm-input:focus { border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.15) !important; }
-        .udm-save:hover:not(:disabled) { box-shadow: 0 10px 28px rgba(99,102,241,0.5) !important; transform: translateY(-2px); }
-        .udm-delete:hover { background: rgba(239,68,68,0.18) !important; border-color: rgba(239,68,68,0.5) !important; }
-        .udm-branch:hover { transform: scale(1.06); }
-        .udm-perm-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1) !important; }
+        .udm-field:focus { border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.14) !important; }
+        .udm-tile:hover  { background: var(--surface-hover) !important; box-shadow: 0 2px 10px rgba(0,0,0,0.08) !important; }
+        .udm-save:hover:not(:disabled)   { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(79,70,229,0.42) !important; }
+        .udm-delete:hover { background: rgba(239,68,68,0.14) !important; }
+        .udm-branch:hover { transform: scale(1.05); }
       `}</style>
 
       {/* Backdrop */}
-      <div
-        onClick={onClose}
-        style={{
-          position: 'fixed', inset: 0,
-          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)',
-          zIndex: 9999, display: 'flex', justifyContent: 'flex-end',
-        }}
-      >
+      <div onClick={onClose} style={{
+        position: 'fixed', inset: 0,
+        background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)',
+        zIndex: 9999, display: 'flex', justifyContent: 'flex-end',
+      }}>
         {/* Drawer */}
-        <div
-          onClick={e => e.stopPropagation()}
-          style={{
-            width: '520px', maxWidth: '100vw', height: '100vh',
-            background: 'var(--surface-color)',
-            borderLeft: '1px solid var(--border-color)',
-            boxShadow: '-24px 0 64px rgba(0,0,0,0.3)',
-            display: 'flex', flexDirection: 'column',
-            fontFamily: "'Outfit', sans-serif",
-            overflowY: 'auto',
-          }}
-        >
+        <div onClick={e => e.stopPropagation()} style={{
+          width: '480px', maxWidth: '100vw', height: '100vh',
+          background: 'var(--surface-color)',
+          borderLeft: '1px solid var(--border-color)',
+          boxShadow: '-20px 0 56px rgba(0,0,0,0.28)',
+          display: 'flex', flexDirection: 'column',
+          fontFamily: "'Outfit', sans-serif",
+          overflowY: 'auto',
+        }}>
 
-          {/* ── Hero Header ── */}
+          {/* ── Hero ── */}
           <div style={{
-            background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #6366f1 100%)',
-            padding: '2rem 1.75rem 1.6rem',
-            position: 'relative', flexShrink: 0,
+            background: 'linear-gradient(135deg,#4f46e5 0%,#7c3aed 55%,#6366f1 100%)',
+            padding: '1.75rem 1.5rem 1.4rem', position: 'relative', flexShrink: 0,
           }}>
             <button onClick={onClose} style={{
-              position: 'absolute', top: '1rem', right: '1rem',
+              position: 'absolute', top: '0.9rem', right: '0.9rem',
               background: 'rgba(255,255,255,0.18)', border: 'none', borderRadius: '50%',
-              width: '30px', height: '30px', color: 'white', fontSize: '1rem',
+              width: '28px', height: '28px', color: 'white', fontSize: '1rem',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              backdropFilter: 'blur(4px)',
             }}>×</button>
 
-            <div style={{ display: 'flex', gap: '1.15rem', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
               {/* Avatar */}
               <div style={{ position: 'relative', flexShrink: 0 }}>
                 <div style={{
-                  width: '68px', height: '68px', borderRadius: '50%',
-                  background: 'rgba(255,255,255,0.18)', border: '3px solid rgba(255,255,255,0.55)',
+                  width: '60px', height: '60px', borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.2)', border: '2.5px solid rgba(255,255,255,0.55)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  overflow: 'hidden', fontSize: '1.7rem', color: 'white',
-                  fontWeight: 800, boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+                  overflow: 'hidden', fontSize: '1.5rem', color: 'white', fontWeight: 800,
                 }}>
                   {photo
                     ? <img src={photo} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : (name[0] || username[0] || 'U').toUpperCase()}
                 </div>
                 <label htmlFor="photo-udm" style={{
-                  position: 'absolute', bottom: -2, right: -2,
-                  background: 'white', borderRadius: '50%', width: '24px', height: '24px',
+                  position: 'absolute', bottom: -2, right: -2, background: 'white',
+                  borderRadius: '50%', width: '22px', height: '22px',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '0.65rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+                  fontSize: '0.6rem', cursor: 'pointer', boxShadow: '0 1px 6px rgba(0,0,0,0.25)',
                 }}>📷</label>
-                <input id="photo-udm" type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
+                <input id="photo-udm" type="file" accept="image/*"
+                  onChange={e => { const f = e.target.files?.[0]; if (!f) return; const r = new FileReader(); r.onloadend = () => setPhoto(r.result as string); r.readAsDataURL(f); }}
+                  style={{ display: 'none' }} />
               </div>
 
-              {/* Name + email + toggle */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontWeight: 800, fontSize: '1rem', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {name || (isCreate ? 'New User' : '—')}
                 </div>
-                <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.72)', marginTop: '0.1rem', marginBottom: '0.6rem' }}>
+                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', marginTop: '0.1rem', marginBottom: '0.5rem' }}>
                   {email || 'username@transworldintl.com'}
                 </div>
-                {/* Approved Toggle */}
+                {/* Approved toggle */}
                 <label style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+                  display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
                   cursor: isSuperAdmin ? 'not-allowed' : 'pointer',
-                  background: isApproved ? 'rgba(16,185,129,0.22)' : 'rgba(239,68,68,0.22)',
-                  border: `1px solid ${isApproved ? 'rgba(16,185,129,0.45)' : 'rgba(239,68,68,0.45)'}`,
-                  borderRadius: '20px', padding: '0.22rem 0.65rem 0.22rem 0.45rem',
+                  background: isApproved ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)',
+                  border: `1px solid ${isApproved ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`,
+                  borderRadius: '20px', padding: '0.2rem 0.6rem 0.2rem 0.4rem',
                 }}>
                   <div style={{
-                    width: '32px', height: '17px', borderRadius: '9px',
-                    background: isApproved ? '#10b981' : 'rgba(255,255,255,0.25)',
-                    position: 'relative', transition: 'all 0.25s ease', flexShrink: 0,
+                    width: '30px', height: '16px', borderRadius: '8px',
+                    background: isApproved ? '#10b981' : 'rgba(255,255,255,0.2)',
+                    position: 'relative', transition: 'all 0.22s', flexShrink: 0,
                   }}>
                     <div style={{
-                      position: 'absolute', top: '1.5px', left: isApproved ? '16px' : '1.5px',
-                      width: '14px', height: '14px', borderRadius: '50%',
-                      background: 'white', transition: 'all 0.25s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                      position: 'absolute', top: '1.5px', left: isApproved ? '15px' : '1.5px',
+                      width: '13px', height: '13px', borderRadius: '50%', background: 'white',
+                      transition: 'all 0.22s', boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
                     }} />
                   </div>
                   <input type="checkbox" disabled={isSuperAdmin} checked={isApproved}
                     onChange={e => setIsApproved(e.target.checked)} style={{ display: 'none' }} />
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isApproved ? '#6ee7b7' : '#fca5a5' }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: isApproved ? '#6ee7b7' : '#fca5a5' }}>
                     {isApproved ? 'Approved' : 'Disabled'}
                   </span>
                 </label>
@@ -309,218 +245,156 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
             </div>
           </div>
 
-          {/* ── Form Body ── */}
-          <div style={{ flex: 1, padding: '1.4rem 1.75rem', display: 'flex', flexDirection: 'column', gap: '1.1rem', overflowY: 'auto' }}>
+          {/* ── Body ── */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem 1.4rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
-            {/* Fields Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
-              <div>
-                <label style={labelStyle}>Full Name *</label>
-                <input className="udm-input" type="text" required value={name}
-                  onChange={e => setName(e.target.value)} placeholder="John Doe" style={inputStyle} />
-              </div>
-              <div>
-                <label style={labelStyle}>Username *</label>
-                <input className="udm-input" type="text" required value={username}
-                  onChange={e => {
-                    const u = e.target.value.toLowerCase();
-                    setUsername(u);
-                    if (isCreate) setEmail(`${u}@transworldintl.com`);
-                  }} placeholder="johndoe" style={inputStyle} />
-              </div>
-              <div>
-                <label style={labelStyle}>Email *</label>
-                <input className="udm-input" type="email" required value={email}
-                  onChange={e => setEmail(e.target.value.toLowerCase())}
-                  placeholder="john@transworldintl.com" style={inputStyle} />
-              </div>
-              <div>
-                <label style={labelStyle}>Phone</label>
-                <input className="udm-input" type="text" value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  placeholder="9876543210" style={inputStyle} />
-              </div>
+            {/* Profile fields */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.7rem' }}>
+              {[
+                { lbl: 'Full Name *',    val: name,     set: setName,     type: 'text',     ph: 'John Doe' },
+                { lbl: 'Username *',     val: username, set: (v: string) => { setUsername(v.toLowerCase()); if (isCreate) setEmail(`${v.toLowerCase()}@transworldintl.com`); }, type: 'text', ph: 'johndoe' },
+                { lbl: 'Email *',        val: email,    set: (v: string) => setEmail(v.toLowerCase()), type: 'email', ph: 'john@transworldintl.com' },
+                { lbl: 'Phone',          val: phone,    set: setPhone,    type: 'text',     ph: '9876543210' },
+              ].map(({ lbl, val, set, type, ph }) => (
+                <div key={lbl}>
+                  <div style={{ fontSize: '0.69rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.3rem' }}>
+                    {lbl}
+                  </div>
+                  <input
+                    className="udm-field" type={type} value={val} placeholder={ph}
+                    onChange={e => set(e.target.value)} style={inputStyle}
+                  />
+                </div>
+              ))}
               {isCreate && (
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={labelStyle}>Password *</label>
-                  <input className="udm-input" type="password" required minLength={6} value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder="Min. 6 characters" style={inputStyle} />
+                  <div style={{ fontSize: '0.69rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.3rem' }}>Password *</div>
+                  <input className="udm-field" type="password" minLength={6} value={password}
+                    onChange={e => setPassword(e.target.value)} placeholder="Min. 6 characters" style={inputStyle} />
                 </div>
               )}
             </div>
 
-            {/* ── Permissions Section ── */}
+            {/* ── Permissions ── */}
             <div>
-              {/* Section heading */}
               <div style={{
-                display: 'flex', alignItems: 'center', gap: '0.5rem',
-                marginBottom: '0.75rem',
+                display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.6rem',
               }}>
-                <div style={{
-                  width: '3px', height: '18px', borderRadius: '2px',
-                  background: 'linear-gradient(135deg, #6366f1, #10b981)',
-                }} />
-                <span style={{
-                  fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.07em',
-                  textTransform: 'uppercase', color: 'var(--text-secondary)',
-                }}>Access Permissions</span>
+                <div style={{ width: '3px', height: '14px', borderRadius: '2px', background: 'linear-gradient(#6366f1,#10b981)', flexShrink: 0 }} />
+                <span style={{ fontSize: '0.69rem', fontWeight: 800, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
+                  Access Permissions
+                </span>
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', opacity: 0.55, marginLeft: '0.2rem' }}>— click badge to cycle</span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+              {/* 2×2 grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem' }}>
 
                 {/* CSC Jobs */}
-                <div className="udm-perm-card">
-                  <PermCard
-                    emoji="📋" iconBg="linear-gradient(135deg, #4f46e5, #6366f1)"
-                    title="CSC Jobs" subtitle="Active & Closed Jobs"
-                  >
-                    <PermOpt label="None" icon="🚫" active={cscAccess === 'None'} activeColor="#94a3b8" activeGlow="rgba(148,163,184,0.2)"
-                      onClick={() => { setCscAccess('None'); setFollowupAccess('None'); }} />
-                    <PermOpt label="View" icon="👁️" active={cscAccess === 'View'} activeColor="#6366f1" activeGlow="rgba(99,102,241,0.35)"
-                      onClick={() => setCscAccess('View')} />
-                    <PermOpt label="Edit" icon="✏️" active={cscAccess === 'Edit'} activeColor="#4f46e5" activeGlow="rgba(79,70,229,0.35)"
-                      onClick={() => setCscAccess('Edit')} />
-                  </PermCard>
-                </div>
+                <AccessTile
+                  label="CSC Jobs" icon="📋" value={cscAccess}
+                  onClick={() => {
+                    const next_ = next(cscCycle, cscAccess);
+                    setCscAccess(next_);
+                    if (next_ === 'None') setFollowupAccess('None');
+                  }}
+                />
 
-                {/* Follow-Ups (conditional, indented) */}
-                {cscAccess !== 'None' && (
-                  <div style={{ display: 'flex', gap: '0' }}>
-                    <div style={{ width: '20px', flexShrink: 0, display: 'flex', alignItems: 'stretch' }}>
-                      <div style={{ width: '2px', margin: '0 auto', background: 'rgba(99,102,241,0.25)', borderRadius: '2px' }} />
-                    </div>
-                    <div style={{ flex: 1 }} className="udm-perm-card">
-                      <PermCard
-                        emoji="⏰" iconBg="linear-gradient(135deg, #8b5cf6, #a78bfa)"
-                        title="Follow-Ups" subtitle="Follow-up Reminders" indented={false}
-                      >
-                        <PermOpt label="None" icon="🚫" active={followupAccess === 'None'} activeColor="#94a3b8" activeGlow="rgba(148,163,184,0.2)"
-                          onClick={() => setFollowupAccess('None')} />
-                        <PermOpt label="Self" icon="👤" active={followupAccess === 'Self'} activeColor="#8b5cf6" activeGlow="rgba(139,92,246,0.35)"
-                          onClick={() => setFollowupAccess('Self')} />
-                        <PermOpt label="All" icon="🌐" active={followupAccess === 'All'} activeColor="#7c3aed" activeGlow="rgba(124,58,237,0.35)"
-                          onClick={() => setFollowupAccess('All')} />
-                      </PermCard>
-                    </div>
-                  </div>
-                )}
+                {/* Follow-Ups */}
+                <AccessTile
+                  label="Follow-Ups" icon="⏰" value={followupAccess}
+                  dim={cscAccess === 'None'}
+                  onClick={() => setFollowupAccess(next(followupCycle, followupAccess))}
+                />
 
                 {/* All Jobs */}
-                <div className="udm-perm-card">
-                  <PermCard
-                    emoji="📁" iconBg="linear-gradient(135deg, #0284c7, #38bdf8)"
-                    title="All Jobs" subtitle="Full-Width Jobs Table"
-                  >
-                    <PermOpt label="None" icon="🚫" active={allJobsAccess === 'None'} activeColor="#94a3b8" activeGlow="rgba(148,163,184,0.2)"
-                      onClick={() => setAllJobsAccess('None')} />
-                    <PermOpt label="View" icon="👁️" active={allJobsAccess === 'View'} activeColor="#0284c7" activeGlow="rgba(2,132,199,0.35)"
-                      onClick={() => setAllJobsAccess('View')} />
-                  </PermCard>
-                </div>
+                <AccessTile
+                  label="All Jobs" icon="📁" value={allJobsAccess}
+                  onClick={() => setAllJobsAccess(next(allJobsCycle, allJobsAccess))}
+                />
 
                 {/* Unbilled */}
-                <div className="udm-perm-card">
-                  <PermCard
-                    emoji="🧾" iconBg="linear-gradient(135deg, #059669, #10b981)"
-                    title="Unbilled" subtitle="Unbilled Jobs Portal"
-                  >
-                    <PermOpt label="None" icon="🚫" active={unbilledAccess === 'None'} activeColor="#94a3b8" activeGlow="rgba(148,163,184,0.2)"
-                      onClick={() => { setUnbilledAccess('None'); setSelectedBranches([]); }} />
-                    <PermOpt label="View" icon="👁️" active={unbilledAccess === 'View'} activeColor="#10b981" activeGlow="rgba(16,185,129,0.35)"
-                      onClick={() => setUnbilledAccess('View')} />
-                    <PermOpt label="Edit" icon="✏️" active={unbilledAccess === 'Edit'} activeColor="#059669" activeGlow="rgba(5,150,105,0.35)"
-                      onClick={() => setUnbilledAccess('Edit')} />
-                  </PermCard>
-                </div>
-
-                {/* Branches (conditional, indented under Unbilled) */}
-                {unbilledAccess !== 'None' && (
-                  <div style={{ display: 'flex', gap: '0' }}>
-                    <div style={{ width: '20px', flexShrink: 0, display: 'flex', alignItems: 'stretch' }}>
-                      <div style={{ width: '2px', margin: '0 auto', background: 'rgba(16,185,129,0.25)', borderRadius: '2px' }} />
-                    </div>
-                    <div style={{
-                      flex: 1, padding: '0.85rem 1rem',
-                      borderRadius: '14px', border: '1px solid var(--border-color)',
-                      background: 'var(--surface-color)',
-                    }}>
-                      <div style={{
-                        fontSize: '0.7rem', fontWeight: 800, color: '#10b981',
-                        textTransform: 'uppercase', letterSpacing: '0.07em',
-                        marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.35rem',
-                      }}>
-                        📍 Assigned Branches
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                        {BRANCH_CODES.map(code => {
-                          const active = selectedBranches.includes(code);
-                          return (
-                            <button
-                              key={code} type="button" className="udm-branch"
-                              onClick={() => toggleBranch(code)}
-                              style={{
-                                padding: '0.28rem 0.65rem', borderRadius: '20px',
-                                fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer',
-                                border: `1.5px solid ${active ? '#10b981' : 'var(--border-color)'}`,
-                                background: active ? 'rgba(16,185,129,0.15)' : 'var(--bg-color)',
-                                color: active ? '#10b981' : 'var(--text-secondary)',
-                                transition: 'all 0.15s ease',
-                                boxShadow: active ? '0 0 8px rgba(16,185,129,0.2)' : 'none',
-                              }}
-                            >
-                              {active ? `✓ ${code}` : `+ ${code}`}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <AccessTile
+                  label="Unbilled" icon="🧾" value={unbilledAccess}
+                  onClick={() => {
+                    const next_ = next(unbilledCycle, unbilledAccess);
+                    setUnbilledAccess(next_);
+                    if (next_ === 'None') setBranches([]);
+                  }}
+                />
               </div>
+
+              {/* Branches — shown when Unbilled ≠ None */}
+              {unbilledAccess !== 'None' && (
+                <div style={{
+                  marginTop: '0.5rem',
+                  padding: '0.7rem 0.8rem',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--bg-color)',
+                }}>
+                  <div style={{
+                    fontSize: '0.67rem', fontWeight: 800, color: '#10b981',
+                    textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.45rem',
+                  }}>
+                    📍 Assigned Branches
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                    {BRANCH_CODES.map(code => {
+                      const active = branches.includes(code);
+                      return (
+                        <button key={code} type="button" className="udm-branch"
+                          onClick={() => toggleBranch(code)}
+                          style={{
+                            padding: '0.22rem 0.55rem', borderRadius: '5px',
+                            fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer',
+                            border: `1.5px solid ${active ? '#10b981' : 'var(--border-color)'}`,
+                            background: active ? 'rgba(16,185,129,0.13)' : 'var(--surface-color)',
+                            color: active ? '#10b981' : 'var(--text-secondary)',
+                            transition: 'all 0.13s ease',
+                            boxShadow: active ? '0 0 6px rgba(16,185,129,0.2)' : 'none',
+                          }}
+                        >
+                          {active ? `✓ ${code}` : code}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* ── Action Buttons ── */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', paddingBottom: '0.5rem' }}>
+            {/* ── Buttons ── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingBottom: '0.5rem' }}>
               <button
-                type="button" disabled={saving}
-                onClick={handleSaveData}
+                type="button" disabled={saving} onClick={handleSave}
                 className="udm-save"
                 style={{
-                  width: '100%', padding: '0.9rem',
-                  borderRadius: '12px', border: 'none',
-                  background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-                  color: 'white', fontWeight: 800, fontSize: '0.9rem',
-                  cursor: saving ? 'not-allowed' : 'pointer',
-                  opacity: saving ? 0.7 : 1,
-                  boxShadow: '0 4px 18px rgba(79,70,229,0.35)',
-                  transition: 'all 0.2s ease',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem',
+                  width: '100%', padding: '0.8rem',
+                  borderRadius: '10px', border: 'none',
+                  background: 'linear-gradient(135deg,#4f46e5,#7c3aed)',
+                  color: 'white', fontWeight: 800, fontSize: '0.88rem',
+                  cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1,
+                  boxShadow: '0 4px 16px rgba(79,70,229,0.32)',
+                  transition: 'all 0.18s ease',
                 }}
               >
-                {saving
-                  ? <><span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⏳</span> Saving...</>
-                  : isCreate
-                    ? '➕ Create User Account'
-                    : '💾 Save Profile & Permissions'
-                }
+                {saving ? '⏳ Saving...' : isCreate ? '➕ Create User Account' : '💾 Save Profile & Permissions'}
               </button>
 
               {!isCreate && !isSuperAdmin && onDelete && (
                 <button
-                  type="button"
-                  className="udm-delete"
+                  type="button" className="udm-delete"
                   onClick={async () => {
                     const ok = await customConfirm(`⚠️ Permanently delete "${name || username}"? This cannot be undone.`);
                     if (ok) await onDelete(user.id);
                   }}
                   style={{
-                    width: '100%', padding: '0.65rem',
-                    borderRadius: '12px',
-                    border: '1.5px solid rgba(239,68,68,0.3)',
-                    background: 'rgba(239,68,68,0.06)',
-                    color: '#ef4444', fontWeight: 700, fontSize: '0.82rem',
-                    cursor: 'pointer', transition: 'all 0.18s ease',
+                    width: '100%', padding: '0.6rem',
+                    borderRadius: '10px', border: '1.5px solid rgba(239,68,68,0.28)',
+                    background: 'rgba(239,68,68,0.05)', color: '#ef4444',
+                    fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer',
+                    transition: 'all 0.15s ease',
                   }}
                 >
                   🗑️ Permanently Delete User Account
