@@ -10,22 +10,20 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
   const [showModal, setShowModal] = useState(false);
   const [activeModalUser, setActiveModalUser] = useState<any | null>(null);
 
-  // Sealed Role-Based Access for Alerts:
-  // - Admin: Can see all alerts across all branches
-  // - Viewer: Cannot see anything (returns null)
-  // - Manager & Executive: Can see only their own (filtered by assigned branch/coordinator)
-  const canManageUsers = profile && (profile.csc_role === 'Edit' || profile.unbilled_role === 'Edit');
-  const isViewer = !canManageUsers;
+  // Pending Sign-Up notifications are shown ONLY to Super Admin (is_super_admin === true)
+  const isSuperAdmin = profile?.is_super_admin === true;
 
   useEffect(() => {
-    if (isViewer) return;
+    if (!isSuperAdmin) return;
 
     fetchPendingUsers();
 
     // Check periodically every 30 seconds for new signups
     const interval = setInterval(fetchPendingUsers, 30000);
     return () => clearInterval(interval);
-  }, [isViewer, profile]);
+  }, [isSuperAdmin, profile]);
+
+  if (!isSuperAdmin) return null;
 
   const fetchPendingUsers = async () => {
     try {
@@ -58,7 +56,7 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
     }
   };
 
-  if (isViewer || pendingUsers.length === 0) return null;
+  if (!isSuperAdmin || pendingUsers.length === 0) return null;
 
   return (
     <>
@@ -178,8 +176,8 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
                     </div>
                   </div>
 
-                  {/* Actions — only shown if user can manage users */}
-                  {canManageUsers && (
+                  {/* Actions — shown for Super Admin */}
+                  {isSuperAdmin && (
                   <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.4rem', justifyContent: 'flex-end' }}>
                     <button
                       onClick={() => setActiveModalUser(pu)}
