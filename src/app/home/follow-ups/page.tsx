@@ -108,7 +108,7 @@ export default function FollowUpsPage() {
         .select('*')
         .eq('follow_up_required', true);
 
-      // If not admin/All, restrict to owner agent
+      // If not All access, restrict to owner agent
       if (!showAll) {
         query = query.ilike('agent_name', activeName);
       }
@@ -153,7 +153,7 @@ export default function FollowUpsPage() {
       }));
       setTasks(enrichedComms);
 
-      // Find list of all unique agent names for filtering (if admin).
+      // Find list of all unique agent names for filtering.
       const agents = Array.from(
         new Set(enrichedComms.map((c: any) => c.agent_name?.toLowerCase()).filter(Boolean))
       ).sort() as string[];

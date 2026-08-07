@@ -43,7 +43,7 @@ export default function ActivityLogPage() {
   const router = useRouter();
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [search, setSearch] = useState('');
@@ -51,7 +51,7 @@ export default function ActivityLogPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
-  // Auth guard — Admin only
+  // Auth guard — Super Admin only
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -68,7 +68,7 @@ export default function ActivityLogPage() {
         router.push('/home');
         return;
       }
-      setIsAdmin(true);
+      setIsAuthorized(true);
     };
     checkAuth();
   }, [router]);
@@ -105,9 +105,9 @@ export default function ActivityLogPage() {
   }, [page, appliedSearch, dateFrom, dateTo]);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isAuthorized) return;
     fetchLogs();
-  }, [isAdmin, fetchLogs]);
+  }, [isAuthorized, fetchLogs]);
 
   const handleSearch = () => {
     setPage(0);
@@ -124,7 +124,7 @@ export default function ActivityLogPage() {
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
-  if (!isAdmin) {
+  if (!isAuthorized) {
     return (
       <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
         Checking access...

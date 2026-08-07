@@ -308,7 +308,7 @@ function JobsTable() {
       } catch (e) {}
     }
     
-    // Check if user is admin and get their name
+    // Check user permissions and get their name
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
         supabase.from('profiles').select('*').eq('id', data.user.id).single().then(({ data: profileData }) => {
