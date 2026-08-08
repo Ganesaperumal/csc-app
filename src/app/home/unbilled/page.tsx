@@ -882,7 +882,6 @@ export default function UnbilledManagementPage() {
       {/* Line 1: Header Bar with Back Button, Title, Search, Clear Funnels, Export XLSX, Reminders */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'nowrap', overflowX: 'auto', marginBottom: '1.5rem', paddingBottom: '0.2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 1, minWidth: 0, maxWidth: '100%' }}>
-          {((userProfile?.csc_role && userProfile.csc_role !== 'None') || (userProfile?.followups_role && userProfile.followups_role !== 'None')) && (
           <button
             onClick={() => router.push('/home')}
             style={{
@@ -913,7 +912,6 @@ export default function UnbilledManagementPage() {
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             Back
           </button>
-        )}
           <div style={{ flexShrink: 1, minWidth: 0 }}>
             <h1 className={styles.title} style={{ fontSize: '1.2rem', whiteSpace: 'nowrap', margin: 0 }}>
               🧾 <span className={styles.titleText}>Unbilled<span className={styles.hideOnMobile}> Management</span></span>
