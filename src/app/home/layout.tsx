@@ -373,9 +373,8 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const isJobPage = pathname.startsWith('/home/job/');
-  const isAllJobsPage = pathname === '/home/all-jobs';
   const isUnbilledPage = pathname === '/home/unbilled';
-  const showSidebar = !isJobPage && !isAllJobsPage && !isUnbilledPage;
+  const showSidebar = !isJobPage && !isUnbilledPage;
 
   useEffect(() => {
     const checkUser = async () => {
