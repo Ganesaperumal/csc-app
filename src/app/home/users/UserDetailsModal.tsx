@@ -168,9 +168,9 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
     <>
       <style>{`
         @keyframes udmFade { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes udmSlide { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        @keyframes udmPop { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         .udm-backdrop { animation: udmFade 0.2s ease-out forwards; }
-        .udm-panel { animation: udmSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .udm-panel { animation: udmPop 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .udm-field:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59,130,246,0.15) !important; }
         .udm-save:hover { background: #15803d !important; }
         .udm-delete:hover { background: #fee2e2 !important; }
@@ -183,21 +183,29 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
         onClick={onClose}
         style={{
           position: 'fixed', inset: 0,
-          background: 'rgba(15, 23, 42, 0.5)',
-          backdropFilter: 'blur(3px)',
+          background: 'rgba(15, 23, 42, 0.55)',
+          backdropFilter: 'blur(6px)',
+          WebkitBackdropFilter: 'blur(6px)',
           zIndex: 9999,
-          display: 'flex', justifyContent: 'flex-end',
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          padding: '1.25rem',
         }}
       >
-        {/* Slide-over Drawer Panel */}
+        {/* Centered Glass Modal Popup */}
         <div
           className="udm-panel"
           onClick={e => e.stopPropagation()}
           style={{
-            width: '100%', maxWidth: '440px', height: '100vh',
+            width: '100%', 
+            maxWidth: '560px', 
+            maxHeight: '88vh',
             background: '#ffffff',
-            boxShadow: '-8px 0 32px rgba(0, 0, 0, 0.15)',
-            display: 'flex', flexDirection: 'column',
+            borderRadius: '20px',
+            boxShadow: '0 25px 60px rgba(15, 23, 42, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.8)',
+            display: 'flex', 
+            flexDirection: 'column',
             overflow: 'hidden',
           }}
         >

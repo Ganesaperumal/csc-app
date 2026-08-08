@@ -79,12 +79,7 @@ export default function AIChatbot() {
         }}>
           {/* Header */}
           <div style={{ background: 'linear-gradient(135deg, #4f46e5, #06b6d4)', padding: '16px', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem' }}>
-              <svg width="22" height="22" viewBox="0 0 36 36" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="6" y="10" width="22" height="16" rx="4" strokeWidth="2.5" stroke="#00f2fe" />
-                <text x="17" y="22" dominantBaseline="central" fontSize="14" fontWeight="900" fontFamily="sans-serif" fill="#f093fb" stroke="none" textAnchor="middle">AI</text>
-                <text x="28" y="11" fontSize="11" stroke="none" fill="white" textAnchor="middle">✨</text>
-              </svg> 
+            <div style={{ fontWeight: 800, fontSize: '0.95rem' }}>
               TI AI Assistant
             </div>
             <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.4rem', fontWeight: 'bold' }}>
