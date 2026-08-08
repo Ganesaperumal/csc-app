@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { PermissionsProvider } from '@/components/PermissionsContext';
@@ -26,110 +26,253 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
   const canAccessCsc = cscRole !== 'None' && cscRole !== '';
   const canAccessActive = canAccessCsc;
   const canAccessClosed = canAccessCsc;
-  const isActiveActive = pathname.startsWith('/home/active-jobs');
-  const isClosedActive = pathname === '/home/closed-jobs';
-
   const canAccessFollowUps = canAccessCsc && followupsRole !== 'None';
   const canAccessAllJobs = allJobsRole !== 'None' && allJobsRole !== '';
   const canAccessUnbilled = unbilledRole !== 'None' && unbilledRole !== '';
   const canAccessReports = canAccessCsc || canAccessUnbilled || (followupsRole !== 'None' && followupsRole !== '');
 
+  const isActiveActive = pathname.startsWith('/home/active-jobs');
+  const isClosedActive = pathname === '/home/closed-jobs';
+  const isFollowUpsActive = pathname === '/home/follow-ups';
+  const isAllJobsActive = pathname === '/home/all-jobs';
+  const isUnbilledActive = pathname.startsWith('/home/unbilled');
+  const isReportsActive = pathname === '/home/reports';
+
+  // Determine active item key & pill styling
+  let activeKey = '';
+  let pillGradient = 'linear-gradient(135deg, #10b981, #059669)';
+  let pillGlow = '0 4px 14px rgba(16, 185, 129, 0.35)';
+
+  if (isActiveActive) {
+    activeKey = 'active';
+    pillGradient = 'linear-gradient(135deg, #10b981, #059669)';
+    pillGlow = '0 4px 14px rgba(16, 185, 129, 0.35)';
+  } else if (isClosedActive) {
+    activeKey = 'closed';
+    pillGradient = 'linear-gradient(135deg, #6366f1, #4f46e5)';
+    pillGlow = '0 4px 14px rgba(79, 70, 229, 0.35)';
+  } else if (isFollowUpsActive) {
+    activeKey = 'followups';
+    pillGradient = 'linear-gradient(135deg, #f59e0b, #d97706)';
+    pillGlow = '0 4px 14px rgba(245, 158, 11, 0.35)';
+  } else if (isAllJobsActive) {
+    activeKey = 'alljobs';
+    pillGradient = 'linear-gradient(135deg, #3b82f6, #1d4ed8)';
+    pillGlow = '0 4px 14px rgba(59, 130, 246, 0.35)';
+  } else if (isUnbilledActive) {
+    activeKey = 'unbilled';
+    pillGradient = 'linear-gradient(135deg, #8b5cf6, #6d28d9)';
+    pillGlow = '0 4px 14px rgba(139, 92, 246, 0.35)';
+  } else if (isReportsActive) {
+    activeKey = 'reports';
+    pillGradient = 'linear-gradient(135deg, #ec4899, #be185d)';
+    pillGlow = '0 4px 14px rgba(236, 72, 153, 0.35)';
+  }
+
+  // Ref tracking for pixel-perfect 2D glider pill placement
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [pillStyle, setPillStyle] = useState<React.CSSProperties>({ opacity: 0 });
+
+  useEffect(() => {
+    if (!panelRef.current || !activeKey) {
+      setPillStyle({ opacity: 0 });
+      return;
+    }
+    const activeEl = panelRef.current.querySelector(`[data-nav-key="${activeKey}"]`) as HTMLElement;
+    if (activeEl) {
+      const panelRect = panelRef.current.getBoundingClientRect();
+      const elRect = activeEl.getBoundingClientRect();
+      setPillStyle({
+        top: `${elRect.top - panelRect.top}px`,
+        left: `${elRect.left - panelRect.left}px`,
+        width: `${elRect.width}px`,
+        height: `${elRect.height}px`,
+        background: pillGradient,
+        boxShadow: pillGlow,
+        opacity: 1
+      });
+    }
+  }, [pathname, activeKey, pillGradient, pillGlow]);
+
   return (
     <nav className={styles.nav} style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', gap: '0.35rem' }}>
       
-      {(canAccessActive || canAccessClosed) && (
-        <div style={{ marginBottom: '0.4rem' }}>
-          <div style={{
-            fontSize: '0.7rem',
-            fontWeight: 800,
-            color: 'var(--text-secondary)',
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-            paddingLeft: '0.5rem',
-            marginBottom: '0.4rem'
-          }}>
-            Jobs Status
-          </div>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            backgroundColor: 'rgba(148, 163, 184, 0.12)',
-            borderRadius: '12px',
-            padding: '4px',
-            position: 'relative',
-            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)'
-          }}>
-            {canAccessActive && (
-              <Link
-                href="/home/active-jobs"
-                style={{
-                  flex: 1,
-                  textAlign: 'center',
-                  padding: '0.45rem 0.25rem',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  borderRadius: '8px',
-                  textDecoration: 'none',
-                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                  color: isActiveActive ? '#ffffff' : 'var(--text-secondary)',
-                  background: isActiveActive
-                    ? 'linear-gradient(135deg, #10b981, #059669)'
-                    : 'transparent',
-                  boxShadow: isActiveActive ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
-                }}
-              >
-                <span>⚡</span> Active
-              </Link>
-            )}
-            {canAccessClosed && (
-              <Link
-                href="/home/closed-jobs"
-                style={{
-                  flex: 1,
-                  textAlign: 'center',
-                  padding: '0.45rem 0.25rem',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  borderRadius: '8px',
-                  textDecoration: 'none',
-                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                  color: isClosedActive ? '#ffffff' : 'var(--text-secondary)',
-                  background: isClosedActive
-                    ? 'linear-gradient(135deg, #6366f1, #4f46e5)'
-                    : 'transparent',
-                  boxShadow: isClosedActive ? '0 4px 12px rgba(79, 70, 229, 0.35)' : 'none',
-                }}
-              >
-                <span>🗃️</span> Closed
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
+      {/* ═══ UNIFIED NAVIGATION PANEL ═══ */}
+      <div 
+        ref={panelRef}
+        style={{
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
+          padding: '6px',
+          backgroundColor: 'rgba(148, 163, 184, 0.12)',
+          borderRadius: '16px',
+          border: '1px solid var(--border-color)',
+          boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)',
+          marginBottom: '0.5rem'
+        }}
+      >
+        {/* ── 2D Dynamic Sliding Glider Pill Background ── */}
+        <div style={{
+          position: 'absolute',
+          borderRadius: '10px',
+          pointerEvents: 'none',
+          zIndex: 1,
+          transition: 'top 0.35s cubic-bezier(0.34, 1.25, 0.64, 1), left 0.35s cubic-bezier(0.34, 1.25, 0.64, 1), width 0.35s cubic-bezier(0.34, 1.25, 0.64, 1), height 0.35s cubic-bezier(0.34, 1.25, 0.64, 1), background 0.3s ease, box-shadow 0.3s ease, opacity 0.2s ease',
+          ...pillStyle
+        }} />
 
-      {canAccessFollowUps && (
-        <Link href="/home/follow-ups" className={`${styles.navItem} ${pathname === '/home/follow-ups' ? styles.active : ''}`}>
-          <span>⏰</span> Follow-ups
-        </Link>
-      )}
+        {/* Line 1: Active Jobs (Full Width) */}
+        {canAccessActive && (
+          <Link
+            href="/home/active-jobs"
+            data-nav-key="active"
+            style={{
+              width: '100%',
+              padding: '0.6rem 0.85rem',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              borderRadius: '10px',
+              textDecoration: 'none',
+              position: 'relative',
+              zIndex: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              transition: 'color 0.25s ease',
+              color: isActiveActive ? '#ffffff' : 'var(--text-secondary)',
+            }}
+          >
+            <span>⚡</span> Active Jobs
+          </Link>
+        )}
 
-      {canAccessAllJobs && (
-        <Link href="/home/all-jobs" className={`${styles.navItem} ${pathname === '/home/all-jobs' ? styles.active : ''}`}>
-          <span>📁</span> All Jobs
-        </Link>
-      )}
+        {/* Line 2: Closed Jobs (Full Width) */}
+        {canAccessClosed && (
+          <Link
+            href="/home/closed-jobs"
+            data-nav-key="closed"
+            style={{
+              width: '100%',
+              padding: '0.6rem 0.85rem',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              borderRadius: '10px',
+              textDecoration: 'none',
+              position: 'relative',
+              zIndex: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              transition: 'color 0.25s ease',
+              color: isClosedActive ? '#ffffff' : 'var(--text-secondary)',
+            }}
+          >
+            <span>🗃️</span> Closed Jobs
+          </Link>
+        )}
 
-      {canAccessUnbilled && (
-        <Link href="/home/unbilled" className={`${styles.navItem} ${pathname.startsWith('/home/unbilled') ? styles.active : ''}`}>
-          <span>🧾</span> Unbilled
-        </Link>
-      )}
+        {/* Row 2: Follow-ups (Full Width) */}
+        {canAccessFollowUps && (
+          <Link
+            href="/home/follow-ups"
+            data-nav-key="followups"
+            style={{
+              width: '100%',
+              padding: '0.6rem 0.85rem',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              borderRadius: '10px',
+              textDecoration: 'none',
+              position: 'relative',
+              zIndex: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              transition: 'color 0.25s ease',
+              color: isFollowUpsActive ? '#ffffff' : 'var(--text-secondary)',
+            }}
+          >
+            <span>⏰</span> Follow-ups
+          </Link>
+        )}
 
-      {canAccessReports && (
-        <Link href="/home/reports" className={`${styles.navItem} ${pathname === '/home/reports' ? styles.active : ''}`}>
-          <span>📊</span> Reports
-        </Link>
-      )}
+        {/* Row 3: All Jobs (Full Width) */}
+        {canAccessAllJobs && (
+          <Link
+            href="/home/all-jobs"
+            data-nav-key="alljobs"
+            style={{
+              width: '100%',
+              padding: '0.6rem 0.85rem',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              borderRadius: '10px',
+              textDecoration: 'none',
+              position: 'relative',
+              zIndex: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              transition: 'color 0.25s ease',
+              color: isAllJobsActive ? '#ffffff' : 'var(--text-secondary)',
+            }}
+          >
+            <span>📁</span> All Jobs
+          </Link>
+        )}
+
+        {/* Row 4: Unbilled (Full Width) */}
+        {canAccessUnbilled && (
+          <Link
+            href="/home/unbilled"
+            data-nav-key="unbilled"
+            style={{
+              width: '100%',
+              padding: '0.6rem 0.85rem',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              borderRadius: '10px',
+              textDecoration: 'none',
+              position: 'relative',
+              zIndex: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              transition: 'color 0.25s ease',
+              color: isUnbilledActive ? '#ffffff' : 'var(--text-secondary)',
+            }}
+          >
+            <span>🧾</span> Unbilled
+          </Link>
+        )}
+
+        {/* Row 5: Reports (Full Width) */}
+        {canAccessReports && (
+          <Link
+            href="/home/reports"
+            data-nav-key="reports"
+            style={{
+              width: '100%',
+              padding: '0.6rem 0.85rem',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              borderRadius: '10px',
+              textDecoration: 'none',
+              position: 'relative',
+              zIndex: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              transition: 'color 0.25s ease',
+              color: isReportsActive ? '#ffffff' : 'var(--text-secondary)',
+            }}
+          >
+            <span>📊</span> Reports
+          </Link>
+        )}
+      </div>
 
       {/* Pending Sign-Up Notification Banner directly above ⚙️ Admin | 👥 Users */}
       <div style={{ marginTop: 'auto' }}>
@@ -146,8 +289,34 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
             borderRadius: '12px',
             padding: '4px',
             position: 'relative',
-            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)'
+            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.05)',
+            overflow: 'hidden'
           }}>
+            {/* ── Sliding Active Glider Pill for Admin / Users ── */}
+            <div style={{
+              position: 'absolute',
+              top: '4px',
+              bottom: '4px',
+              left: '4px',
+              width: 'calc(50% - 4px)',
+              borderRadius: '8px',
+              background: pathname === '/home/users'
+                ? 'linear-gradient(135deg, #10b981, #059669)'
+                : pathname === '/home/admin'
+                ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
+                : 'transparent',
+              boxShadow: pathname === '/home/users'
+                ? '0 4px 14px rgba(16, 185, 129, 0.35)'
+                : pathname === '/home/admin'
+                ? '0 4px 14px rgba(59, 130, 246, 0.35)'
+                : 'none',
+              transform: pathname === '/home/users' ? 'translateX(100%)' : 'translateX(0%)',
+              opacity: (pathname === '/home/admin' || pathname === '/home/users') ? 1 : 0,
+              transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease, boxShadow 0.3s ease, opacity 0.2s ease',
+              pointerEvents: 'none',
+              zIndex: 1
+            }} />
+
             <Link
               href="/home/admin"
               style={{
@@ -155,15 +324,13 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
                 textAlign: 'center',
                 padding: '0.45rem 0.25rem',
                 fontSize: '0.8rem',
-                fontWeight: 600,
+                fontWeight: 700,
                 borderRadius: '8px',
                 textDecoration: 'none',
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+                zIndex: 2,
+                transition: 'color 0.25s ease',
                 color: pathname === '/home/admin' ? '#ffffff' : 'var(--text-secondary)',
-                background: pathname === '/home/admin'
-                  ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
-                  : 'transparent',
-                boxShadow: pathname === '/home/admin' ? '0 4px 12px rgba(59, 130, 246, 0.35)' : 'none',
               }}
             >
               <span>⚙️</span> Admin
@@ -175,15 +342,13 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
                 textAlign: 'center',
                 padding: '0.45rem 0.25rem',
                 fontSize: '0.8rem',
-                fontWeight: 600,
+                fontWeight: 700,
                 borderRadius: '8px',
                 textDecoration: 'none',
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+                zIndex: 2,
+                transition: 'color 0.25s ease',
                 color: pathname === '/home/users' ? '#ffffff' : 'var(--text-secondary)',
-                background: pathname === '/home/users'
-                  ? 'linear-gradient(135deg, #10b981, #059669)'
-                  : 'transparent',
-                boxShadow: pathname === '/home/users' ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
               }}
             >
               <span>👥</span> Users

@@ -137,16 +137,48 @@ export default function ActivityLogPage() {
 
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span>📋</span>
-            <span style={{ backgroundImage: 'linear-gradient(45deg, #4f46e5, #7c3aed)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
-              Activity Log
-            </span>
-          </h1>
-          <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Field-level audit trail of all job edits
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button 
+            onClick={() => router.push('/home')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.6rem 1.2rem',
+              borderRadius: '99px',
+              border: '1px solid var(--border-color)',
+              background: 'var(--surface-color)',
+              color: 'var(--text-primary)',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              boxShadow: 'var(--glass-shadow)',
+              transition: 'all 0.3s ease',
+              fontFamily: "'Outfit', sans-serif"
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = 'var(--surface-hover)';
+              e.currentTarget.style.transform = 'translateX(-2px)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'var(--surface-color)';
+              e.currentTarget.style.transform = 'none';
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            Back
+          </button>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>📋</span>
+              <span style={{ backgroundImage: 'linear-gradient(45deg, #4f46e5, #7c3aed)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
+                Activity Log
+              </span>
+            </h1>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              Field-level audit trail of all job edits
+            </p>
+          </div>
         </div>
         <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'var(--surface-color)', padding: '0.4rem 0.8rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
           {totalCount.toLocaleString()} total entries
@@ -320,12 +352,34 @@ export default function ActivityLogPage() {
                 onClick={() => setPage(p => Math.max(0, p - 1))}
                 disabled={page === 0}
                 style={{
-                  padding: '0.35rem 0.85rem', borderRadius: '6px', border: '1px solid var(--border-color)',
-                  background: 'var(--surface-color)', color: page === 0 ? 'var(--text-secondary)' : 'var(--text-primary)',
-                  cursor: page === 0 ? 'not-allowed' : 'pointer', fontSize: '0.82rem', fontWeight: 600, opacity: page === 0 ? 0.5 : 1
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.45rem 1rem',
+                  borderRadius: '99px',
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--surface-color)',
+                  color: page === 0 ? 'var(--text-secondary)' : 'var(--text-primary)',
+                  cursor: page === 0 ? 'not-allowed' : 'pointer',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  opacity: page === 0 ? 0.5 : 1,
+                  boxShadow: 'var(--glass-shadow)',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseOver={(e) => {
+                  if (page > 0) {
+                    e.currentTarget.style.background = 'var(--surface-hover)';
+                    e.currentTarget.style.transform = 'translateX(-2px)';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'var(--surface-color)';
+                  e.currentTarget.style.transform = 'none';
                 }}
               >
-                ← Prev
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                Prev
               </button>
               <span style={{ padding: '0.35rem 0.75rem', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                 {page + 1} / {totalPages}

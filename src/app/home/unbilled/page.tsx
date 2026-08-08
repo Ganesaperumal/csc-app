@@ -886,19 +886,31 @@ export default function UnbilledManagementPage() {
           <button
             onClick={() => router.push('/home')}
             style={{
-              padding: '0.45rem 0.85rem',
-              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.6rem 1.2rem',
+              borderRadius: '99px',
               border: '1px solid var(--border-color)',
               background: 'var(--surface-color)',
               color: 'var(--text-primary)',
               fontWeight: 700,
+              fontSize: '0.85rem',
               cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              fontSize: '0.85rem'
+              boxShadow: 'var(--glass-shadow)',
+              transition: 'all 0.3s ease',
+              fontFamily: "'Outfit', sans-serif"
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = 'var(--surface-hover)';
+              e.currentTarget.style.transform = 'translateX(-2px)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'var(--surface-color)';
+              e.currentTarget.style.transform = 'none';
             }}
           >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             Back
           </button>
         )}

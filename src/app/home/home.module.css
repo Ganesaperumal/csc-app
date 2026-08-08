@@ -97,21 +97,23 @@
 }
 
 .navItem:hover {
-  background: rgba(79, 70, 229, 0.04);
+  background: rgba(99, 102, 241, 0.08);
   color: var(--text-primary);
   transform: translateX(3px);
+  border: 1px solid rgba(99, 102, 241, 0.15);
 }
 
 .navItem.active {
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(217, 70, 239, 0.04));
-  color: var(--text-accent);
-  font-weight: 600;
-  box-shadow: inset 0 0 20px rgba(79, 70, 229, 0.02);
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.15), rgba(6, 182, 212, 0.1));
+  color: var(--primary-color);
+  font-weight: 700;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.4);
 }
 
 .navItem.active::before {
-  background: linear-gradient(180deg, #4f46e5, #d946ef);
-  box-shadow: 0 0 8px rgba(79, 70, 229, 0.3);
+  background: linear-gradient(180deg, #4f46e5, #06b6d4);
+  box-shadow: 0 0 10px rgba(79, 70, 229, 0.5);
 }
 
 .sidebarFooter {

@@ -111,7 +111,7 @@ export default function CommandPalette() {
 
   return (
     <div className="cmd-overlay" onClick={() => setOpen(false)}>
-      <div className="cmd-box" onClick={e => e.stopPropagation()}>
+      <div className="cmd-box liquid-glass-overlay" onClick={e => e.stopPropagation()} style={{ background: 'rgba(15, 23, 42, 0.85)', color: '#ffffff' }}>
 
         {/* Search input row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0 1.2rem' }}>

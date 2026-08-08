@@ -322,18 +322,50 @@ export default function ClosedJobsPage() {
   return (
     <div>
       <div className={styles.header}>
-        <h1 style={{ 
-            margin: 0, 
-            fontSize: '2.4rem', 
-            fontWeight: 800, 
-            background: 'linear-gradient(135deg, #4f46e5 0%, #d946ef 50%, #06b6d4 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            letterSpacing: '-0.02em',
-            filter: 'drop-shadow(0 2px 4px rgba(79, 70, 229, 0.1))'
-          }}>
-          Closed Jobs
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button 
+            onClick={() => router.push('/home')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.6rem 1.2rem',
+              borderRadius: '99px',
+              border: '1px solid var(--border-color)',
+              background: 'var(--surface-color)',
+              color: 'var(--text-primary)',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              boxShadow: 'var(--glass-shadow)',
+              transition: 'all 0.3s ease',
+              fontFamily: "'Outfit', sans-serif"
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = 'var(--surface-hover)';
+              e.currentTarget.style.transform = 'translateX(-2px)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'var(--surface-color)';
+              e.currentTarget.style.transform = 'none';
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            Back
+          </button>
+          <h1 style={{ 
+              margin: 0, 
+              fontSize: '2.4rem', 
+              fontWeight: 800, 
+              background: 'linear-gradient(135deg, #4f46e5 0%, #d946ef 50%, #06b6d4 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              letterSpacing: '-0.02em',
+              filter: 'drop-shadow(0 2px 4px rgba(79, 70, 229, 0.1))'
+            }}>
+            Closed Jobs
+          </h1>
+        </div>
 
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Global Search Bar */}

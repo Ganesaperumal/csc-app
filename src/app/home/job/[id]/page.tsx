@@ -1021,14 +1021,29 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           <button 
             onClick={handleBack} 
             style={{ 
-              display: 'flex', alignItems: 'center', gap: '0.4rem', 
-              padding: '0.5rem 1.25rem', borderRadius: '99px', border: 'none', 
-              background: 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)', 
-              color: '#4f46e5', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', 
-              transition: 'all 0.2s ease', boxShadow: '0 2px 8px rgba(79, 70, 229, 0.15)',
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem', 
+              padding: '0.6rem 1.2rem', 
+              borderRadius: '99px', 
+              border: '1px solid var(--border-color)', 
+              background: 'var(--surface-color)', 
+              color: 'var(--text-primary)', 
+              fontWeight: 700, 
+              fontSize: '0.85rem', 
+              cursor: 'pointer', 
+              boxShadow: 'var(--glass-shadow)', 
+              transition: 'all 0.3s ease',
+              fontFamily: "'Outfit', sans-serif"
             }}
-            onMouseOver={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #4f46e5 0%, #d946ef 100%)'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)'; }}
-            onMouseOut={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%)'; e.currentTarget.style.color = '#4f46e5'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.15)'; }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = 'var(--surface-hover)';
+              e.currentTarget.style.transform = 'translateX(-2px)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'var(--surface-color)';
+              e.currentTarget.style.transform = 'none';
+            }}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             Back
