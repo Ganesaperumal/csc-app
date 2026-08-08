@@ -24,55 +24,58 @@ export default function CustomSelect({
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   useEffect(() => {
     if (isOpen && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      // Calculate position relative to viewport
       let top = rect.bottom + window.scrollY + 4;
       let left = rect.left + window.scrollX;
-      let width = rect.width;
-      
-      // Prevent rendering off-screen (bottom)
-      const maxDropdownHeight = 220;
-      if (rect.bottom + maxDropdownHeight > window.innerHeight) {
-        top = rect.top + window.scrollY - maxDropdownHeight - 4;
+      let width = Math.max(rect.width, 140);
+
+      // Prevent rendering off-screen (right)
+      if (left + width > window.innerWidth - 16) {
+        left = window.innerWidth - width - 16;
       }
-      
+
+      // Prevent rendering off-screen (bottom)
+      const maxDropdownHeight = 240;
+      if (rect.bottom + maxDropdownHeight > window.innerHeight) {
+        top = Math.max(8, rect.top + window.scrollY - maxDropdownHeight - 4);
+      }
+
       setDropdownStyle({
         position: 'absolute',
         top: `${top}px`,
         left: `${left}px`,
         width: `${width}px`,
-        background: '#ffffff',
-        border: '1px solid #cbd5e1',
+        background: 'var(--surface-color, #ffffff)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        border: '1px solid var(--border-color, #cbd5e1)',
         borderRadius: '12px',
-        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
+        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.25)',
         zIndex: 99999,
         padding: '4px',
         display: 'flex',
         flexDirection: 'column',
         gap: '2px',
+        maxHeight: '240px',
+        overflowY: 'auto'
       });
     }
   }, [isOpen]);
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
-      // Check if click was inside container OR inside the portal
       const target = e.target as HTMLElement;
       if (containerRef.current && !containerRef.current.contains(target) && !target.closest('.custom-select-portal')) {
         setIsOpen(false);
       }
     };
-    // Need to use capture phase or just mousedown so it fires before React unmounts it
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
-
 
   const selectedOption = options.find(opt => opt.value === value);
 
@@ -115,11 +118,13 @@ export default function CustomSelect({
         }}
         onMouseOut={(e) => {
           if (!disabled) {
-            e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.25)';
+            e.currentTarget.style.borderColor = textColor ? `${textColor}40` : 'var(--border-color)';
           }
         }}
       >
-        <span>{selectedOption ? selectedOption.label : placeholder}</span>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '0.25rem' }}>
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
         <svg 
           xmlns="http://www.w3.org/2000/svg" 
           width="16" 
@@ -133,7 +138,8 @@ export default function CustomSelect({
           style={{ 
             transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)', 
             transform: isOpen ? 'rotate(180deg)' : 'none',
-            color: '#4f46e5'
+            color: '#4f46e5',
+            flexShrink: 0
           }}
         >
           <polyline points="6 9 12 15 18 9"></polyline>
@@ -165,13 +171,14 @@ export default function CustomSelect({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  gap: '0.5rem'
                 }}
                 onMouseEnter={e => !isSelected && (e.currentTarget.style.background = 'var(--surface-hover)')}
                 onMouseLeave={e => !isSelected && (e.currentTarget.style.background = 'transparent')}
               >
-                {opt.label}
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{opt.label}</span>
                 {isSelected && (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="20 6 9 17 4 12"></polyline></svg>
                 )}
               </div>
             );

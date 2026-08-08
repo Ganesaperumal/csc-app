@@ -965,7 +965,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   if (loading) return <div className={styles.container}>Loading job details...</div>;
   if (!job) return <div className={styles.container}>Job not found.</div>;
 
-  const isHHG = job.goods_type?.toLowerCase().includes('household') || job.goods_type?.toLowerCase().includes('vehicle');
+  const isHHG = (job.goods_type || '').toLowerCase().includes('household') || (job.goods_type || '').toLowerCase().includes('vehicle') || (job.goods_type || '').toLowerCase().includes('hhg');
   const isCOM = job.goods_type?.toLowerCase().includes('commercial') || job.goods_type?.toLowerCase().includes('monitor') || job.goods_type?.toLowerCase().includes('vaults');
 
   const latestCustomerComm = comms.find(c => c.call_type === 'Customer');
@@ -1222,7 +1222,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   />
                 </div>
               )}
-              {isFieldVisible(isViewOnly, job.car_included) && (
+              {isHHG && isFieldVisible(isViewOnly, job.car_included) && (
                 <div className={styles.inputGroup}>
                   <label>🚗 CAR INCLUDED?</label>
                   <ToggleSwitch disabled={isViewer} name="car_included" value={job.car_included === true} onChange={(val) => handleFieldChange('car_included', val)} />
@@ -1249,42 +1249,42 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               )}
 
               {/* Subheadings for site details */}
-              {(isFieldVisible(isViewOnly, job.origin_floor) || isFieldVisible(isViewOnly, job.origin_service_lift) || isFieldVisible(isViewOnly, job.origin_parking)) && (
+              {isHHG && (isFieldVisible(isViewOnly, job.origin_floor) || isFieldVisible(isViewOnly, job.origin_service_lift) || isFieldVisible(isViewOnly, job.origin_parking)) && (
                 <div style={{ gridColumn: '1', fontWeight: 'bold', fontSize: '0.9rem', color: '#8b5cf6', textTransform: 'uppercase', borderBottom: '1px solid rgba(139, 92, 246, 0.2)', paddingBottom: '0.3rem', marginTop: '0.6rem', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   🛫 ORIGIN SITE:
                 </div>
               )}
-              {(isFieldVisible(isViewOnly, job.dest_floor) || isFieldVisible(isViewOnly, job.dest_service_lift) || isFieldVisible(isViewOnly, job.dest_parking)) && (
+              {isHHG && (isFieldVisible(isViewOnly, job.dest_floor) || isFieldVisible(isViewOnly, job.dest_service_lift) || isFieldVisible(isViewOnly, job.dest_parking)) && (
                 <div style={{ gridColumn: '2', fontWeight: 'bold', fontSize: '0.9rem', color: '#ec4899', textTransform: 'uppercase', borderBottom: '1px solid rgba(236, 72, 153, 0.2)', paddingBottom: '0.3rem', marginTop: '0.6rem', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   🛬 DESTINATION SITE:
                 </div>
               )}
 
-              {isFieldVisible(isViewOnly, job.origin_floor) && (
+              {isHHG && isFieldVisible(isViewOnly, job.origin_floor) && (
                 <div className={styles.inputGroup}><label>🏢 FLOOR</label><input disabled={isViewer} type="number" name="origin_floor" value={job.origin_floor || ''} onChange={handleChange} /></div>
               )}
-              {isFieldVisible(isViewOnly, job.dest_floor) && (
+              {isHHG && isFieldVisible(isViewOnly, job.dest_floor) && (
                 <div className={styles.inputGroup}><label>🏢 FLOOR</label><input disabled={isViewer} type="number" name="dest_floor" value={job.dest_floor || ''} onChange={handleChange} /></div>
               )}
-              {isFieldVisible(isViewOnly, job.origin_service_lift) && (
+              {isHHG && isFieldVisible(isViewOnly, job.origin_service_lift) && (
                 <div className={styles.inputGroup}>
                   <label>🛗 SERVICE LIFT</label>
                   <ToggleSwitch disabled={isViewer} name="origin_service_lift" value={job.origin_service_lift === true || job.origin_service_lift === 'Yes'} onChange={(val) => handleFieldChange('origin_service_lift', val)} />
                 </div>
               )}
-              {isFieldVisible(isViewOnly, job.dest_service_lift) && (
+              {isHHG && isFieldVisible(isViewOnly, job.dest_service_lift) && (
                 <div className={styles.inputGroup}>
                   <label>🛗 SERVICE LIFT</label>
                   <ToggleSwitch disabled={isViewer} name="dest_service_lift" value={job.dest_service_lift === true || job.dest_service_lift === 'Yes'} onChange={(val) => handleFieldChange('dest_service_lift', val)} />
                 </div>
               )}
-              {isFieldVisible(isViewOnly, job.origin_parking) && (
+              {isHHG && isFieldVisible(isViewOnly, job.origin_parking) && (
                 <div className={styles.inputGroup}>
                   <label>🅿️ PARKING</label>
                   <ToggleSwitch disabled={isViewer} name="origin_parking" value={job.origin_parking === true || job.origin_parking === 'Yes'} onChange={(val) => handleFieldChange('origin_parking', val)} />
                 </div>
               )}
-              {isFieldVisible(isViewOnly, job.dest_parking) && (
+              {isHHG && isFieldVisible(isViewOnly, job.dest_parking) && (
                 <div className={styles.inputGroup}>
                   <label>🅿️ PARKING</label>
                   <ToggleSwitch disabled={isViewer} name="dest_parking" value={job.dest_parking === true || job.dest_parking === 'Yes'} onChange={(val) => handleFieldChange('dest_parking', val)} />
@@ -1421,10 +1421,10 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                               {isFieldVisible(isViewOnly, job.packing_team_supervisor || '') && (
                                 <div className={styles.inputGroup}><label>👔 SUPERVISOR</label><input disabled={isViewer} name="packing_team_supervisor" value={job.packing_team_supervisor || ''} onChange={handleChange} list="supervisors-list" /></div>
                               )}
-                              {isFieldVisible(isViewOnly, job.handyman_origin || '') && (
+                              {isHHG && isFieldVisible(isViewOnly, job.handyman_origin || '') && (
                                 <div className={styles.inputGroup}><label>👷‍♂️ HANDYMAN</label><input disabled={isViewer} name="handyman_origin" value={job.handyman_origin || ''} onChange={handleChange} /></div>
                               )}
-                              {isFieldVisible(isViewOnly, job.handyman_origin_remarks || '') && (
+                              {isHHG && isFieldVisible(isViewOnly, job.handyman_origin_remarks || '') && (
                                 <div className={styles.inputGroup}><label>📝 REMARKS ON HANDYMAN</label><input disabled={isViewer} name="handyman_origin_remarks" value={job.handyman_origin_remarks || ''} onChange={handleChange} placeholder="Remarks on handyman" /></div>
                               )}
                               {isFieldVisible(isViewOnly, job.committed_time || '') && (
@@ -1458,11 +1458,11 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                               {isFieldVisible(isViewOnly, job.vehicle_type || '') && (
                                 <div className={styles.inputGroup}><label>🚗 VEHICLE TYPE</label><input disabled={isViewer} type="text" name="vehicle_type" value={job.vehicle_type || ''} onChange={handleChange} placeholder="e.g. 20ft, 40ft, Trailer" /></div>
                               )}
-                              {isFieldVisible(isViewOnly, job.shipment_type || '') && (
+                              {isHHG && isFieldVisible(isViewOnly, job.shipment_type || '') && (
                                 <div className={styles.inputGroup}><label>🚚 SHIPMENT TYPE</label><input disabled={isViewer} type="text" name="shipment_type" value={job.shipment_type || ''} onChange={handleChange} /></div>
                               )}
 
-                              {isFieldVisible(isViewOnly, job.truck_number || '') && (
+                              {isHHG && isFieldVisible(isViewOnly, job.truck_number || '') && (
                                 <div className={styles.inputGroup}><label>🚛 TRUCK NUMBER</label><input disabled={isViewer} type="text" name="truck_number" value={job.truck_number || ''} onChange={handleChange} /></div>
                               )}
                               {isFieldVisible(isViewOnly, job.driver_details || '') && (
@@ -1516,10 +1516,10 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                               {isFieldVisible(isViewOnly, job.dest_supervisor || '') && (
                                 <div className={styles.inputGroup}><label>👔 SUPERVISOR</label><input disabled={isViewer} name="dest_supervisor" value={job.dest_supervisor || ''} onChange={handleChange} list="supervisors-list" /></div>
                               )}
-                              {isFieldVisible(isViewOnly, job.handyman_destination || '') && (
+                              {isHHG && isFieldVisible(isViewOnly, job.handyman_destination || '') && (
                                 <div className={styles.inputGroup}><label>👷‍♂️ HANDYMAN</label><input disabled={isViewer} name="handyman_destination" value={job.handyman_destination || ''} onChange={handleChange} /></div>
                               )}
-                              {isFieldVisible(isViewOnly, job.handyman_dest_remarks || '') && (
+                              {isHHG && isFieldVisible(isViewOnly, job.handyman_dest_remarks || '') && (
                                 <div className={styles.inputGroup}><label>📝 REMARKS ON HANDYMAN</label><input disabled={isViewer} name="handyman_dest_remarks" value={job.handyman_dest_remarks || ''} onChange={handleChange} placeholder="Remarks on handyman" /></div>
                               )}
               
@@ -1893,18 +1893,19 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               <h3 style={{ margin: 0 }}>Documents</h3>
               {!isViewer && (
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <select 
+                  <CustomSelect 
                     value={selectedDocType} 
-                    onChange={(e) => setSelectedDocType(e.target.value)}
-                    style={{ padding: '0.4rem', borderRadius: '6px', border: '1px solid rgba(148, 163, 184, 0.3)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
+                    onChange={(val) => setSelectedDocType(val)}
+                    options={[
+                      { value: 'POD', label: 'POD' },
+                      { value: 'Invoice', label: 'Invoice' },
+                      { value: 'PO', label: 'PO' },
+                      ...customDocTypes.map(t => ({ value: t, label: t })),
+                      { value: 'Add New...', label: 'Add New...' }
+                    ]}
+                    style={{ minWidth: '130px', flexGrow: 0 }}
                     disabled={uploadingPod}
-                  >
-                    <option value="POD">POD</option>
-                    <option value="Invoice">Invoice</option>
-                    <option value="PO">PO</option>
-                    {customDocTypes.map(t => <option key={t} value={t}>{t}</option>)}
-                    <option value="Add New...">Add New...</option>
-                  </select>
+                  />
                   
                   {selectedDocType === 'Add New...' && (
                     <input 

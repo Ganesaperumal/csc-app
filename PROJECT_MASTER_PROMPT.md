@@ -132,6 +132,8 @@ Users have **one primary role** + **two category roles**:
 - **Viewer Mode**: `isViewer` can see all fields whether it has empty value; `isSPOC` locks all edits
 - **Real-time presence**: Multiple agents see `viewingAgents` list (Supabase realtime)
 - **Job logs**: Every save records a diff in `job_logs`
+- **Household Fields Visibility**: `car_included`, Origin/Destination site subheadings, Floor, Service Lift, Parking, Handyman, Remarks on Handyman, Shipment Type, and Truck Number are strictly visible only when `isHHG` (goods under Household/HHG/Vehicle).
+
 
 ### ERP Sync (`/api/ingest-erp/`)
 - Syncs job data from external ERP system into `jobs` table
@@ -168,6 +170,7 @@ Users have **one primary role** + **two category roles**:
 8. **Theme**: Dark mode default. Toggle stored in `localStorage` as key `theme: 'light'`. CSS vars in `globals.css`.
 9. **No direct DB writes from client pages**: All mutations use Supabase JS SDK with RLS. Admin ops (create-user, etc.) use `SUPABASE_SERVICE_ROLE_KEY` in API routes only.
 10. **Branch filtering**: All non-admin queries must filter by `profile.branches`. `['ALL']` = skip filter.
+11. **Supabase 1000-row limit**: Supabase REST API caps single responses at 1,000 rows max. Full dataset queries (All Jobs, Active Jobs, Closed Jobs, CSV/Sheets exports) loop using `.range(from, from + step - 1)` in 1,000-item steps to fetch all records.
 
 ---
 
@@ -182,14 +185,15 @@ Users have **one primary role** + **two category roles**:
 /home/follow-ups      → Follow-ups (csc_role ≠ None)
 /home/all-jobs        → Full-width jobs table (csc_role ≠ None)
 /home/unbilled        → Unbilled jobs (unbilled_role ≠ None)
-/home/reports         → Reports (csc_role ≠ None)
+/home/reports         → Reports (csc_role ≠ None, unbilled_role ≠ None, or followups_role ≠ None) — includes Unbilled, Active Jobs, Agent Oversight, and Activity Log tabs
 /home/legacy-jobs     → Legacy jobs (unbilled_role ≠ None)
 /home/job/[id]        → Job detail (edit or read-only based on role)
 /home/admin           → Admin: Bulk Data Management & Missing Data Editor (Missing Quote Value & Missing Unbilled SPOC)
 /home/data            → Redirects to /home/admin
 /home/permissions     → Redirects to /home/users (replaced by direct section permission pills in User Details drawer)
 /home/users           → Users directory & User Details Permission Editor (CSC Jobs, Follow-Ups, All Jobs, Unbilled, Assigned Unbilled Branches)
-/home/activity-log    → Audit log (Admin only) — field-level edit history from jobs table
+/home/activity-log    → Redirects to /home/reports?tab=activity_log (governed by followups_role: View for Self/All, None for None)
+/home/ui-showcase      → Design System & Component Showcase page (Dropdowns, Buttons, Sliders, Calendars, Badges & Inputs — restricted to Super Admin only)
 /track/[...id]        → Public tracking page (no auth required)
 ```
 

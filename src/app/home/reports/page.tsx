@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { getUserColor } from '@/lib/colorUtils';
 import CustomSelect from '../components/CustomSelect';
 import { usePermissions } from '@/components/PermissionsContext';
@@ -57,6 +58,29 @@ const FIELD_LABELS: Record<string, string> = {
   customer_phone: 'Contact',
   origin: 'Origin',
   destination: 'Destination',
+};
+
+// Helpers for Activity Log formatting
+const formatAuditTimestamp = (ts: string) => {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = d.toLocaleString('en-US', { month: 'short' });
+  const year = d.getFullYear();
+  const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  return `${day}-${month}-${year} ${time}`;
+};
+
+const friendlyAuditField = (field: string | null) => {
+  if (!field) return '—';
+  return field
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
+};
+
+const truncateAuditVal = (val: string | null, max = 60) => {
+  if (!val || val === '') return <span style={{ opacity: 0.35, fontStyle: 'italic' }}>empty</span>;
+  return val.length > max ? val.slice(0, max) + '…' : val;
 };
 
 // Helper to format date
@@ -540,11 +564,19 @@ export default function ReportsPage() {
   // Tab State
   const [activeTab, setActiveTab] = useState<'unbilled' | 'jobs' | 'agents' | 'branch_users' | 'activity_log'>('unbilled');
   
-  // Activity Log Tab Filters
+  // Activity Log Tab Filters & Pagination
+  const [logEntries, setLogEntries] = useState<any[]>([]);
+  const [logTotalCount, setLogTotalCount] = useState(0);
+  const [logLoading, setLogLoading] = useState(false);
+  const [logPage, setLogPage] = useState(0);
   const [logSearch, setLogSearch] = useState('');
+  const [logAppliedSearch, setLogAppliedSearch] = useState('');
+  const [logDateFrom, setLogDateFrom] = useState('');
+  const [logDateTo, setLogDateTo] = useState('');
   const [logAgentFilter, setLogAgentFilter] = useState('');
   const [logFieldFilter, setLogFieldFilter] = useState('');
-  const [logDateFilter, setLogDateFilter] = useState('');
+  const [auditLogStaff, setAuditLogStaff] = useState<{ value: string; label: string }[]>([]);
+  const [auditLogFields, setAuditLogFields] = useState<{ value: string; label: string }[]>([]);
   
   // Loading and Raw Data States
   const [loading, setLoading] = useState(true);
@@ -599,6 +631,76 @@ export default function ReportsPage() {
     return currentUserProfile.unbilled_role && currentUserProfile.unbilled_role !== 'None';
   }, [currentUserProfile]);
 
+  const canAccessActivityLog = useMemo(() => {
+    if (!currentUserProfile) return false;
+    const fRole = (currentUserProfile.followups_role || currentUserProfile.tracking_role || '').toLowerCase();
+    return fRole === 'self' || fRole === 'all' || fRole.includes('self') || fRole.includes('all');
+  }, [currentUserProfile]);
+
+  const fetchActivityLogs = useCallback(async () => {
+    if (!currentUserProfile) return;
+    const fRole = (currentUserProfile.followups_role || currentUserProfile.tracking_role || '').toLowerCase();
+    const isSelf = fRole === 'self' || fRole.includes('self');
+    const isAll = fRole === 'all' || fRole.includes('all');
+
+    if (!isSelf && !isAll) return;
+
+    setLogLoading(true);
+    try {
+      const PAGE_SIZE = 50;
+      let query = supabase
+        .from('audit_logs')
+        .select('*', { count: 'exact' })
+        .order('timestamp', { ascending: false })
+        .range(logPage * PAGE_SIZE, logPage * PAGE_SIZE + PAGE_SIZE - 1);
+
+      if (isSelf && !isAll) {
+        const uName = currentUserProfile.username || '';
+        const name = currentUserProfile.name || '';
+        if (uName && name) {
+          query = query.or(`username.ilike.%${uName}%,name.ilike.%${name}%`);
+        } else if (uName) {
+          query = query.ilike('username', uName);
+        } else if (name) {
+          query = query.ilike('name', name);
+        }
+      } else if (logAgentFilter) {
+        query = query.or(`username.ilike.%${logAgentFilter}%,name.ilike.%${logAgentFilter}%`);
+      }
+
+      if (logFieldFilter) {
+        query = query.eq('field_change', logFieldFilter);
+      }
+
+      if (logAppliedSearch.trim()) {
+        const s = logAppliedSearch.trim();
+        query = query.or(`job_number.ilike.%${s}%,username.ilike.%${s}%,name.ilike.%${s}%,field_change.ilike.%${s}%,old_value.ilike.%${s}%,new_value.ilike.%${s}%`);
+      }
+
+      if (logDateFrom) {
+        query = query.gte('timestamp', `${logDateFrom}T00:00:00`);
+      }
+      if (logDateTo) {
+        query = query.lte('timestamp', `${logDateTo}T23:59:59`);
+      }
+
+      const { data, error, count } = await query;
+      if (error) throw error;
+      setLogEntries(data || []);
+      setLogTotalCount(count || 0);
+    } catch (err) {
+      console.error('Error fetching activity logs in reports:', err);
+    } finally {
+      setLogLoading(false);
+    }
+  }, [currentUserProfile, logPage, logAppliedSearch, logDateFrom, logDateTo, logAgentFilter, logFieldFilter]);
+
+  useEffect(() => {
+    if (activeTab === 'activity_log' && canAccessActivityLog) {
+      fetchActivityLogs();
+    }
+  }, [activeTab, canAccessActivityLog, fetchActivityLogs]);
+
   useEffect(() => {
     // Check authentication and load data
     const initPage = async () => {
@@ -617,8 +719,9 @@ export default function ReportsPage() {
       const hasFollowups = fRole === 'self' || fRole === 'all' || fRole.includes('self') || fRole.includes('all');
       const hasCsc = (cRole !== 'None' && cRole !== '') || hasFollowups;
       const hasUnbilled = profileData.unbilled_role && profileData.unbilled_role !== 'None';
+      const hasActivityLog = hasFollowups;
 
-      if (!hasCsc && !hasUnbilled) {
+      if (!hasCsc && !hasUnbilled && !hasActivityLog) {
         router.push('/home');
         return;
       }
@@ -628,7 +731,9 @@ export default function ReportsPage() {
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get('tab');
 
-      if (tabParam === 'unbilled' && hasUnbilled) {
+      if (tabParam === 'activity_log' && hasActivityLog) {
+        setActiveTab('activity_log');
+      } else if (tabParam === 'unbilled' && hasUnbilled) {
         setActiveTab('unbilled');
       } else if ((tabParam === 'jobs' || tabParam === 'agents') && hasCsc) {
         setActiveTab(tabParam as any);
@@ -636,6 +741,8 @@ export default function ReportsPage() {
         setActiveTab('unbilled');
       } else if (hasCsc) {
         setActiveTab('jobs');
+      } else if (hasActivityLog) {
+        setActiveTab('activity_log');
       }
 
       await loadAllAnalyticsData(profileData);
@@ -702,7 +809,31 @@ export default function ReportsPage() {
       }
       setJobs(allJobs);
 
-      // 3. Audit logs scrapped/bypassed
+      // 3. Fetch distinct staff and field changes existing in audit_logs table
+      const { data: auditData } = await supabase.from('audit_logs').select('username, name, field_change');
+      if (auditData) {
+        const staffMap = new Map<string, string>();
+        const fieldSet = new Set<string>();
+        auditData.forEach((item: any) => {
+          const val = item.username || item.name;
+          const label = item.name || item.username;
+          if (val) {
+            staffMap.set(val, label);
+          }
+          if (item.field_change && item.field_change.trim() !== '') {
+            fieldSet.add(item.field_change.trim());
+          }
+        });
+        const staffOptions = Array.from(staffMap.entries())
+          .map(([val, label]) => ({ value: val, label: label }))
+          .sort((a, b) => a.label.localeCompare(b.label));
+        setAuditLogStaff(staffOptions);
+
+        const fieldOptions = Array.from(fieldSet)
+          .map(val => ({ value: val, label: friendlyAuditField(val) }))
+          .sort((a, b) => a.label.localeCompare(b.label));
+        setAuditLogFields(fieldOptions);
+      }
       setAuditLogs([]);
 
       // 4. Fetch Job Communications
@@ -1333,6 +1464,30 @@ export default function ReportsPage() {
               👥 Agent Activity Oversight
             </button>
           )}
+
+          {canAccessActivityLog && (
+            <button
+              onClick={() => setActiveTab('activity_log')}
+              style={{
+                background: activeTab === 'activity_log' ? 'rgba(99, 102, 241, 0.12)' : 'transparent',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0.6rem 1.1rem',
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                borderBottom: activeTab === 'activity_log' ? '3px solid #6366f1' : '3px solid transparent',
+                color: activeTab === 'activity_log' ? '#6366f1' : 'var(--text-secondary)',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              📝 Activity Log
+            </button>
+          )}
         </div>
 
         {/* Sync Fresh Data Action */}
@@ -1932,6 +2087,252 @@ export default function ReportsPage() {
 
 
 
+      {/* --- ACTIVITY LOG TAB --- */}
+      {activeTab === 'activity_log' && canAccessActivityLog && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Header & Controls */}
+          <div className="glass" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+            
+            {/* Search Input */}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1, minWidth: '220px' }}>
+              <input
+                id="report-audit-search"
+                type="text"
+                placeholder="Search by job #, username, name, or field…"
+                value={logSearch}
+                onChange={e => setLogSearch(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    setLogPage(0);
+                    setLogAppliedSearch(logSearch);
+                  }
+                }}
+                style={{
+                  width: '100%', padding: '0.5rem 2.2rem 0.5rem 0.75rem',
+                  borderRadius: '8px', border: '1px solid var(--border-color)',
+                  background: 'var(--surface-color)', color: 'var(--text-primary)', fontSize: '0.85rem'
+                }}
+              />
+              <span style={{ position: 'absolute', right: '10px', color: 'var(--text-secondary)', fontSize: '0.9rem', pointerEvents: 'none' }}>🔍</span>
+            </div>
+
+            {/* Date From */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>From</label>
+              <input
+                type="date"
+                value={logDateFrom}
+                onChange={e => { setLogDateFrom(e.target.value); setLogPage(0); }}
+                style={{ padding: '0.45rem 0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', fontSize: '0.82rem' }}
+              />
+            </div>
+
+            {/* Date To */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>To</label>
+              <input
+                type="date"
+                value={logDateTo}
+                onChange={e => { setLogDateTo(e.target.value); setLogPage(0); }}
+                style={{ padding: '0.45rem 0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', fontSize: '0.82rem' }}
+              />
+            </div>
+
+            {/* Agent Filter (For All access) */}
+            {((currentUserProfile?.followups_role || '').toLowerCase().includes('all') || (currentUserProfile?.tracking_role || '').toLowerCase().includes('all')) && (
+              <div style={{ minWidth: '160px' }}>
+                <CustomSelect
+                  placeholder="All Staff"
+                  value={logAgentFilter}
+                  onChange={(val) => { setLogAgentFilter(val); setLogPage(0); }}
+                  options={[
+                    { value: '', label: 'All Staff' },
+                    ...auditLogStaff
+                  ]}
+                  style={{ minWidth: '160px' }}
+                />
+              </div>
+            )}
+
+            {/* Field Filter */}
+            <div style={{ minWidth: '160px' }}>
+              <CustomSelect
+                placeholder="All Fields"
+                value={logFieldFilter}
+                onChange={(val) => { setLogFieldFilter(val); setLogPage(0); }}
+                options={[
+                  { value: '', label: 'All Fields' },
+                  ...auditLogFields
+                ]}
+                style={{ minWidth: '160px' }}
+              />
+            </div>
+
+            {/* Search Button */}
+            <button
+              onClick={() => {
+                setLogPage(0);
+                setLogAppliedSearch(logSearch);
+              }}
+              style={{
+                padding: '0.5rem 1.1rem', borderRadius: '8px', border: 'none',
+                background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff',
+                fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap'
+              }}
+            >
+              Search
+            </button>
+
+            {/* Clear Button */}
+            {(logAppliedSearch || logDateFrom || logDateTo || logAgentFilter || logFieldFilter) && (
+              <button
+                onClick={() => {
+                  setLogSearch('');
+                  setLogAppliedSearch('');
+                  setLogDateFrom('');
+                  setLogDateTo('');
+                  setLogAgentFilter('');
+                  setLogFieldFilter('');
+                  setLogPage(0);
+                }}
+                style={{
+                  padding: '0.5rem 0.9rem', borderRadius: '8px', border: '1px solid var(--border-color)',
+                  background: 'var(--surface-color)', color: 'var(--text-secondary)',
+                  fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap'
+                }}
+              >
+                Clear
+              </button>
+            )}
+
+            <div style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'var(--surface-color)', padding: '0.4rem 0.8rem', borderRadius: '8px', border: '1px solid var(--border-color)', fontWeight: 700 }}>
+              {logTotalCount.toLocaleString()} total entries
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="glass" style={{ borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                <thead>
+                  <tr style={{ background: 'var(--surface-color)', borderBottom: '2px solid var(--border-color)' }}>
+                    {['Timestamp', 'Job #', 'Name', 'Field Changed', 'Old Value', 'New Value'].map(col => (
+                      <th key={col} style={{
+                        padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 700,
+                        fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em',
+                        color: 'var(--text-secondary)', whiteSpace: 'nowrap'
+                      }}>
+                        {col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {logLoading ? (
+                    <tr>
+                      <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                          <div style={{ width: '18px', height: '18px', border: '2px solid rgba(0,0,0,0.1)', borderLeftColor: '#4f46e5', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                          Loading audit log…
+                        </div>
+                      </td>
+                    </tr>
+                  ) : logEntries.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                        No audit entries found.
+                      </td>
+                    </tr>
+                  ) : (
+                    logEntries.map((entry, i) => (
+                      <tr
+                        key={entry.id}
+                        style={{
+                          borderBottom: '1px solid var(--border-color)',
+                          background: i % 2 === 0 ? 'transparent' : 'rgba(99,102,241,0.025)',
+                          transition: 'background 0.15s'
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.07)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? 'transparent' : 'rgba(99,102,241,0.025)')}
+                      >
+                        <td style={{ padding: '0.65rem 1rem', whiteSpace: 'nowrap', color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
+                          {formatAuditTimestamp(entry.timestamp)}
+                        </td>
+                        <td style={{ padding: '0.65rem 1rem', whiteSpace: 'nowrap' }}>
+                          <Link
+                            href={`/home/job/${encodeURIComponent(entry.job_number)}`}
+                            style={{ color: '#4f46e5', fontWeight: 700, textDecoration: 'none', fontSize: '0.82rem' }}
+                          >
+                            {entry.job_number || '—'}
+                          </Link>
+                        </td>
+                        <td style={{ padding: '0.65rem 1rem', whiteSpace: 'nowrap', fontWeight: 600, color: 'var(--text-primary)' }}>
+                          {entry.name || entry.username || '—'}
+                        </td>
+                        <td style={{ padding: '0.65rem 1rem', whiteSpace: 'nowrap' }}>
+                          <span style={{ background: 'rgba(16,185,129,0.1)', color: '#059669', padding: '2px 8px', borderRadius: '6px', fontWeight: 600, fontSize: '0.75rem' }}>
+                            {friendlyAuditField(entry.field_change)}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.65rem 1rem', maxWidth: '200px', color: 'var(--text-secondary)' }}>
+                          {truncateAuditVal(entry.old_value)}
+                        </td>
+                        <td style={{ padding: '0.65rem 1rem', maxWidth: '200px', color: 'var(--text-primary)', fontWeight: 500 }}>
+                          {truncateAuditVal(entry.new_value)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {Math.ceil(logTotalCount / 50) > 1 && (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '0.75rem 1rem', borderTop: '1px solid var(--border-color)',
+                background: 'var(--surface-color)', gap: '1rem', flexWrap: 'wrap'
+              }}>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                  Showing {logPage * 50 + 1}–{Math.min((logPage + 1) * 50, logTotalCount)} of {logTotalCount.toLocaleString()}
+                </span>
+                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  <button
+                    onClick={() => setLogPage(p => Math.max(0, p - 1))}
+                    disabled={logPage === 0}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                      padding: '0.45rem 1rem', borderRadius: '99px',
+                      border: '1px solid var(--border-color)', background: 'var(--surface-color)',
+                      color: logPage === 0 ? 'var(--text-secondary)' : 'var(--text-primary)',
+                      cursor: logPage === 0 ? 'not-allowed' : 'pointer', fontSize: '0.82rem', fontWeight: 700,
+                      opacity: logPage === 0 ? 0.5 : 1
+                    }}
+                  >
+                    ← Prev
+                  </button>
+                  <span style={{ padding: '0.35rem 0.75rem', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                    {logPage + 1} / {Math.ceil(logTotalCount / 50)}
+                  </span>
+                  <button
+                    onClick={() => setLogPage(p => Math.min(Math.ceil(logTotalCount / 50) - 1, p + 1))}
+                    disabled={logPage >= Math.ceil(logTotalCount / 50) - 1}
+                    style={{
+                      padding: '0.45rem 1rem', borderRadius: '99px', border: '1px solid var(--border-color)',
+                      background: 'var(--surface-color)', color: logPage >= Math.ceil(logTotalCount / 50) - 1 ? 'var(--text-secondary)' : 'var(--text-primary)',
+                      cursor: logPage >= Math.ceil(logTotalCount / 50) - 1 ? 'not-allowed' : 'pointer', fontSize: '0.82rem', fontWeight: 700,
+                      opacity: logPage >= Math.ceil(logTotalCount / 50) - 1 ? 0.5 : 1
+                    }}
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

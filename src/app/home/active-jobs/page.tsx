@@ -476,14 +476,22 @@ function JobsTable() {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      let query = supabase
-        .from('jobs')
-        .select('*')
-        .not('erp_status', 'ilike', '%cancel%')
-        .order('erp_job_id', { ascending: false, nullsFirst: false });
-
-      const { data, error } = await query;
-      if (error) throw error;
+      let data: any[] = [];
+      let from = 0;
+      const step = 1000;
+      while (true) {
+        const { data: batch, error } = await supabase
+          .from('jobs')
+          .select('*')
+          .not('erp_status', 'ilike', '%cancel%')
+          .order('erp_job_id', { ascending: false, nullsFirst: false })
+          .range(from, from + step - 1);
+        if (error) throw error;
+        if (!batch || batch.length === 0) break;
+        data.push(...batch);
+        if (batch.length < step) break;
+        from += step;
+      }
 
       const COMPLETED_STATUSES = [
         '22. Job Completed', 
@@ -1026,9 +1034,6 @@ function JobsTable() {
                           <div style={{ fontSize: '0.75rem', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.4rem' }}>
                             <div>
                               {n.branch && <span style={{ padding: '0.15rem 0.6rem', borderRadius: '12px', background: 'rgba(139, 92, 246, 0.08)', color: '#7c3aed', border: '1px solid rgba(139, 92, 246, 0.2)' }}>🏢 {n.branch}</span>}
-                            </div>
-                            <div>
-                              <span style={{ padding: '0.15rem 0.6rem', borderRadius: '12px', background: 'rgba(79, 70, 229, 0.1)', color: '#4f46e5', border: '1px solid rgba(79, 70, 229, 0.25)', fontWeight: 700 }}>👤 {n.agent_name || 'Agent'}</span>
                             </div>
                             <div>
                               {n.regarding && <span style={{ padding: '0.15rem 0.6rem', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.08)', color: '#059669', border: '1px solid rgba(16, 185, 129, 0.2)' }}>{n.regarding}</span>}

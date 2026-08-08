@@ -319,13 +319,22 @@ function AllJobsContent() {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('jobs')
-        .select('*')
-        .order('erp_job_id', { ascending: false, nullsFirst: false })
-        .range(0, 4999);
-      if (error) throw error;
-      setJobs(data || []);
+      let allJobs: any[] = [];
+      let from = 0;
+      const step = 1000;
+      while (true) {
+        const { data, error } = await supabase
+          .from('jobs')
+          .select('*')
+          .order('erp_job_id', { ascending: false, nullsFirst: false })
+          .range(from, from + step - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allJobs = [...allJobs, ...data];
+        if (data.length < step) break;
+        from += step;
+      }
+      setJobs(allJobs);
     } catch (err: any) {
       console.error('Error fetching jobs:', err.message);
     } finally {

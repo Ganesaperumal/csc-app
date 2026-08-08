@@ -37,6 +37,7 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
   const isAllJobsActive = pathname === '/home/all-jobs';
   const isUnbilledActive = pathname.startsWith('/home/unbilled');
   const isReportsActive = pathname === '/home/reports';
+  const isShowcaseActive = pathname === '/home/ui-showcase';
 
   // Determine active item key & pill styling
   let activeKey = '';
@@ -67,6 +68,10 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
     activeKey = 'reports';
     pillGradient = 'linear-gradient(135deg, #ec4899, #be185d)';
     pillGlow = '0 4px 14px rgba(236, 72, 153, 0.35)';
+  } else if (isShowcaseActive) {
+    activeKey = 'showcase';
+    pillGradient = 'linear-gradient(135deg, #06b6d4, #0891b2)';
+    pillGlow = '0 4px 14px rgba(6, 182, 212, 0.35)';
   }
 
   // Ref tracking for pixel-perfect 2D glider pill placement
@@ -270,6 +275,31 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
             }}
           >
             <span>📊</span> Reports
+          </Link>
+        )}
+
+        {/* Row 6: UI Showcase */}
+        {profile?.is_super_admin === true && (
+          <Link
+            href="/home/ui-showcase"
+            data-nav-key="showcase"
+            style={{
+              width: '100%',
+              padding: '0.6rem 0.85rem',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              borderRadius: '10px',
+              textDecoration: 'none',
+              position: 'relative',
+              zIndex: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              transition: 'color 0.25s ease',
+              color: isShowcaseActive ? '#ffffff' : 'var(--text-secondary)',
+            }}
+          >
+            <span>🎨</span> UI Showcase
           </Link>
         )}
       </div>

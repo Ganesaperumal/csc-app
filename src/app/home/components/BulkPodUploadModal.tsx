@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { supabase } from '@/lib/supabase';
 import styles from './bulkUpload.module.css';
+import CustomSelect from './CustomSelect';
 
 interface FileItem {
   id: string;
@@ -304,15 +305,21 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
               <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Batch Assign:</span>
               <div>
                 <label style={{ fontSize: '0.8rem', marginRight: '0.5rem', color: 'gray' }}>Doc Type:</label>
-                <select value={globalDocType} onChange={(e) => setGlobalDocType(e.target.value)} style={{ padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)' }}>
-                  {DOCUMENT_TYPES.map(dt => <option key={dt} value={dt}>{dt}</option>)}
-                </select>
+                <CustomSelect
+                  value={globalDocType}
+                  onChange={(val) => setGlobalDocType(val)}
+                  options={DOCUMENT_TYPES.map(dt => ({ value: dt, label: dt }))}
+                  style={{ minWidth: '100px', display: 'inline-block' }}
+                />
               </div>
               <div>
                 <label style={{ fontSize: '0.8rem', marginRight: '0.5rem', color: 'gray' }}>Year:</label>
-                <select value={globalYear} onChange={(e) => setGlobalYear(e.target.value)} style={{ padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)' }}>
-                  {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
+                <CustomSelect
+                  value={globalYear}
+                  onChange={(val) => setGlobalYear(val)}
+                  options={YEARS.map(y => ({ value: y, label: y }))}
+                  style={{ minWidth: '80px', display: 'inline-block' }}
+                />
               </div>
               <button onClick={applyGlobalSettings} disabled={processing} style={{ padding: '0.35rem 0.75rem', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold' }}>
                 Apply to All Rows
@@ -353,22 +360,20 @@ export default function BulkPodUploadModal({ onClose, onUploadComplete }: { onCl
                       />
                     </td>
                     <td style={{ padding: '0.5rem' }}>
-                      <select
+                      <CustomSelect
                         value={f.year}
-                        onChange={(e) => updateRow(f.id, { year: e.target.value })}
-                        style={{ padding: '0.3rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)' }}
-                      >
-                        {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-                      </select>
+                        onChange={(val) => updateRow(f.id, { year: val })}
+                        options={YEARS.map(y => ({ value: y, label: y }))}
+                        style={{ minWidth: '80px' }}
+                      />
                     </td>
                     <td style={{ padding: '0.5rem' }}>
-                      <select
+                      <CustomSelect
                         value={f.docType}
-                        onChange={(e) => updateRow(f.id, { docType: e.target.value })}
-                        style={{ padding: '0.3rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)' }}
-                      >
-                        {DOCUMENT_TYPES.map(dt => <option key={dt} value={dt}>{dt}</option>)}
-                      </select>
+                        onChange={(val) => updateRow(f.id, { docType: val })}
+                        options={DOCUMENT_TYPES.map(dt => ({ value: dt, label: dt }))}
+                        style={{ minWidth: '100px' }}
+                      />
                     </td>
                     <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>
                       {f.matchedJobNumber ? (

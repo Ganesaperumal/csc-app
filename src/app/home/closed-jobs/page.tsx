@@ -205,9 +205,22 @@ export default function ClosedJobsPage() {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('jobs').select('*').in('erp_status', ['Billed', 'Canceled', 'Cancelled']).order('erp_job_id', { ascending: false, nullsFirst: false });
-      const { data, error } = await query;
-      if (error) throw error;
+      let data: any[] = [];
+      let from = 0;
+      const step = 1000;
+      while (true) {
+        const { data: batch, error } = await supabase
+          .from('jobs')
+          .select('*')
+          .in('erp_status', ['Billed', 'Canceled', 'Cancelled'])
+          .order('erp_job_id', { ascending: false, nullsFirst: false })
+          .range(from, from + step - 1);
+        if (error) throw error;
+        if (!batch || batch.length === 0) break;
+        data.push(...batch);
+        if (batch.length < step) break;
+        from += step;
+      }
       
       const isHousehold = (goodsType: string) => {
         const gt = (goodsType || '').trim().toLowerCase();
