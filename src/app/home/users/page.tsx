@@ -224,7 +224,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.02)' }}>
-                {['User', 'Role & Department', 'Username / Email', 'Access', 'Actions'].map(h => (
+                {['User', 'Designation', 'Login', 'Access', 'Actions'].map(h => (
                   <th key={h} style={{
                     padding: '0.85rem 1rem',
                     color: 'var(--text-secondary)', fontWeight: 700,
