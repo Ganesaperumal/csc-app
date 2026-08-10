@@ -224,7 +224,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.02)' }}>
-                {['User', 'Username / Email', 'Access', 'Approval', 'Actions'].map(h => (
+                {['User', 'Role & Department', 'Username / Email', 'Access', 'Approval', 'Actions'].map(h => (
                   <th key={h} style={{
                     padding: '0.85rem 1rem',
                     color: 'var(--text-secondary)', fontWeight: 700,
@@ -271,15 +271,21 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                           <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                             {u.name || u.username}
                           </div>
-                          {(u.role || deptVal) && (
-                            <div style={{ fontSize: '0.74rem', color: '#4f46e5', fontWeight: 600, display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                              {u.role && <span>[{u.role}]</span>}
-                              {deptVal && <span>🏢 {deptVal}</span>}
-                            </div>
-                          )}
                           {u.phone && <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{u.phone}</div>}
                         </div>
                       </div>
+                    </td>
+
+                    {/* Role & Department */}
+                    <td style={{ padding: '0.85rem 1rem' }}>
+                      <div style={{ fontWeight: 600, color: '#4f46e5', fontSize: '0.82rem' }}>
+                        {u.role || 'User'}
+                      </div>
+                      {deptVal && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.15rem' }}>
+                          <span>🏢</span> <span>{deptVal}</span>
+                        </div>
+                      )}
                     </td>
 
                     {/* Username / Email */}
@@ -355,7 +361,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
 
               {filteredUsers.length === 0 && (
                 <tr>
-                  <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
                     <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🔍</div>
                     <div style={{ fontWeight: 600 }}>No users found</div>
                   </td>
