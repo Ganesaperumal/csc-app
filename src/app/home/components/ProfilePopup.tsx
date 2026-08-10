@@ -213,9 +213,23 @@ export default function ProfilePopup({ user }: { user: any }) {
                 <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
                 <AvatarComponent size={140} showPencil={true} />
               </label>
-              <h3 style={{ marginTop: '1rem', color: 'var(--text-primary)', marginBottom: profile?.phone ? '0.25rem' : '1.5rem' }}>{displayName}</h3>
+              <h3 style={{ marginTop: '1rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>{displayName}</h3>
+              {(profile?.role || profile?.department || profile?.designation) && (
+                <div style={{ fontSize: '0.8rem', color: '#4f46e5', fontWeight: 700, marginBottom: '0.45rem', display: 'flex', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                  {profile?.role && (
+                    <span style={{ background: 'rgba(79, 70, 229, 0.08)', padding: '0.2rem 0.6rem', borderRadius: '12px', border: '1px solid rgba(79, 70, 229, 0.2)' }}>
+                      👤 {profile.role}
+                    </span>
+                  )}
+                  {(profile?.department || profile?.designation) && (
+                    <span style={{ background: 'rgba(16, 185, 129, 0.08)', color: '#059669', padding: '0.2rem 0.6rem', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                      🏢 {profile.department || profile.designation}
+                    </span>
+                  )}
+                </div>
+              )}
               {profile?.phone && (
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '4px', margin: 0 }}>
                   <span>📞</span> <span>{profile.phone}</span>
                 </p>
               )}

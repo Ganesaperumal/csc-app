@@ -45,7 +45,14 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { userId, name, username, email, phone, role, csc_role, tracking_role, followups_role, all_jobs_role, unbilled_role, branches, is_approved, photo, password } = body;
+    const { 
+      userId, name, username, email, phone, role, department, designation, 
+      csc_access, csc_role, 
+      followups_access, followups_role, tracking_role,
+      all_jobs_access, all_jobs_role, 
+      unbilled_access, unbilled_role, 
+      branches, is_approved, photo, password 
+    } = body;
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -64,15 +71,34 @@ export async function PUT(request: Request) {
     if (name !== undefined) updates.name = name;
     if (username !== undefined) updates.username = username;
     if (phone !== undefined) updates.phone = phone;
-    if (csc_role !== undefined) updates.csc_role = csc_role;
-    if (unbilled_role !== undefined) updates.unbilled_role = unbilled_role;
-
-    if (followups_role !== undefined) updates.followups_role = followups_role;
-    if (tracking_role !== undefined) updates.tracking_role = tracking_role;
-    
-    if (all_jobs_role !== undefined) updates.all_jobs_role = all_jobs_role;
     if (role !== undefined) updates.role = role;
-    
+    if (department !== undefined) updates.department = department;
+    else if (designation !== undefined) updates.department = designation;
+
+    const cscVal = csc_access !== undefined ? csc_access : csc_role;
+    if (cscVal !== undefined) {
+      updates.csc_access = cscVal;
+      updates.csc_role = cscVal;
+    }
+
+    const followupsVal = followups_access !== undefined ? followups_access : (followups_role !== undefined ? followups_role : tracking_role);
+    if (followupsVal !== undefined) {
+      updates.followups_access = followupsVal;
+      updates.followups_role = followupsVal;
+    }
+
+    const allJobsVal = all_jobs_access !== undefined ? all_jobs_access : all_jobs_role;
+    if (allJobsVal !== undefined) {
+      updates.all_jobs_access = allJobsVal;
+      updates.all_jobs_role = allJobsVal;
+    }
+
+    const unbilledVal = unbilled_access !== undefined ? unbilled_access : unbilled_role;
+    if (unbilledVal !== undefined) {
+      updates.unbilled_access = unbilledVal;
+      updates.unbilled_role = unbilledVal;
+    }
+
     if (branches !== undefined) updates.branches = branches;
     if (is_approved !== undefined) updates.is_approved = is_approved;
     if (photo !== undefined) updates.photo = photo;

@@ -12,10 +12,18 @@ type Permission = {
   access: AccessLevel;
 };
 
+type UserRolesParam = { 
+  role?: string; 
+  csc_access?: string; csc_role?: string; 
+  unbilled_access?: string; unbilled_role?: string;
+  all_jobs_access?: string; all_jobs_role?: string;
+  followups_access?: string; followups_role?: string;
+};
+
 type PermissionsContextType = {
   permissions: Permission[];
   loading: boolean;
-  getAccessLevel: (pageName: string, userRoles: { role?: string; csc_role?: string; unbilled_role?: string }) => AccessLevel;
+  getAccessLevel: (pageName: string, userRoles: UserRolesParam) => AccessLevel;
 };
 
 const PermissionsContext = createContext<PermissionsContextType>({
@@ -49,18 +57,20 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
 
   const getAccessLevel = (
     pageName: string, 
-    userRoles: { role?: string; csc_role?: string; unbilled_role?: string }
+    userRoles: UserRolesParam
   ): AccessLevel => {
     if (!userRoles) return 'None';
 
     let maxAccess: AccessLevel = 'None';
     const isCSCGroup = pageName === 'Active Jobs' || pageName === 'Closed Jobs' || pageName === 'CSC Jobs';
 
+    const userCsc = userRoles.csc_access || userRoles.csc_role;
+    const userUnbilled = userRoles.unbilled_access || userRoles.unbilled_role;
+
     permissions.forEach(perm => {
       let isMatch = perm.section === pageName;
       if (isCSCGroup) {
-        // If a CSC Jobs entry exists, prefer CSC Jobs over legacy Active/Closed entries
-        const hasCSCJobsRow = permissions.some(p => p.section === 'CSC Jobs' && p.role === (perm.category === 'CSC' ? (userRoles.csc_role || userRoles.role) : userRoles.role));
+        const hasCSCJobsRow = permissions.some(p => p.section === 'CSC Jobs' && p.role === (perm.category === 'CSC' ? (userCsc || userRoles.role) : userRoles.role));
         if (hasCSCJobsRow) {
           isMatch = perm.section === 'CSC Jobs';
         } else {
@@ -69,19 +79,16 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
       }
 
       if (isMatch) {
-        // Prevent orphaned Unbilled category permissions from overriding Activity Log
         if (pageName === 'Activity Log' && perm.category === 'Unbilled') return;
 
-        // Determine the applicable role for this permission's category
-        let applicableRole = userRoles.role; // Default/legacy role
+        let applicableRole = userRoles.role;
         
         if (perm.category === 'CSC') {
-          applicableRole = userRoles.csc_role ? userRoles.csc_role : applicableRole;
+          applicableRole = userCsc ? userCsc : applicableRole;
         } else if (perm.category === 'Unbilled') {
-          applicableRole = userRoles.unbilled_role ? userRoles.unbilled_role : applicableRole;
+          applicableRole = userUnbilled ? userUnbilled : applicableRole;
         }
 
-        // Only grant access if the applicable role matches the permission's role
         if (applicableRole === perm.role && applicableRole !== 'None') {
           const rawAccess = perm.access as string;
           maxAccess = (rawAccess === 'Read' ? 'View' : perm.access) as AccessLevel || 'None';

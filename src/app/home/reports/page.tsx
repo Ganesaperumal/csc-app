@@ -620,26 +620,27 @@ export default function ReportsPage() {
 
   const canAccessCsc = useMemo(() => {
     if (!currentUserProfile) return false;
-    const cscRole = currentUserProfile.csc_role || 'None';
-    const fRole = (currentUserProfile.followups_role || currentUserProfile.tracking_role || '').toLowerCase();
+    const cscRole = currentUserProfile.csc_access || currentUserProfile.csc_role || 'None';
+    const fRole = (currentUserProfile.followups_access || currentUserProfile.followups_role || currentUserProfile.tracking_role || '').toLowerCase();
     const hasFollowups = fRole === 'self' || fRole === 'all' || fRole.includes('self') || fRole.includes('all');
     return (cscRole !== 'None' && cscRole !== '') || hasFollowups;
   }, [currentUserProfile]);
 
   const canAccessUnbilled = useMemo(() => {
     if (!currentUserProfile) return false;
-    return currentUserProfile.unbilled_role && currentUserProfile.unbilled_role !== 'None';
+    const unbRole = currentUserProfile.unbilled_access || currentUserProfile.unbilled_role;
+    return unbRole && unbRole !== 'None';
   }, [currentUserProfile]);
 
   const canAccessActivityLog = useMemo(() => {
     if (!currentUserProfile) return false;
-    const fRole = (currentUserProfile.followups_role || currentUserProfile.tracking_role || '').toLowerCase();
+    const fRole = (currentUserProfile.followups_access || currentUserProfile.followups_role || currentUserProfile.tracking_role || '').toLowerCase();
     return fRole === 'self' || fRole === 'all' || fRole.includes('self') || fRole.includes('all');
   }, [currentUserProfile]);
 
   const fetchActivityLogs = useCallback(async () => {
     if (!currentUserProfile) return;
-    const fRole = (currentUserProfile.followups_role || currentUserProfile.tracking_role || '').toLowerCase();
+    const fRole = (currentUserProfile.followups_access || currentUserProfile.followups_role || currentUserProfile.tracking_role || '').toLowerCase();
     const isSelf = fRole === 'self' || fRole.includes('self');
     const isAll = fRole === 'all' || fRole.includes('all');
 
@@ -714,11 +715,12 @@ export default function ReportsPage() {
         .from('profiles').select('*').eq('id', session.user.id).single();
       if (!profileData) { router.push('/home'); return; }
       
-      const cRole = profileData.csc_role || 'None';
-      const fRole = (profileData.followups_role || profileData.tracking_role || '').toLowerCase();
+      const cRole = profileData.csc_access || profileData.csc_role || 'None';
+      const fRole = (profileData.followups_access || profileData.followups_role || profileData.tracking_role || '').toLowerCase();
       const hasFollowups = fRole === 'self' || fRole === 'all' || fRole.includes('self') || fRole.includes('all');
       const hasCsc = (cRole !== 'None' && cRole !== '') || hasFollowups;
-      const hasUnbilled = profileData.unbilled_role && profileData.unbilled_role !== 'None';
+      const unbRole = profileData.unbilled_access || profileData.unbilled_role;
+      const hasUnbilled = unbRole && unbRole !== 'None';
       const hasActivityLog = hasFollowups;
 
       if (!hasCsc && !hasUnbilled && !hasActivityLog) {
@@ -2139,7 +2141,7 @@ export default function ReportsPage() {
             </div>
 
             {/* Agent Filter (For All access) */}
-            {((currentUserProfile?.followups_role || '').toLowerCase().includes('all') || (currentUserProfile?.tracking_role || '').toLowerCase().includes('all')) && (
+            {((currentUserProfile?.followups_access || currentUserProfile?.followups_role || '').toLowerCase().includes('all') || (currentUserProfile?.tracking_role || '').toLowerCase().includes('all')) && (
               <div style={{ minWidth: '160px' }}>
                 <CustomSelect
                   placeholder="All Staff"

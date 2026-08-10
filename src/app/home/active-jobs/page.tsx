@@ -313,7 +313,7 @@ function JobsTable() {
       if (data.user) {
         supabase.from('profiles').select('*').eq('id', data.user.id).single().then(({ data: profileData }) => {
           if (profileData) {
-            const cscRole = profileData.csc_role || 'None';
+            const cscRole = profileData.csc_access || profileData.csc_role || 'None';
             const isCscEdit = cscRole === 'Edit';
             const isCscView = cscRole === 'View';
 
@@ -324,7 +324,7 @@ function JobsTable() {
             if (isCscView) {
               setIsViewer(true);
             }
-            const fRole = (profileData.followups_role || profileData.tracking_role || '').toLowerCase();
+            const fRole = (profileData.followups_access || profileData.followups_role || profileData.tracking_role || '').toLowerCase();
             if (fRole === 'all' || fRole.includes('all')) {
               setIsFollowupsAll(true);
             }

@@ -167,8 +167,8 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
                   <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
                     <strong>Requested Modules:</strong>
                     <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
-                      <span style={{ padding: '0.15rem 0.4rem', borderRadius: '4px', background: 'rgba(79,70,229,0.1)', color: '#4f46e5', fontWeight: 700 }}>CSC: {pu.csc_role || 'None'}</span>
-                      <span style={{ padding: '0.15rem 0.4rem', borderRadius: '4px', background: 'rgba(16,185,129,0.1)', color: '#10b981', fontWeight: 700 }}>Unbilled: {pu.unbilled_role || 'None'}</span>
+                      <span style={{ padding: '0.15rem 0.4rem', borderRadius: '4px', background: 'rgba(79,70,229,0.1)', color: '#4f46e5', fontWeight: 700 }}>CSC: {pu.csc_access || pu.csc_role || 'None'}</span>
+                      <span style={{ padding: '0.15rem 0.4rem', borderRadius: '4px', background: 'rgba(16,185,129,0.1)', color: '#10b981', fontWeight: 700 }}>Unbilled: {pu.unbilled_access || pu.unbilled_role || 'None'}</span>
                     </div>
                   </div>
 

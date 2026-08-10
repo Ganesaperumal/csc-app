@@ -258,7 +258,7 @@ function AllJobsContent() {
       const { data: profileData } = await supabase
         .from('profiles').select('*').eq('id', session.user.id).single();
       if (!profileData) { router.push('/home'); return; }
-      const allJobsRole = profileData.all_jobs_role || 'None';
+      const allJobsRole = profileData.all_jobs_access || profileData.all_jobs_role || 'None';
 
       if (allJobsRole === 'None' || !allJobsRole) {
         router.push('/home');

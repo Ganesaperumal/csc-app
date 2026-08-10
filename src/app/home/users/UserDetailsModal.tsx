@@ -108,13 +108,15 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const [name,     setName]     = useState(user?.name     || '');
-  const [username, setUsername] = useState(user?.username || '');
-  const [email,    setEmail]    = useState(user?.email    || (user?.username ? `${user.username}@transworldintl.com` : ''));
-  const [phone,    setPhone]    = useState(user?.phone    || '');
-  const [password, setPassword] = useState('');
+  const [name,       setName]       = useState(user?.name       || '');
+  const [role,       setRole]       = useState(user?.role       || 'User');
+  const [department, setDepartment] = useState(user?.department || user?.designation || '');
+  const [username,   setUsername]   = useState(user?.username   || '');
+  const [email,      setEmail]      = useState(user?.email      || (user?.username ? `${user.username}@transworldintl.com` : ''));
+  const [phone,      setPhone]      = useState(user?.phone      || '');
+  const [password,   setPassword]   = useState('');
 
-  /* Init from DB roles */
+  /* Init from DB access columns (fallback to legacy _role) */
   const initCsc      = (r?: string): CscAccess      => (!r || r === 'None') ? 'None' : (r === 'Edit' ? 'Edit' : 'View');
   const initFollowup = (f?: string, t?: string): FollowupAccess => {
     const r = f || t;
@@ -126,10 +128,10 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
   };
   const initUnbilled = (r?: string): UnbilledAccess => (!r || r === 'None') ? 'None' : (r === 'Edit' ? 'Edit' : 'View');
 
-  const [cscAccess,     setCscAccess]     = useState<CscAccess>(initCsc(user?.csc_role));
-  const [followupAccess,setFollowupAccess]= useState<FollowupAccess>(initFollowup(user?.followups_role, user?.tracking_role));
-  const [allJobsAccess, setAllJobsAccess] = useState<AllJobsAccess>(initAllJobs(user?.all_jobs_role, user?.role));
-  const [unbilledAccess,setUnbilledAccess]= useState<UnbilledAccess>(initUnbilled(user?.unbilled_role));
+  const [cscAccess,     setCscAccess]     = useState<CscAccess>(initCsc(user?.csc_access || user?.csc_role));
+  const [followupAccess,setFollowupAccess]= useState<FollowupAccess>(initFollowup(user?.followups_access || user?.followups_role, user?.tracking_role));
+  const [allJobsAccess, setAllJobsAccess] = useState<AllJobsAccess>(initAllJobs(user?.all_jobs_access || user?.all_jobs_role, user?.role));
+  const [unbilledAccess,setUnbilledAccess]= useState<UnbilledAccess>(initUnbilled(user?.unbilled_access || user?.unbilled_role));
   const [branches,      setBranches]      = useState<string[]>(user?.branches?.length ? user.branches : ['ALL']);
   const [isApproved,    setIsApproved]    = useState<boolean>(user?.is_approved !== false);
   const [photo,         setPhoto]         = useState<string | null>(user?.photo || null);
@@ -137,13 +139,23 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
 
   const handleSave = async () => {
     setSaving(true);
+    const cscVal = cscAccess;
+    const followupsVal = cscAccess === 'None' ? 'None' : followupAccess;
+    const allJobsVal = allJobsAccess;
+    const unbilledVal = unbilledAccess;
+
     await onSave({
-      userId: user?.id, name, username, email, phone,
+      userId: user?.id, name, username, role, department, designation: department, email, phone,
       password: isCreate ? password : (password || undefined),
-      csc_role:       cscAccess,
-      followups_role: cscAccess === 'None' ? 'None' : followupAccess,
-      all_jobs_role:  allJobsAccess,
-      unbilled_role:  unbilledAccess,
+      csc_access:       cscVal,
+      followups_access: followupsVal,
+      all_jobs_access:  allJobsVal,
+      unbilled_access:  unbilledVal,
+      // Legacy compatibility
+      csc_role:       cscVal,
+      followups_role: followupsVal,
+      all_jobs_role:  allJobsVal,
+      unbilled_role:  unbilledVal,
       branches: unbilledAccess === 'None' ? [] : (branches.length ? branches : ['ALL']),
       is_approved: isApproved, photo,
     });
@@ -284,10 +296,12 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
             {/* Profile fields */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
               {[
-                { lbl: 'Full Name *',    val: name,     set: setName,     type: 'text',     ph: 'John Doe' },
-                { lbl: 'Username *',     val: username, set: (v: string) => { setUsername(v.toLowerCase()); if (isCreate) setEmail(`${v.toLowerCase()}@transworldintl.com`); }, type: 'text', ph: 'johndoe' },
-                { lbl: 'Email *',        val: email,    set: (v: string) => setEmail(v.toLowerCase()), type: 'email', ph: 'john@transworldintl.com' },
-                { lbl: 'Phone',          val: phone,    set: setPhone,    type: 'text',     ph: '9876543210' },
+                { lbl: 'Full Name *',    val: name,       set: setName,       type: 'text',  ph: 'John Doe' },
+                { lbl: 'Role',           val: role,       set: setRole,       type: 'text',  ph: 'e.g. Admin / Operator' },
+                { lbl: 'Department',     val: department, set: setDepartment, type: 'text',  ph: 'e.g. Operations / Billing' },
+                { lbl: 'Username *',     val: username,   set: (v: string) => { setUsername(v.toLowerCase()); if (isCreate) setEmail(`${v.toLowerCase()}@transworldintl.com`); }, type: 'text', ph: 'johndoe' },
+                { lbl: 'Email *',        val: email,      set: (v: string) => setEmail(v.toLowerCase()), type: 'email', ph: 'john@transworldintl.com' },
+                { lbl: 'Phone',          val: phone,      set: setPhone,      type: 'text',  ph: '9876543210' },
               ].map(({ lbl, val, set, type, ph }) => (
                 <div key={lbl}>
                   <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.35rem' }}>

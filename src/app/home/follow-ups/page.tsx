@@ -80,8 +80,8 @@ export default function FollowUpsPage() {
 
       if (profile) {
         activeName = profile.name || profile.username || user.email?.split('@')[0] || 'Agent';
-        const fRole = (profile.followups_role || profile.tracking_role || '').toLowerCase();
-        const cscRole = profile.csc_role || 'None';
+        const fRole = (profile.followups_access || profile.followups_role || profile.tracking_role || '').toLowerCase();
+        const cscRole = profile.csc_access || profile.csc_role || 'None';
 
         const hasCscAccess = cscRole !== 'None' && cscRole !== '';
         const hasFollowupsAccess = fRole !== 'none' && fRole !== '';

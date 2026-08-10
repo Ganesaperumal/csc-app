@@ -18,10 +18,10 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
   const pathname = usePathname();
 
   // ─── Direct Profile Column Permissions (Single Source of Truth) ───
-  const cscRole = profile?.csc_role || 'None';
-  const followupsRole = profile?.followups_role || 'None';
-  const allJobsRole = profile?.all_jobs_role || 'None';
-  const unbilledRole = profile?.unbilled_role || 'None';
+  const cscRole = profile?.csc_access || profile?.csc_role || 'None';
+  const followupsRole = profile?.followups_access || profile?.followups_role || 'None';
+  const allJobsRole = profile?.all_jobs_access || profile?.all_jobs_role || 'None';
+  const unbilledRole = profile?.unbilled_access || profile?.unbilled_role || 'None';
 
   const canAccessCsc = cscRole !== 'None' && cscRole !== '';
   const canAccessActive = canAccessCsc;
@@ -486,8 +486,8 @@ export default function DashboardLayout({
 }
 
 function SyncERPWrapper({ user, profile }: { user: any, profile: any }) {
-  const cscRole = profile?.csc_role || 'None';
-  const fRole = (profile?.followups_role || profile?.tracking_role || '').toLowerCase();
+  const cscRole = profile?.csc_access || profile?.csc_role || 'None';
+  const fRole = (profile?.followups_access || profile?.followups_role || profile?.tracking_role || '').toLowerCase();
   const hasFollowups = fRole === 'self' || fRole === 'all' || fRole.includes('self') || fRole.includes('all');
   const hasCscAccess = cscRole !== 'None' && cscRole !== '';
 

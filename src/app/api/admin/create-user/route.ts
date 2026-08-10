@@ -8,7 +8,15 @@ const supabase = createClient(
 
 export async function POST(request: Request) {
   try {
-    const { email, password, name, username: reqUsername, role, csc_role, tracking_role, followups_role, all_jobs_role, unbilled_role, branches, phone, photo, is_approved } = await request.json();
+    const body = await request.json();
+    const { 
+      email, password, name, username: reqUsername, role, department, designation,
+      csc_access, csc_role, 
+      followups_access, followups_role, tracking_role,
+      all_jobs_access, all_jobs_role, 
+      unbilled_access, unbilled_role, 
+      branches, phone, photo, is_approved 
+    } = body;
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
@@ -30,22 +38,31 @@ export async function POST(request: Request) {
 
     const userId = authData.user.id;
 
+    const finalCsc = csc_access || csc_role || 'None';
+    const finalFollowups = followups_access || followups_role || tracking_role || 'None';
+    const finalAllJobs = all_jobs_access || all_jobs_role || 'None';
+    const finalUnbilled = unbilled_access || unbilled_role || 'None';
+
     let insertPayload: any = {
       id: userId,
       name: name || username,
       username,
-      csc_role: csc_role || 'None',
-      unbilled_role: unbilled_role || 'None',
+      role: role || 'User',
+      department: department || designation || null,
+      csc_access: finalCsc,
+      followups_access: finalFollowups,
+      all_jobs_access: finalAllJobs,
+      unbilled_access: finalUnbilled,
+      // Backwards compatibility fallbacks
+      csc_role: finalCsc,
+      followups_role: finalFollowups,
+      all_jobs_role: finalAllJobs,
+      unbilled_role: finalUnbilled,
       branches: branches || [],
       phone: phone || null,
       photo: photo || null,
       is_approved: is_approved !== undefined ? is_approved : true,
     };
-
-    if (followups_role !== undefined) insertPayload.followups_role = followups_role;
-    if (tracking_role !== undefined) insertPayload.tracking_role = tracking_role;
-    if (all_jobs_role !== undefined) insertPayload.all_jobs_role = all_jobs_role;
-    if (role !== undefined) insertPayload.role = role;
 
     // Resilient insert loop: automatically strip any column that does not exist in Supabase schema cache
     let insertSuccess = false;

@@ -78,7 +78,7 @@ src/
 ### Core Tables
 | Table | Key Columns | Notes |
 |-------|------------|-------|
-| `profiles` | `id` (UUID, FK auth.users), `name`, `username`, `role`, `csc_role`, `unbilled_role`, `branches` (TEXT[]), `is_approved`, `is_reviewed`, `phone`, `photo`, `csc_coordinator` | Role-based access |
+| `profiles` | `id` (UUID, FK auth.users), `name`, `username`, `role`, `department`, `csc_access`, `followups_access`, `all_jobs_access`, `unbilled_access`, `branches` (TEXT[]), `is_approved`, `is_reviewed`, `phone`, `photo`, `csc_coordinator` | Role & access control |
 | `jobs` | `job_number`, `enquiry_number`, `branch`, `customer_name`, `company`, `goods_description`, `origin`, `destination`, `packing_date`, `delivery_date`, `goods_track_status`, `car_track_status`, `po_status`, `po_date`, `inv_request_date`, `bill_closure_date`, `sales_by`, `spoc_name`, `documents` (JSONB), `whatsapp_sent_stages` (JSONB), `insurance_required`, `quote_value` | Main job record |
 | `legacy_jobs` | `job_number`, `enquiry_number`, `branch`, `customer_name`, `packing_date`, `delivery_date`, `goods_track_status`, `po_status`, `po_date`, `inv_request_date`, `bill_closure_date`, `sales_by`, `spoc_name` | Old/archived jobs |
 | `job_logs` | `job_id`, `action`, `changed_by`, `changes` (JSONB), `created_at` | Audit log per job |

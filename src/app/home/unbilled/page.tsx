@@ -446,7 +446,7 @@ export default function UnbilledManagementPage() {
   // Enforce access control once user profile has loaded
   useEffect(() => {
     if (!userProfile) return;
-    const unbilledRole = userProfile.unbilled_role || 'None';
+    const unbilledRole = userProfile.unbilled_access || userProfile.unbilled_role || 'None';
     const isUnbilledEdit = unbilledRole === 'Edit';
     const isUnbilledView = unbilledRole === 'View';
 

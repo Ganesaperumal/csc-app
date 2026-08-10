@@ -111,7 +111,13 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
   const filteredUsers = users
     .filter(u => {
       const q = searchQuery.toLowerCase();
-      return !q || (u.name?.toLowerCase().includes(q) || u.username?.toLowerCase().includes(q));
+      return !q || (
+        u.name?.toLowerCase().includes(q) ||
+        u.username?.toLowerCase().includes(q) ||
+        u.role?.toLowerCase().includes(q) ||
+        u.department?.toLowerCase().includes(q) ||
+        u.designation?.toLowerCase().includes(q)
+      );
     })
     .sort((a, b) => ((a.name || a.username) || '').localeCompare((b.name || b.username) || ''));
 
@@ -234,9 +240,10 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
               {filteredUsers.map((u) => {
                 const isApproved = u.is_approved !== false;
 
-                const cscVal = u.csc_role || 'None';
-                const allJobsVal = u.all_jobs_role || 'None';
-                const unbilledVal = u.unbilled_role || 'None';
+                const cscVal = u.csc_access || u.csc_role || 'None';
+                const allJobsVal = u.all_jobs_access || u.all_jobs_role || 'None';
+                const unbilledVal = u.unbilled_access || u.unbilled_role || 'None';
+                const deptVal = u.department || u.designation || '';
 
                 return (
                   <tr
@@ -264,7 +271,13 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                           <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                             {u.name || u.username}
                           </div>
-                          {u.phone && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{u.phone}</div>}
+                          {(u.role || deptVal) && (
+                            <div style={{ fontSize: '0.74rem', color: '#4f46e5', fontWeight: 600, display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+                              {u.role && <span>[{u.role}]</span>}
+                              {deptVal && <span>🏢 {deptVal}</span>}
+                            </div>
+                          )}
+                          {u.phone && <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{u.phone}</div>}
                         </div>
                       </div>
                     </td>

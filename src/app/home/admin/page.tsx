@@ -246,7 +246,7 @@ export default function AdminPage() {
           const isSuperAdmin = profile?.is_super_admin === true;
 
           if (profile && isSuperAdmin) {
-            setUserRole(profile.csc_role || 'View');
+            setUserRole(profile.csc_access || profile.csc_role || 'View');
             setCheckingAuth(false);
           } else {
             showToast('⛔ Access Denied: Admin Center is restricted to Super Admin only.', 'error');

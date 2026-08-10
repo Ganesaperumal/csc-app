@@ -388,9 +388,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const { getAccessLevel } = usePermissions();
   const [profileRoles, setProfileRoles] = useState<any | null>(null);
 
-  // Edit access for Job Details is ONLY granted by csc_role = 'Edit'.
-  // unbilled_role, followups_role, and all_jobs_role NEVER grant edit access to CSC job details!
-  const cRole = (profileRoles?.csc_role || '').toString().trim().toLowerCase();
+  // Edit access for Job Details is ONLY granted by csc_access = 'Edit'.
+  // unbilled_access, followups_access, and all_jobs_access NEVER grant edit access to CSC job details!
+  const cRole = (profileRoles?.csc_access || profileRoles?.csc_role || '').toString().trim().toLowerCase();
   const hasEditAccess = profileRoles ? cRole === 'edit' : false;
 
   const isReadOnly = profileRoles ? !hasEditAccess : true;
@@ -546,7 +546,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
         setProfileRoles(profile);
       } else {
         setAgentName(user.email?.split('@')[0] || 'Agent');
-        setProfileRoles({ csc_role: 'Edit' });
+        setProfileRoles({ csc_access: 'Edit', csc_role: 'Edit' });
       }
     };
     initProfile();

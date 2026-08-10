@@ -270,6 +270,553 @@ function AppGoodsVerticalStepper({ value, onChange }: { value: string; onChange:
 }
 
 
+// --- CALENDAR POPUP MODAL HELPERS & COMPONENTS ---
+const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+function formatDateDisplay(d: Date | null) {
+  if (!d) return 'Select Date';
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = d.toLocaleString('en-US', { month: 'short' });
+  const year = d.getFullYear();
+  return `${day}-${month}-${year}`;
+}
+
+function isSameDay(d1: Date | null, d2: Date | null) {
+  if (!d1 || !d2) return false;
+  return d1.getFullYear() === d2.getFullYear() &&
+         d1.getMonth() === d2.getMonth() &&
+         d1.getDate() === d2.getDate();
+}
+
+function isBetweenDays(d: Date, start: Date | null, end: Date | null) {
+  if (!start || !end) return false;
+  const time = d.getTime();
+  const startTime = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+  const endTime = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+  const min = Math.min(startTime, endTime);
+  const max = Math.max(startTime, endTime);
+  return time > min && time < max;
+}
+
+function SingleDateCalendarModal({
+  value,
+  onChange
+}: {
+  value: Date;
+  onChange: (date: Date) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [viewYear, setViewYear] = useState(value.getFullYear());
+  const [viewMonth, setViewMonth] = useState(value.getMonth());
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setViewYear(value.getFullYear());
+    setViewMonth(value.getMonth());
+  }, [value]);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  const handlePrevMonth = () => {
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear(prev => prev - 1);
+    } else {
+      setViewMonth(prev => prev - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear(prev => prev + 1);
+    } else {
+      setViewMonth(prev => prev + 1);
+    }
+  };
+
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const firstDayOfWeek = new Date(viewYear, viewMonth, 1).getDay();
+  const prevMonthDays = new Date(viewYear, viewMonth, 0).getDate();
+
+  const gridCells = [];
+
+  for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+    const dayNum = prevMonthDays - i;
+    const dateObj = new Date(viewYear, viewMonth - 1, dayNum);
+    gridCells.push({ date: dateObj, isCurrentMonth: false });
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateObj = new Date(viewYear, viewMonth, d);
+    gridCells.push({ date: dateObj, isCurrentMonth: true });
+  }
+
+  const totalCells = Math.ceil(gridCells.length / 7) * 7;
+  const remaining = totalCells - gridCells.length;
+  for (let n = 1; n <= remaining; n++) {
+    const dateObj = new Date(viewYear, viewMonth + 1, n);
+    gridCells.push({ date: dateObj, isCurrentMonth: false });
+  }
+
+  const today = new Date();
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          padding: '0.65rem 1.1rem',
+          borderRadius: '12px',
+          border: '1px solid var(--border-color)',
+          background: 'var(--surface-color)',
+          color: 'var(--text-primary)',
+          fontWeight: 700,
+          fontSize: '0.85rem',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem',
+          boxShadow: 'var(--glass-shadow)',
+          transition: 'all 0.2s',
+          fontFamily: "'Outfit', sans-serif"
+        }}
+      >
+        <span>📅</span>
+        <span>{formatDateDisplay(value)}</span>
+        <span style={{ fontSize: '0.7rem', color: '#4f46e5' }}>▼</span>
+      </button>
+
+      {isOpen && (
+        <div style={{
+          position: 'absolute',
+          top: '115%',
+          left: 0,
+          zIndex: 1000,
+          width: '320px',
+          background: 'var(--bg-color, #ffffff)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '16px',
+          padding: '1.25rem',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
+          fontFamily: "'Outfit', sans-serif"
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <button
+              onClick={handlePrevMonth}
+              title="Previous month"
+              style={{
+                width: '32px', height: '32px', borderRadius: '50%',
+                border: '1px solid var(--border-color)', background: 'var(--surface-color)',
+                color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 800, fontSize: '1.1rem',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}
+            >
+              ‹
+            </button>
+            <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+              {MONTH_NAMES[viewMonth]} {viewYear}
+            </div>
+            <button
+              onClick={handleNextMonth}
+              title="Next month"
+              style={{
+                width: '32px', height: '32px', borderRadius: '50%',
+                border: '1px solid var(--border-color)', background: 'var(--surface-color)',
+                color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 800, fontSize: '1.1rem',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}
+            >
+              ›
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.85rem' }}>
+            <button
+              onClick={() => {
+                const now = new Date();
+                onChange(now);
+                setViewYear(now.getFullYear());
+                setViewMonth(now.getMonth());
+              }}
+              style={{ flex: 1, padding: '0.3rem', fontSize: '0.72rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'rgba(79, 70, 229, 0.1)', color: '#4f46e5', fontWeight: 700, cursor: 'pointer' }}
+            >
+              Today
+            </button>
+            <button
+              onClick={() => {
+                const tom = new Date();
+                tom.setDate(tom.getDate() + 1);
+                onChange(tom);
+                setViewYear(tom.getFullYear());
+                setViewMonth(tom.getMonth());
+              }}
+              style={{ flex: 1, padding: '0.3rem', fontSize: '0.72rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}
+            >
+              Tomorrow
+            </button>
+            <button
+              onClick={() => {
+                const nextW = new Date();
+                nextW.setDate(nextW.getDate() + 7);
+                onChange(nextW);
+                setViewYear(nextW.getFullYear());
+                setViewMonth(nextW.getMonth());
+              }}
+              style={{ flex: 1, padding: '0.3rem', fontSize: '0.72rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}
+            >
+              In 7 Days
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', textAlign: 'center', marginBottom: '0.4rem' }}>
+            {DAYS_OF_WEEK.map(day => (
+              <span key={day} style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                {day.slice(0, 2)}
+              </span>
+            ))}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+            {gridCells.map((cell, idx) => {
+              const isSelected = isSameDay(cell.date, value);
+              const isToday = isSameDay(cell.date, today);
+
+              return (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    onChange(cell.date);
+                    setIsOpen(false);
+                  }}
+                  style={{
+                    height: '34px',
+                    borderRadius: '8px',
+                    border: isSelected ? 'none' : (isToday ? '1.5px solid #4f46e5' : 'none'),
+                    background: isSelected 
+                      ? 'linear-gradient(135deg, #4f46e5, #7c3aed)' 
+                      : 'transparent',
+                    color: isSelected 
+                      ? 'white' 
+                      : (cell.isCurrentMonth ? 'var(--text-primary)' : 'var(--text-secondary)'),
+                    opacity: cell.isCurrentMonth ? 1 : 0.35,
+                    fontWeight: isSelected || isToday ? 800 : 500,
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {cell.date.getDate()}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.85rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)' }}>
+            <button
+              onClick={() => setIsOpen(false)}
+              style={{ padding: '0.35rem 0.85rem', borderRadius: '6px', border: 'none', background: '#4f46e5', color: 'white', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DateRangeCalendarModal({
+  startDate,
+  endDate,
+  onChange
+}: {
+  startDate: Date | null;
+  endDate: Date | null;
+  onChange: (start: Date | null, end: Date | null) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [viewYear, setViewYear] = useState(startDate ? startDate.getFullYear() : new Date().getFullYear());
+  const [viewMonth, setViewMonth] = useState(startDate ? startDate.getMonth() : new Date().getMonth());
+  const [hoverDate, setHoverDate] = useState<Date | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  const handlePrevMonth = () => {
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear(prev => prev - 1);
+    } else {
+      setViewMonth(prev => prev - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear(prev => prev + 1);
+    } else {
+      setViewMonth(prev => prev + 1);
+    }
+  };
+
+  const handleDayClick = (date: Date) => {
+    if (!startDate || (startDate && endDate)) {
+      onChange(date, null);
+    } else {
+      if (date < startDate) {
+        onChange(date, null);
+      } else {
+        onChange(startDate, date);
+      }
+    }
+  };
+
+  const calculateRangeDays = () => {
+    if (!startDate || !endDate) return null;
+    const diff = Math.abs(endDate.getTime() - startDate.getTime());
+    return Math.round(diff / (1000 * 60 * 60 * 24)) + 1;
+  };
+
+  const renderMonthGrid = (year: number, month: number) => {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDayOfWeek = new Date(year, month, 1).getDay();
+    const prevMonthDays = new Date(year, month, 0).getDate();
+
+    const cells = [];
+    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+      const dayNum = prevMonthDays - i;
+      cells.push({ date: new Date(year, month - 1, dayNum), isCurrentMonth: false });
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      cells.push({ date: new Date(year, month, d), isCurrentMonth: true });
+    }
+    const totalCells = Math.ceil(cells.length / 7) * 7;
+    const remaining = totalCells - cells.length;
+    for (let n = 1; n <= remaining; n++) {
+      cells.push({ date: new Date(year, month + 1, n), isCurrentMonth: false });
+    }
+
+    const today = new Date();
+
+    return (
+      <div style={{ flex: 1, minWidth: '250px' }}>
+        <div style={{ textAlign: 'center', fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
+          {MONTH_NAMES[month]} {year}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', textAlign: 'center', marginBottom: '0.35rem' }}>
+          {DAYS_OF_WEEK.map(day => (
+            <span key={day} style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+              {day.slice(0, 2)}
+            </span>
+          ))}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
+          {cells.map((cell, idx) => {
+            const isStart = isSameDay(cell.date, startDate);
+            const isEnd = isSameDay(cell.date, endDate);
+            const isInRange = isBetweenDays(cell.date, startDate, endDate || hoverDate);
+            const isToday = isSameDay(cell.date, today);
+
+            let bg = 'transparent';
+            let color = cell.isCurrentMonth ? 'var(--text-primary)' : 'var(--text-secondary)';
+            let borderRadius = '8px';
+
+            if (isStart || isEnd) {
+              bg = isStart ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #8b5cf6, #6d28d9)';
+              color = 'white';
+            } else if (isInRange) {
+              bg = 'rgba(79, 70, 229, 0.15)';
+              color = '#4f46e5';
+              borderRadius = '0px';
+            }
+
+            return (
+              <button
+                key={idx}
+                onClick={() => handleDayClick(cell.date)}
+                onMouseEnter={() => setHoverDate(cell.date)}
+                style={{
+                  height: '32px',
+                  border: isToday && !isStart && !isEnd ? '1.5px solid #10b981' : 'none',
+                  background: bg,
+                  color: color,
+                  opacity: cell.isCurrentMonth ? 1 : 0.3,
+                  fontWeight: isStart || isEnd || isToday ? 800 : 500,
+                  fontSize: '0.78rem',
+                  borderRadius: borderRadius,
+                  cursor: 'pointer',
+                  transition: 'all 0.1s ease'
+                }}
+              >
+                {cell.date.getDate()}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const nextMonthYear = viewMonth === 11 ? viewYear + 1 : viewYear;
+  const nextMonthVal = viewMonth === 11 ? 0 : viewMonth + 1;
+
+  const rangeDaysCount = calculateRangeDays();
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          padding: '0.65rem 1.1rem',
+          borderRadius: '12px',
+          border: '1px solid var(--border-color)',
+          background: 'var(--surface-color)',
+          color: 'var(--text-primary)',
+          fontWeight: 700,
+          fontSize: '0.85rem',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem',
+          boxShadow: 'var(--glass-shadow)',
+          transition: 'all 0.2s',
+          fontFamily: "'Outfit', sans-serif"
+        }}
+      >
+        <span>🗓️</span>
+        <span>{formatDateDisplay(startDate)} → {formatDateDisplay(endDate)}</span>
+        {rangeDaysCount && (
+          <span style={{ padding: '0.15rem 0.55rem', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontSize: '0.72rem', fontWeight: 800 }}>
+            {rangeDaysCount} Days
+          </span>
+        )}
+        <span style={{ fontSize: '0.7rem', color: '#4f46e5' }}>▼</span>
+      </button>
+
+      {isOpen && (
+        <div style={{
+          position: 'absolute',
+          top: '115%',
+          left: 0,
+          zIndex: 1000,
+          width: '560px',
+          maxWidth: '90vw',
+          background: 'var(--bg-color, #ffffff)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '16px',
+          padding: '1.25rem',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+          fontFamily: "'Outfit', sans-serif"
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span style={{ fontSize: '1.1rem' }}>🗓️</span>
+              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)' }}>Select Date Range</span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button
+                onClick={handlePrevMonth}
+                title="Previous month"
+                style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                ‹
+              </button>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                {MONTH_NAMES[viewMonth]} {viewYear} — {MONTH_NAMES[nextMonthVal]} {nextMonthYear}
+              </span>
+              <button
+                onClick={handleNextMonth}
+                title="Next month"
+                style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                ›
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+            {[
+              { label: 'Today', getRange: () => [new Date(), new Date()] },
+              { label: 'Last 7 Days', getRange: () => { const e = new Date(); const s = new Date(); s.setDate(e.getDate() - 6); return [s, e]; } },
+              { label: 'Last 30 Days', getRange: () => { const e = new Date(); const s = new Date(); s.setDate(e.getDate() - 29); return [s, e]; } },
+              { label: 'This Month', getRange: () => { const now = new Date(); return [new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 0)]; } },
+              { label: 'Next 30 Days', getRange: () => { const s = new Date(); const e = new Date(); e.setDate(s.getDate() + 30); return [s, e]; } }
+            ].map(p => (
+              <button
+                key={p.label}
+                onClick={() => {
+                  const [s, e] = p.getRange();
+                  onChange(s, e);
+                  setViewYear(s.getFullYear());
+                  setViewMonth(s.getMonth());
+                }}
+                style={{ padding: '0.3rem 0.65rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'rgba(79, 70, 229, 0.08)', color: '#4f46e5', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
+            {renderMonthGrid(viewYear, viewMonth)}
+            {renderMonthGrid(nextMonthYear, nextMonthVal)}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+              {startDate && endDate ? (
+                <span style={{ color: '#10b981' }}>Selected: {formatDateDisplay(startDate)} to {formatDateDisplay(endDate)} ({rangeDaysCount} Days)</span>
+              ) : (
+                <span>Pick start date, then end date</span>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={() => onChange(null, null)}
+                style={{ padding: '0.4rem 0.85rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Clear
+              </button>
+              <button
+                onClick={() => setIsOpen(false)}
+                style={{ padding: '0.4rem 1rem', borderRadius: '6px', border: 'none', background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Apply Range
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function UIShowcasePage() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -317,6 +864,9 @@ export default function UIShowcasePage() {
   const [singleDate, setSingleDate] = useState('2026-08-08');
   const [dateFrom, setDateFrom] = useState('2026-08-01');
   const [dateTo, setDateTo] = useState('2026-08-31');
+  const [modalSingleDate, setModalSingleDate] = useState<Date>(new Date(2026, 7, 10));
+  const [rangeStartDate, setRangeStartDate] = useState<Date | null>(new Date(2026, 7, 1));
+  const [rangeEndDate, setRangeEndDate] = useState<Date | null>(new Date(2026, 7, 15));
 
   // Input States
   const [searchText, setSearchText] = useState('');
@@ -640,61 +1190,63 @@ export default function UIShowcasePage() {
         <section className="glass" style={{ padding: '1.5rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
             <span style={{ fontSize: '1.3rem' }}>📅</span>
-            <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800 }}>4. Calendars & Date Controls</h2>
+            <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800 }}>4. Calendars & Interactive Date Modals</h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem' }}>
             
-            {/* Single Date Picker */}
+            {/* 1. Interactive Single Date Picker Popup Modal */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Single Date Picker</label>
-              <input
-                type="date"
-                value={singleDate}
-                onChange={e => setSingleDate(e.target.value)}
-                style={{
-                  padding: '0.55rem 0.85rem',
-                  borderRadius: '10px',
-                  border: '1px solid var(--border-color)',
-                  background: 'var(--surface-color)',
-                  color: 'var(--text-primary)',
-                  fontSize: '0.875rem',
-                  fontFamily: "'Outfit', sans-serif",
-                  outline: 'none'
-                }}
+              <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                1. Single Date Picker Popup Modal (<code style={{ color: '#4f46e5' }}>Month Navigation</code>)
+              </label>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                Popup calendar modal with Previous (`‹`) & Next (`›`) month navigation, preset buttons (Today, Tomorrow, In 7 Days), and trailing month days grid.
+              </p>
+              <SingleDateCalendarModal
+                value={modalSingleDate}
+                onChange={(d) => setModalSingleDate(d)}
               />
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Selected: {singleDate || 'None'}</span>
+              <span style={{ fontSize: '0.75rem', color: '#4f46e5', fontWeight: 600 }}>Selected: {formatDateDisplay(modalSingleDate)}</span>
             </div>
 
-            {/* Date Range Selector */}
+            {/* 2. Interactive Date Range Selection Popup Modal */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Date Range Selector (From / To)</label>
+              <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                2. Dual-Month Date Range Selection Popup Modal (<code style={{ color: '#10b981' }}>Start & End Range</code>)
+              </label>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                Interactive dual-month calendar popup with Start Date & End Date range picking, live hover preview band, preset ranges (Today, Last 7 Days, Last 30 Days, This Month), and duration counter.
+              </p>
+              <DateRangeCalendarModal
+                startDate={rangeStartDate}
+                endDate={rangeEndDate}
+                onChange={(s, e) => {
+                  setRangeStartDate(s);
+                  setRangeEndDate(e);
+                }}
+              />
+              <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600 }}>
+                Selected Range: {formatDateDisplay(rangeStartDate)} → {formatDateDisplay(rangeEndDate)}
+              </span>
+            </div>
+
+            {/* Standard Native Input & Badges */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Standard Native Input & Follow-up Badges</label>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <input
                   type="date"
-                  value={dateFrom}
-                  onChange={e => setDateFrom(e.target.value)}
-                  style={{ flex: 1, padding: '0.55rem 0.6rem', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', fontSize: '0.82rem' }}
-                />
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>to</span>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={e => setDateTo(e.target.value)}
+                  value={singleDate}
+                  onChange={e => setSingleDate(e.target.value)}
                   style={{ flex: 1, padding: '0.55rem 0.6rem', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', fontSize: '0.82rem' }}
                 />
               </div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Range: {dateFrom} → {dateTo}</span>
-            </div>
-
-            {/* Calendar Follow-up Date Card Preview */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Follow-up Date Badge Preview</label>
-              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                <span style={{ padding: '0.3rem 0.75rem', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.25)', fontWeight: 800, fontSize: '0.8rem' }}>
-                  ⏰ ASAP Overdue
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.25rem' }}>
+                <span style={{ padding: '0.25rem 0.65rem', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.25)', fontWeight: 800, fontSize: '0.75rem' }}>
+                  ⏰ Overdue
                 </span>
-                <span style={{ padding: '0.3rem 0.75rem', borderRadius: '12px', background: 'rgba(79, 70, 229, 0.1)', color: '#4f46e5', border: '1px solid rgba(79, 70, 229, 0.25)', fontWeight: 800, fontSize: '0.8rem' }}>
+                <span style={{ padding: '0.25rem 0.65rem', borderRadius: '12px', background: 'rgba(79, 70, 229, 0.1)', color: '#4f46e5', border: '1px solid rgba(79, 70, 229, 0.25)', fontWeight: 800, fontSize: '0.75rem' }}>
                   📅 08-Aug-26
                 </span>
               </div>

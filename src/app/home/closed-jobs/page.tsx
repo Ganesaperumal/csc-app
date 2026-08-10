@@ -169,7 +169,7 @@ export default function ClosedJobsPage() {
       const { data: profileData } = await supabase
         .from('profiles').select('*').eq('id', session.user.id).single();
       if (!profileData) { router.push('/home'); return; }
-      const cscRole = profileData.csc_role || 'None';
+      const cscRole = profileData.csc_access || profileData.csc_role || 'None';
       const isCscEdit = cscRole === 'Edit';
       const isCscView = cscRole === 'View';
 
