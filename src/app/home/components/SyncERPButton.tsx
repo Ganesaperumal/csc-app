@@ -13,8 +13,8 @@ export default function SyncERPButton({ user: initialUser, profile: initialProfi
 
   useEffect(() => {
     const resolveAccess = (profile: any) => {
-      const cscRole = profile?.csc_role || 'None';
-      const fRole = (profile?.followups_role || profile?.tracking_role || '').toLowerCase();
+      const cscRole = profile?.csc_access || profile?.csc_role || 'None';
+      const fRole = (profile?.followups_access || profile?.followups_role || profile?.tracking_role || '').toLowerCase();
       const hasFollowups = fRole === 'self' || fRole === 'all' || fRole.includes('self') || fRole.includes('all');
       setCanEdit(cscRole === 'Edit' || hasFollowups);
     };
