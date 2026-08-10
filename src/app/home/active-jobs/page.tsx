@@ -4,6 +4,8 @@ import { useEffect, useState, Suspense, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { usePermissions } from '@/components/PermissionsContext';
+import { showToast } from '@/components/GlobalDialogs';
+import * as XLSX from 'xlsx';
 import styles from '../jobs.module.css';
 
 const ALL_COLUMNS = [
@@ -682,6 +684,44 @@ function JobsTable() {
     localStorage.removeItem('csc_column_filters');
   };
 
+  const handleExportXlsx = () => {
+    if (sortedJobs.length === 0) {
+      showToast('No rows available in present view to export', 'error');
+      return;
+    }
+
+    const fmtDt = (d: any) => d ? new Date(d).toLocaleDateString('en-GB') : '';
+
+    const exportData = sortedJobs.map(j => ({
+      'Job Number': j.job_number || '',
+      'Job Date': fmtDt(j.job_date),
+      'Branch': j.branch || '',
+      'Customer Name': j.customer_name || '',
+      'Company': j.company || '',
+      'Type': j.goods_type || '',
+      'Origin': j.origin || '',
+      'Destination': j.destination || '',
+      'Customer Phone': j.customer_phone || '',
+      'SPOC': j.spoc_name || '',
+      'Goods Track Status': j.goods_track_status || '',
+      'Car Track Status': j.car_track_status || '',
+      'PO Status': j.po_status || '',
+      'PO Date': fmtDt(j.po_date),
+      'Inv Request Date': fmtDt(j.inv_request_date),
+      'Packing Date': fmtDt(j.packing_date),
+      'Actual Delivery': fmtDt(j.actual_delivery),
+      'Operation By': j.operation_by || '',
+      'Truck Type': j.truck_type || '',
+      'Remarks': j.remarks || ''
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Active_Jobs');
+    XLSX.writeFile(workbook, `Active_Jobs_View_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    showToast('XLSX exported successfully!', 'success');
+  };
+
   const getTitle = () => {
     return viewMode === 'completed' ? 'Completed Jobs Dashboard' : 'Active Jobs';
   };
@@ -839,6 +879,29 @@ function JobsTable() {
               </button>
             )}
           </div>
+
+          {/* XL Export Button */}
+          <button
+            onClick={handleExportXlsx}
+            title="Export filtered active jobs to Excel"
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '8px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              color: 'white',
+              fontWeight: 700,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 2px 8px rgba(16,185,129,0.3)'
+            }}
+          >
+            📥 XL
+          </button>
           {/* Clear Filters */}
           <button 
             title="Clear all filters"

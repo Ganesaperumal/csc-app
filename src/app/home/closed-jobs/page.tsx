@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { usePermissions } from '@/components/PermissionsContext';
+import { showToast } from '@/components/GlobalDialogs';
+import * as XLSX from 'xlsx';
 import CustomSelect from '../components/CustomSelect';
 import styles from '../jobs.module.css';
 
@@ -333,6 +335,43 @@ export default function ClosedJobsPage() {
     localStorage.removeItem('csc_closed_column_filters');
   };
 
+  const handleExportXlsx = () => {
+    if (sortedJobs.length === 0) {
+      showToast('No rows available in present view to export', 'error');
+      return;
+    }
+
+    const fmtDt = (d: any) => d ? new Date(d).toLocaleDateString('en-GB') : '';
+
+    const exportData = sortedJobs.map(j => ({
+      'Job Number': j.job_number || '',
+      'Job Date': fmtDt(j.job_date),
+      'Branch': j.branch || '',
+      'Customer Name': j.customer_name || '',
+      'Company': j.company || '',
+      'Type': j.goods_type || '',
+      'Origin': j.origin || '',
+      'Destination': j.destination || '',
+      'Status': j.erp_status || j.status || '',
+      'Goods Track Status': j.goods_track_status || '',
+      'Car Track Status': j.car_track_status || '',
+      'PO Status': j.po_status || '',
+      'PO Date': fmtDt(j.po_date),
+      'Inv Request Date': fmtDt(j.inv_request_date),
+      'Bill Closure Date': fmtDt(j.bill_closure_date),
+      'Packing Date': fmtDt(j.packing_date),
+      'Actual Delivery': fmtDt(j.actual_delivery),
+      'SPOC': j.spoc_name || '',
+      'Remarks': j.remarks || ''
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Closed_Jobs');
+    XLSX.writeFile(workbook, `Closed_Jobs_View_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    showToast('XLSX exported successfully!', 'success');
+  };
+
   return (
     <div>
       <div className={styles.header}>
@@ -410,6 +449,29 @@ export default function ClosedJobsPage() {
               </button>
             )}
           </div>
+
+          {/* XL Export Button */}
+          <button
+            onClick={handleExportXlsx}
+            title="Export filtered closed jobs to Excel"
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '8px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              color: 'white',
+              fontWeight: 700,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 2px 8px rgba(16,185,129,0.3)'
+            }}
+          >
+            📥 XL
+          </button>
           {/* Status dropdown: Billed / Cancelled / All */}
           <CustomSelect
             value={statusFilter}
