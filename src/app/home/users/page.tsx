@@ -224,7 +224,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.02)' }}>
-                {['User', 'Role & Department', 'Username / Email', 'Access', 'Approval', 'Actions'].map(h => (
+                {['User', 'Role & Department', 'Username / Email', 'Access', 'Actions'].map(h => (
                   <th key={h} style={{
                     padding: '0.85rem 1rem',
                     color: 'var(--text-secondary)', fontWeight: 700,
@@ -310,44 +310,42 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                       </div>
                     </td>
 
-                    {/* Approval Toggle */}
+                    {/* Merged Actions & Approval */}
                     <td style={{ padding: '0.85rem 1rem' }}>
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleToggleApproval(u);
-                        }}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
-                      >
-                        <div style={{
-                          width: '38px', height: '20px', borderRadius: '10px',
-                          background: isApproved ? '#16a34a' : '#cbd5e1',
-                          border: `1px solid ${isApproved ? '#15803d' : '#94a3b8'}`,
-                          position: 'relative', transition: 'all 0.2s ease',
-                          flexShrink: 0,
-                        }}>
+                      <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleApproval(u);
+                          }}
+                          title={isApproved ? "Click to set user Inactive" : "Click to set user Active"}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}
+                        >
                           <div style={{
-                            position: 'absolute', top: '1.5px',
-                            left: isApproved ? '19px' : '1.5px',
-                            width: '15px', height: '15px', borderRadius: '50%',
-                            background: '#ffffff', transition: 'all 0.2s ease',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                          }} />
+                            width: '36px', height: '19px', borderRadius: '10px',
+                            background: isApproved ? '#16a34a' : '#cbd5e1',
+                            border: `1px solid ${isApproved ? '#15803d' : '#94a3b8'}`,
+                            position: 'relative', transition: 'all 0.2s ease',
+                            flexShrink: 0,
+                          }}>
+                            <div style={{
+                              position: 'absolute', top: '1.5px',
+                              left: isApproved ? '18px' : '1.5px',
+                              width: '14px', height: '14px', borderRadius: '50%',
+                              background: '#ffffff', transition: 'all 0.2s ease',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                            }} />
+                          </div>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: isApproved ? '#16a34a' : '#64748b' }}>
+                            {isApproved ? 'Active' : 'Inactive'}
+                          </span>
                         </div>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: isApproved ? '#16a34a' : '#64748b' }}>
-                          {isApproved ? 'Active' : 'Inactive'}
-                        </span>
-                      </div>
-                    </td>
 
-                    {/* Actions */}
-                    <td style={{ padding: '0.85rem 1rem' }}>
-                      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                         <button
                           title="Reset Password & Copy Credentials"
                           onClick={(e) => { e.stopPropagation(); handleResetPassword(u); }}
                           style={{
-                            padding: '0.35rem 0.65rem', borderRadius: '20px',
+                            padding: '0.3rem 0.55rem', borderRadius: '20px',
                             border: '1px solid var(--border-color)', background: 'var(--surface-color)',
                             color: 'var(--text-primary)', fontSize: '0.85rem',
                             cursor: 'pointer', fontWeight: 700,
@@ -361,7 +359,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
 
               {filteredUsers.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
                     <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🔍</div>
                     <div style={{ fontWeight: 600 }}>No users found</div>
                   </td>

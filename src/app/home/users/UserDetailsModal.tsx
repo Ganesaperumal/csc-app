@@ -297,9 +297,9 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
               {[
                 { lbl: 'Full Name *',    val: name,       set: setName,       type: 'text',  ph: 'John Doe' },
+                { lbl: 'Username *',     val: username,   set: (v: string) => { setUsername(v.toLowerCase()); if (isCreate) setEmail(`${v.toLowerCase()}@transworldintl.com`); }, type: 'text', ph: 'johndoe' },
                 { lbl: 'Role',           val: role,       set: setRole,       type: 'text',  ph: 'e.g. Admin / Operator' },
                 { lbl: 'Department',     val: department, set: setDepartment, type: 'text',  ph: 'e.g. Operations / Billing' },
-                { lbl: 'Username *',     val: username,   set: (v: string) => { setUsername(v.toLowerCase()); if (isCreate) setEmail(`${v.toLowerCase()}@transworldintl.com`); }, type: 'text', ph: 'johndoe' },
                 { lbl: 'Email *',        val: email,      set: (v: string) => setEmail(v.toLowerCase()), type: 'email', ph: 'john@transworldintl.com' },
                 { lbl: 'Phone',          val: phone,      set: setPhone,      type: 'text',  ph: '9876543210' },
               ].map(({ lbl, val, set, type, ph }) => (
