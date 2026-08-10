@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { usePermissions } from '@/components/PermissionsContext';
+import CustomSelect from '../components/CustomSelect';
 import styles from '../jobs.module.css';
 
 const ALL_COLUMNS = [
@@ -409,26 +410,22 @@ export default function ClosedJobsPage() {
               </button>
             )}
           </div>
-          {/* Status radio: All / Billed / Cancelled */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', background: 'var(--surface-color)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.45rem 1rem', backdropFilter: 'blur(10px)' }}>
-            {([
-              { value: 'billed', label: `Billed (${billedCount})`, color: '#059669' },
-              { value: 'cancelled', label: `Cancelled (${cancelledCount})`, color: '#dc2626' },
-              { value: 'all', label: `All (${jobs.length})`, color: '#6366f1' },
-            ] as const).map(opt => (
-              <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, color: statusFilter === opt.value ? opt.color : 'var(--text-secondary)', userSelect: 'none', transition: 'color 0.15s' }}>
-                <input
-                  type="radio"
-                  name="statusFilter"
-                  value={opt.value}
-                  checked={statusFilter === opt.value}
-                  onChange={() => setStatusFilter(opt.value)}
-                  style={{ accentColor: opt.color, width: '14px', height: '14px', cursor: 'pointer' }}
-                />
-                {opt.label}
-              </label>
-            ))}
-          </div>
+          {/* Status dropdown: Billed / Cancelled / All */}
+          <CustomSelect
+            value={statusFilter}
+            onChange={(val) => {
+              const sVal = val as 'all' | 'billed' | 'cancelled';
+              setStatusFilter(sVal);
+              try { localStorage.setItem('csc_closed_status_filter', sVal); } catch {}
+            }}
+            options={[
+              { value: 'billed', label: `Billed (${billedCount})` },
+              { value: 'cancelled', label: `Cancelled (${cancelledCount})` },
+              { value: 'all', label: `All (${jobs.length})` }
+            ]}
+            style={{ width: '180px', minWidth: '160px' }}
+            textColor={statusFilter === 'billed' ? '#059669' : statusFilter === 'cancelled' ? '#dc2626' : '#6366f1'}
+          />
 
           {/* Clear all filters */}
           <button 
@@ -454,13 +451,21 @@ export default function ClosedJobsPage() {
             </svg>
           </button>
           
-          {/* Type slider */}
+          {/* Type slider (HHG / COM / ALL) */}
           {(() => {
             const opts = ['HHG', 'COM', 'ALL'] as const;
-            const labels = { HHG: 'Household', COM: 'Commercial', ALL: 'All' };
             const idx = opts.indexOf(typeFilter as any);
             return (
-              <div style={{ position: 'relative', display: 'flex', background: 'var(--surface-color)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '4px', backdropFilter: 'blur(10px)', gap: 0 }}>
+              <div style={{
+                position: 'relative',
+                display: 'flex',
+                background: 'var(--surface-color)',
+                border: '1px solid rgba(148,163,184,0.25)',
+                borderRadius: '99px',
+                padding: '4px',
+                backdropFilter: 'blur(10px)',
+                gap: 0
+              }}>
                 {/* Sliding pill background */}
                 <div style={{
                   position: 'absolute',
@@ -468,29 +473,36 @@ export default function ClosedJobsPage() {
                   left: `calc(4px + ${idx} * (100% - 8px) / 3)`,
                   width: 'calc((100% - 8px) / 3)',
                   height: 'calc(100% - 8px)',
-                  borderRadius: '7px',
+                  borderRadius: '99px',
                   background: typeFilter === 'HHG' ? 'linear-gradient(135deg, #10b981, #059669)' : typeFilter === 'COM' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #6366f1, #4f46e5)',
                   transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1), background 0.25s ease',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                   zIndex: 0,
                 }} />
                 {opts.map(opt => (
-                  <button key={opt} onClick={() => setTypeFilter(opt)} style={{
-                    position: 'relative', zIndex: 1,
-                    padding: '0.38rem 1rem',
-                    border: 'none',
-                    background: 'transparent',
-                    borderRadius: '7px',
-                    fontWeight: 700,
-                    fontSize: '0.82rem',
-                    cursor: 'pointer',
-                    color: typeFilter === opt ? 'white' : 'var(--text-secondary)',
-                    transition: 'color 0.2s ease',
-                    whiteSpace: 'nowrap',
-                    fontFamily: "'Outfit', sans-serif",
-                    minWidth: '90px',
-                  }}>
-                    {labels[opt]}
+                  <button
+                    key={opt}
+                    onClick={() => setTypeFilter(opt)}
+                    style={{
+                      position: 'relative',
+                      zIndex: 1,
+                      padding: '0.45rem 1.1rem',
+                      border: 'none',
+                      background: 'transparent',
+                      borderRadius: '99px',
+                      fontWeight: 800,
+                      fontSize: '0.82rem',
+                      letterSpacing: '0.03em',
+                      cursor: 'pointer',
+                      color: typeFilter === opt ? 'white' : 'var(--text-secondary)',
+                      transition: 'color 0.2s ease',
+                      whiteSpace: 'nowrap',
+                      fontFamily: "'Outfit', sans-serif",
+                      minWidth: '65px',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {opt}
                   </button>
                 ))}
               </div>

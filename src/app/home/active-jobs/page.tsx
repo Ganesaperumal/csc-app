@@ -862,26 +862,63 @@ function JobsTable() {
               <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
             </svg>
           </button>
-          <div className={styles.toggleContainer}>
-            <button 
-              className={`${styles.toggleBtn} ${typeFilter === 'HHG' ? styles.activeHHG : ''}`}
-              onClick={() => setTypeFilter('HHG')}
-            >
-              Household
-            </button>
-            <button 
-              className={`${styles.toggleBtn} ${typeFilter === 'COM' ? styles.activeCOM : ''}`}
-              onClick={() => setTypeFilter('COM')}
-            >
-              Commercial
-            </button>
-            <button 
-              className={`${styles.toggleBtn} ${typeFilter === 'ALL' ? styles.activeALL : ''}`}
-              onClick={() => setTypeFilter('ALL')}
-            >
-              All
-            </button>
-          </div>
+          {/* Rounded Type Slider (HHG / COM / ALL) */}
+          {(() => {
+            const opts = ['HHG', 'COM', 'ALL'] as const;
+            const idx = opts.indexOf(typeFilter as any);
+            return (
+              <div style={{
+                position: 'relative',
+                display: 'flex',
+                background: 'var(--surface-color)',
+                border: '1px solid rgba(148,163,184,0.25)',
+                borderRadius: '99px',
+                padding: '4px',
+                backdropFilter: 'blur(10px)',
+                gap: 0
+              }}>
+                {/* Sliding pill background */}
+                <div style={{
+                  position: 'absolute',
+                  top: '4px',
+                  left: `calc(4px + ${idx} * (100% - 8px) / 3)`,
+                  width: 'calc((100% - 8px) / 3)',
+                  height: 'calc(100% - 8px)',
+                  borderRadius: '99px',
+                  background: typeFilter === 'HHG' ? 'linear-gradient(135deg, #10b981, #059669)' : typeFilter === 'COM' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                  transition: 'left 0.25s cubic-bezier(0.4, 0, 0.2, 1), background 0.25s ease',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  zIndex: 0,
+                }} />
+                {opts.map(opt => (
+                  <button
+                    key={opt}
+                    onClick={() => setTypeFilter(opt)}
+                    style={{
+                      position: 'relative',
+                      zIndex: 1,
+                      padding: '0.45rem 1.1rem',
+                      border: 'none',
+                      background: 'transparent',
+                      borderRadius: '99px',
+                      fontWeight: 800,
+                      fontSize: '0.82rem',
+                      letterSpacing: '0.03em',
+                      cursor: 'pointer',
+                      color: typeFilter === opt ? 'white' : 'var(--text-secondary)',
+                      transition: 'color 0.2s ease',
+                      whiteSpace: 'nowrap',
+                      fontFamily: "'Outfit', sans-serif",
+                      minWidth: '65px',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
 
           <button
             onClick={() => setViewMode(prev => prev === 'active' ? 'completed' : 'active')}

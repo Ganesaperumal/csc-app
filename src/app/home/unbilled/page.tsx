@@ -51,8 +51,8 @@ const getDisplayGoodsStatus = (status: string | null) => {
 
 const ALL_UNBILLED_COLUMNS = [
   { id: 'remarks', label: 'Remarks' },
-  { id: 'branch', label: 'BRN' },
   { id: 'job_date', label: 'Date' },
+  { id: 'no_of_days', label: 'No of Days' },
   { id: 'job_number', label: 'Job Number' },
   { id: 'enquiry_number', label: 'Enquiry #' },
   { id: 'customer_company', label: 'Client & Company' },
@@ -60,8 +60,8 @@ const ALL_UNBILLED_COLUMNS = [
   { id: 'packing_date', label: '📦 Packing' },
   { id: 'actual_delivery', label: '🚚 Delivery' },
   { id: 'goods_track_status', label: 'Goods Status' },
-  { id: 'bill_closure_date', label: 'Bill Closure Dt' },
   { id: 'po_status', label: 'PO Status' },
+  { id: 'bill_closure_date', label: 'Bill Closure Dt' },
   { id: 'po_date', label: 'PO Rcvd Dt' },
   { id: 'inv_request_date', label: 'Inv Request Dt' },
   { id: 'spoc_name', label: 'SPOC' }
@@ -75,6 +75,25 @@ const formatDate = (dateStr: string | null) => {
   const month = date.toLocaleString('en-US', { month: 'short' });
   const year = date.getFullYear().toString().slice(-2);
   return `${day}-${month}-${year}`;
+};
+
+const calculateNoOfDays = (jobDateStr: string | null | undefined): number | null => {
+  if (!jobDateStr || typeof jobDateStr !== 'string' || jobDateStr.trim() === '' || jobDateStr === '—') return null;
+  let jobDate: Date;
+  const match = jobDateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    jobDate = new Date(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10));
+  } else {
+    jobDate = new Date(jobDateStr);
+  }
+  if (isNaN(jobDate.getTime())) return null;
+
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const startOfJobDate = new Date(jobDate.getFullYear(), jobDate.getMonth(), jobDate.getDate());
+
+  const diffTime = startOfToday.getTime() - startOfJobDate.getTime();
+  return Math.round(diffTime / (1000 * 60 * 60 * 24));
 };
 
 function DateCellInput({ value, onChange, disabled }: { value: string | null; onChange: (val: string) => void; disabled?: boolean }) {
@@ -253,7 +272,10 @@ function ColumnFilterDropdown({
   const getDisplayValue = (job: any) => {
     const enqKey = job.enq_number || job.enquiry_number || '';
     switch (colId) {
-      case 'branch': return job.branch || '—';
+      case 'no_of_days': {
+        const days = calculateNoOfDays(job.job_date);
+        return days !== null ? String(days) : '—';
+      }
       case 'job_date': return formatDate(job.job_date);
       case 'job_number': return job.job_number || '—';
       case 'enquiry_number': return enqKey || '—';
@@ -274,7 +296,10 @@ function ColumnFilterDropdown({
   const getRawValue = (job: any) => {
     const enqKey = job.enq_number || job.enquiry_number || '';
     switch (colId) {
-      case 'branch': return job.branch || '';
+      case 'no_of_days': {
+        const days = calculateNoOfDays(job.job_date);
+        return days !== null ? String(days) : '';
+      }
       case 'job_date': return job.job_date || '';
       case 'job_number': return job.job_number || '';
       case 'enquiry_number': return enqKey;
@@ -685,7 +710,10 @@ export default function UnbilledManagementPage() {
     for (const [colId, allowedVals] of Object.entries(columnFilters)) {
       if (allowedVals && allowedVals.length > 0) {
         let val = '';
-        if (colId === 'branch') val = j.branch || '';
+        if (colId === 'no_of_days') {
+          const days = calculateNoOfDays(j.job_date);
+          val = days !== null ? String(days) : '';
+        }
         else if (colId === 'job_date') val = j.job_date || '';
         else if (colId === 'job_number') val = j.job_number || '';
         else if (colId === 'enquiry_number') val = j.enq_number || j.enquiry_number || '';
@@ -714,7 +742,12 @@ export default function UnbilledManagementPage() {
     filteredJobs.sort((a, b) => {
       let valA: any = '';
       let valB: any = '';
-      if (activeSortCol === 'quote_value') {
+      if (activeSortCol === 'no_of_days') {
+        const daysA = calculateNoOfDays(a.job_date);
+        const daysB = calculateNoOfDays(b.job_date);
+        valA = daysA !== null ? daysA : -Infinity;
+        valB = daysB !== null ? daysB : -Infinity;
+      } else if (activeSortCol === 'quote_value') {
         valA = Number(a.quote_value || 0);
         valB = Number(b.quote_value || 0);
       } else if (activeSortCol === 'enquiry_number') {
@@ -755,8 +788,8 @@ export default function UnbilledManagementPage() {
       const enqKey = j.enq_number || j.enquiry_number || '';
       const val = j.quote_value || 0;
       return {
-        'Branch': j.branch || '',
         'Job Date': formatDate(j.job_date),
+        'No of Days': calculateNoOfDays(j.job_date) ?? '',
         'Job Number': j.job_number || '',
         'Enquiry #': enqKey,
         'Customer Name': j.customer_name || '',
@@ -1148,8 +1181,8 @@ export default function UnbilledManagementPage() {
                   const isFiltered = (columnFilters[col.id] && columnFilters[col.id].length > 0);
                   const isSorted = columnSorts[col.id];
                   return (
-                    <th key={col.id} style={{ textAlign: col.id === 'quote_value' ? 'right' : 'left' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: col.id === 'quote_value' ? 'flex-end' : 'space-between' }}>
+                    <th key={col.id} style={{ textAlign: (col.id === 'quote_value' || col.id === 'no_of_days') ? 'right' : 'left' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: (col.id === 'quote_value' || col.id === 'no_of_days') ? 'flex-end' : 'space-between' }}>
                         <span>{col.label}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
                           {isSorted && (
@@ -1236,15 +1269,20 @@ export default function UnbilledManagementPage() {
                           gap: '0.3rem'
                         }}
                       >
-                        Follow-up
+                        Add Remark
                       </button>
                     </td>
 
-                    {/* 2. Branch */}
-                    <td>{j.branch || '—'}</td>
-
-                    {/* 3. Date (job_date) */}
+                    {/* 2. Date (job_date) */}
                     <td>{formatDate(j.job_date)}</td>
+
+                    {/* 3. No of Days */}
+                    <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {(() => {
+                        const days = calculateNoOfDays(j.job_date);
+                        return days !== null ? days : '—';
+                      })()}
+                    </td>
 
                     {/* 4. Job Number (Plain text display, no navigation) */}
                     <td style={{ fontWeight: 800, color: '#6d28d9' }}>
@@ -1296,16 +1334,7 @@ export default function UnbilledManagementPage() {
                       />
                     </td>
 
-                    {/* 11. Bill Closure Dt */}
-                    <td>
-                      <DateCellInput
-                        value={j.bill_closure_date}
-                        onChange={(val) => handleUpdateJobField(j, 'bill_closure_date', val)}
-                        disabled={isViewer}
-                      />
-                    </td>
-
-                    {/* 12. PO Status */}
+                    {/* 11. PO Status */}
                     <td>
                       <CustomSelect
                         value={j.po_status || ''}
@@ -1313,6 +1342,15 @@ export default function UnbilledManagementPage() {
                         onChange={(val) => handleUpdateJobField(j, 'po_status', val)}
                         options={PO_STATUS_OPTIONS.map(p => ({ value: p, label: p }))}
                         style={{ minWidth: '140px' }}
+                        disabled={isViewer}
+                      />
+                    </td>
+
+                    {/* 12. Bill Closure Dt */}
+                    <td>
+                      <DateCellInput
+                        value={j.bill_closure_date}
+                        onChange={(val) => handleUpdateJobField(j, 'bill_closure_date', val)}
                         disabled={isViewer}
                       />
                     </td>
@@ -1358,7 +1396,7 @@ export default function UnbilledManagementPage() {
           <div className={styles.drawer} onClick={(e) => e.stopPropagation()}>
             <div className={styles.drawerHeader}>
               <div>
-                <h3 className={styles.drawerTitle}>Daily Follow-up</h3>
+                <h3 className={styles.drawerTitle}>Remarks & Follow-ups</h3>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Job: {activeDrawerJob.job_number} | Branch: {activeDrawerJob.branch}</span>
               </div>
               <button className={styles.closeBtn} onClick={() => setActiveDrawerJob(null)}>✕</button>
