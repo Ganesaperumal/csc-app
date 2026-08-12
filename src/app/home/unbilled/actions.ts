@@ -146,9 +146,13 @@ export async function addUnbilledFollowupServerAction(params: {
 }
 
 /**
- * Server Action: Fetch follow-up history or upcoming reminders by job_number
+ * Server Action: Fetch follow-up history or upcoming personal reminders
  */
-export async function fetchUnbilledFollowupsServerAction(jobNumber?: string) {
+export async function fetchUnbilledFollowupsServerAction(
+  jobNumber?: string,
+  agentName?: string,
+  userId?: string
+) {
   const supabase = getAdminClient();
 
   let query = supabase.from('unbilled_followups').select('id, job_number, updated_by, agent_name, followup_notes, next_followup_date, created_at');
@@ -156,7 +160,17 @@ export async function fetchUnbilledFollowupsServerAction(jobNumber?: string) {
   if (jobNumber) {
     query = query.eq('job_number', jobNumber).order('created_at', { ascending: false });
   } else {
-    query = query.not('next_followup_date', 'is', null).order('next_followup_date', { ascending: true });
+    query = query.not('next_followup_date', 'is', null);
+
+    if (userId && agentName) {
+      query = query.or(`updated_by.eq.${userId},agent_name.ilike.%${agentName}%`);
+    } else if (userId) {
+      query = query.eq('updated_by', userId);
+    } else if (agentName) {
+      query = query.ilike('agent_name', `%${agentName}%`);
+    }
+
+    query = query.order('next_followup_date', { ascending: true });
   }
 
   const { data, error } = await query;

@@ -518,23 +518,23 @@ export default function UnbilledManagementPage() {
 
     setCurrentUser(session.user);
 
-    // Parallel fetch user profile and upcoming followups via Server Action
-    const [profileRes, remindersData] = await Promise.all([
-      supabase.from('profiles').select('*').eq('id', session.user.id).single(),
-      fetchUnbilledFollowupsServerAction().catch(err => {
-        console.error('Error fetching reminders:', err);
-        return [];
-      })
-    ]);
-
-    const profile = profileRes.data;
+    // Fetch user profile first
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
     if (profile) {
       setUserProfile(profile);
     }
 
-    if (remindersData) {
-      setUpcomingReminders(remindersData);
-    }
+    const userName = profile?.name || profile?.username || session.user.email?.split('@')[0];
+    const userId = session.user.id;
+
+    // Fetch personal upcoming followups via Server Action
+    fetchUnbilledFollowupsServerAction(undefined, userName, userId)
+      .then(remindersData => {
+        setUpcomingReminders(remindersData || []);
+      })
+      .catch(err => {
+        console.error('Error fetching personal reminders:', err);
+      });
 
     let jobsQuery = supabase
       .from('jobs')
@@ -600,7 +600,9 @@ export default function UnbilledManagementPage() {
 
   const fetchUpcomingReminders = async () => {
     try {
-      const reminders = await fetchUnbilledFollowupsServerAction();
+      const userName = userProfile?.name || userProfile?.username || currentUser?.email?.split('@')[0];
+      const userId = currentUser?.id;
+      const reminders = await fetchUnbilledFollowupsServerAction(undefined, userName, userId);
       setUpcomingReminders(reminders);
     } catch (err) {
       console.error('Error fetching reminders:', err);
