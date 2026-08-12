@@ -1280,26 +1280,23 @@ export default function UnbilledManagementPage() {
                 return (
                   <tr key={uniqueKey}>
                     {/* 1. Remarks (First Column) */}
-                    <td>
+                    <td style={{ width: '1%', whiteSpace: 'nowrap' }}>
                       <button
                         onClick={() => handleOpenFollowupDrawer(j)}
                         style={{
-                          padding: '0.35rem 0.65rem',
-                          borderRadius: '6px',
+                          padding: '0.22rem 0.45rem',
+                          borderRadius: '5px',
                           border: '1px solid var(--border-color)',
-                          background: followupsMap[j.job_number] ? 'rgba(16,185,129,0.1)' : 'rgba(79,70,229,0.1)',
+                          background: followupsMap[j.job_number] ? 'rgba(16,185,129,0.1)' : 'rgba(79,70,229,0.08)',
                           color: followupsMap[j.job_number] ? '#059669' : '#4f46e5',
                           fontWeight: 700,
-                          fontSize: '0.78rem',
+                          fontSize: '0.72rem',
                           cursor: 'pointer',
                           whiteSpace: 'nowrap',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.3rem',
                           transition: 'all 0.15s ease'
                         }}
                       >
-                        {followupsMap[j.job_number] ? '💬 View Remarks' : '➕ Add Remark'}
+                        {followupsMap[j.job_number] ? 'View Remark' : 'Add Remark'}
                       </button>
                     </td>
 
