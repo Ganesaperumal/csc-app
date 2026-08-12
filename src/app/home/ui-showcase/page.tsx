@@ -1400,6 +1400,154 @@ export default function UIShowcasePage() {
           </div>
         </section>
 
+        {/* SECTION 7: AFTER NEW USER SIGN-UP APPEARANCE & MODALS */}
+        <section className="glass" style={{ padding: '1.5rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+            <span style={{ fontSize: '1.3rem' }}>⏳</span>
+            <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800 }}>7. After New User Sign-Up Appearance</h2>
+          </div>
+
+          <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            Showcase of screens and notification cards displayed immediately after a new staff user completes self-registration.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+            
+            {/* 1. Staff View: Post Sign-Up Confirmation Screen */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                1. Staff View — Self-Registration Confirmation Card
+              </label>
+              <div style={{
+                background: 'var(--surface-color)',
+                borderRadius: '16px',
+                border: '1px solid var(--border-color)',
+                boxShadow: 'var(--glass-shadow)',
+                padding: '1.75rem 1.5rem',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>⏳</div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f59e0b', margin: '0 0 0.5rem' }}>
+                  Account Pending Approval!
+                </h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, margin: '0 0 1rem' }}>
+                  Thank you <strong>John Doe</strong>. Your registration request has been sent for approval.
+                </p>
+
+                <div style={{
+                  background: 'rgba(16, 185, 129, 0.08)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  borderRadius: '12px',
+                  padding: '0.85rem 1rem',
+                  textAlign: 'left',
+                  fontSize: '0.82rem',
+                  color: 'var(--text-primary)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.35rem',
+                  maxWidth: '340px',
+                  margin: '0 auto'
+                }}>
+                  <div style={{ fontWeight: 800, color: '#059669', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <span>💬</span> WhatsApp:
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span><strong>Bindu</strong> - +91 9844 60 1860</span>
+                    <a href="https://wa.me/919844601860" target="_blank" rel="noopener noreferrer" style={{ color: '#059669', fontWeight: 700, textDecoration: 'none', fontSize: '0.75rem' }}>
+                      Chat ↗
+                    </a>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span><strong>Ganesa</strong> - +91 9844 19 8888</span>
+                    <a href="https://wa.me/919844198888" target="_blank" rel="noopener noreferrer" style={{ color: '#059669', fontWeight: 700, textDecoration: 'none', fontSize: '0.75rem' }}>
+                      Chat ↗
+                    </a>
+                  </div>
+                </div>
+
+                <div style={{
+                  display: 'inline-block', marginTop: '1.25rem', padding: '0.55rem 1.35rem',
+                  borderRadius: '8px', background: '#4f46e5', color: 'white', fontWeight: 700,
+                  fontSize: '0.85rem', cursor: 'pointer'
+                }}>
+                  Return to Login
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Super Admin View: Pending Sign-Up Notification Banner & Review Card */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                2. Super Admin View — Pending Sign-Up Reminder Card
+              </label>
+
+              <div style={{
+                background: 'var(--surface-color)',
+                borderRadius: '16px',
+                border: '1px solid var(--border-color)',
+                boxShadow: 'var(--glass-shadow)',
+                padding: '1.25rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.85rem'
+              }}>
+                {/* Sidebar Pill Banner */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                  color: 'white',
+                  padding: '0.5rem 0.85rem',
+                  borderRadius: '50px',
+                  boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  fontWeight: 700,
+                  fontSize: '0.78rem'
+                }}>
+                  <span>🔔</span> 1 Pending Sign-Up
+                </div>
+
+                {/* Review Request Card */}
+                <div style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  padding: '0.85rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.4rem'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.9rem' }}>John Doe</div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>@johndoe • john@transworldintl.com</div>
+                    </div>
+                    <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: 'rgba(245,158,11,0.15)', color: '#d97706', fontSize: '0.7rem', fontWeight: 800 }}>
+                      ⏳ Pending
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                    <strong>Requested Modules:</strong>
+                    <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+                      <span style={{ padding: '0.15rem 0.4rem', borderRadius: '4px', background: 'rgba(79,70,229,0.1)', color: '#4f46e5', fontWeight: 700 }}>CSC: Edit</span>
+                      <span style={{ padding: '0.15rem 0.4rem', borderRadius: '4px', background: 'rgba(16,185,129,0.1)', color: '#10b981', fontWeight: 700 }}>Unbilled: Edit</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.2rem' }}>
+                    <button style={{ padding: '0.35rem 0.75rem', borderRadius: '6px', border: 'none', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: 'white', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer' }}>
+                      ⚙️ Review Access
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
       </div>
     </div>
   );

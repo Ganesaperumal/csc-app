@@ -128,12 +128,44 @@ export default function SignupPage() {
         </div>
 
         {submitted ? (
-          <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
+          <div style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>⏳</div>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f59e0b', margin: '0 0 0.5rem' }}>Account Pending Approval!</h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.5 }}>
-              Thank you <strong>{name}</strong>. Your registration request has been sent to Super Admin for approval and role assignment.
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.5, margin: '0 0 1rem' }}>
+              Thank you <strong>{name}</strong>. Your registration request has been sent for approval.
             </p>
+
+            <div style={{
+              background: 'rgba(16, 185, 129, 0.08)',
+              border: '1px solid rgba(16, 185, 129, 0.25)',
+              borderRadius: '12px',
+              padding: '0.85rem 1rem',
+              textAlign: 'left',
+              fontSize: '0.85rem',
+              color: 'var(--text-primary)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.4rem',
+              maxWidth: '360px',
+              margin: '0 auto'
+            }}>
+              <div style={{ fontWeight: 800, color: '#059669', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span>💬</span> WhatsApp:
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span><strong>Bindu</strong> - +91 9844 60 1860</span>
+                <a href="https://wa.me/919844601860" target="_blank" rel="noopener noreferrer" style={{ color: '#059669', fontWeight: 700, textDecoration: 'none', fontSize: '0.78rem' }}>
+                  Chat ↗
+                </a>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span><strong>Ganesa</strong> - +91 9844 19 8888</span>
+                <a href="https://wa.me/919844198888" target="_blank" rel="noopener noreferrer" style={{ color: '#059669', fontWeight: 700, textDecoration: 'none', fontSize: '0.78rem' }}>
+                  Chat ↗
+                </a>
+              </div>
+            </div>
+
             <Link href="/login" style={{ display: 'inline-block', marginTop: '1.5rem', padding: '0.65rem 1.5rem', borderRadius: '8px', background: '#4f46e5', color: 'white', fontWeight: 700, textDecoration: 'none' }}>
               Return to Login
             </Link>
