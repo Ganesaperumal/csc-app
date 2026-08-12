@@ -1284,13 +1284,13 @@ export default function UnbilledManagementPage() {
                       <button
                         onClick={() => handleOpenFollowupDrawer(j)}
                         style={{
-                          padding: '0.22rem 0.45rem',
-                          borderRadius: '5px',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '6px',
                           border: '1px solid var(--border-color)',
                           background: followupsMap[j.job_number] ? 'rgba(16,185,129,0.1)' : 'rgba(79,70,229,0.08)',
                           color: followupsMap[j.job_number] ? '#059669' : '#4f46e5',
-                          fontWeight: 700,
-                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          fontSize: '0.78rem',
                           cursor: 'pointer',
                           whiteSpace: 'nowrap',
                           transition: 'all 0.15s ease'
