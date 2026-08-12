@@ -1147,66 +1147,86 @@ export default function UnbilledManagementPage() {
         <div className={styles.tableContainer} onScroll={handleTableScroll}>
           {/* KPI Metric Cards */}
           <div className={styles.kpiGrid}>
-          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(6,182,212,0.15), rgba(6,182,212,0.02))', borderColor: 'rgba(6,182,212,0.3)' }}>
-            <div className={styles.kpiLabel} style={{ color: '#06b6d4' }}>Total</div>
-            <div className={styles.kpiValue}><AnimatedNumber value={totalKpi.value} isCurrency /></div>
-            <div className={styles.kpiCount} style={{ color: '#06b6d4', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{totalKpi.count} Jobs</div>
-          </div>
+          {(totalKpi.count > 0 || totalKpi.value > 0) && (
+            <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(6,182,212,0.15), rgba(6,182,212,0.02))', borderColor: 'rgba(6,182,212,0.3)' }}>
+              <div className={styles.kpiLabel} style={{ color: '#06b6d4' }}>Total</div>
+              <div className={styles.kpiValue}><AnimatedNumber value={totalKpi.value} isCurrency /></div>
+              <div className={styles.kpiCount} style={{ color: '#06b6d4', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{totalKpi.count} Jobs</div>
+            </div>
+          )}
 
-          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(34,197,94,0.02))', borderColor: 'rgba(34,197,94,0.3)' }}>
-            <div className={styles.kpiLabel} style={{ color: '#22c55e' }}>Billable</div>
-            <div className={styles.kpiValue}><AnimatedNumber value={billableKpi.value} isCurrency /></div>
-            <div className={styles.kpiCount} style={{ color: '#22c55e', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{billableKpi.count} Jobs</div>
-          </div>
+          {(billableKpi.count > 0 || billableKpi.value > 0) && (
+            <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(34,197,94,0.02))', borderColor: 'rgba(34,197,94,0.3)' }}>
+              <div className={styles.kpiLabel} style={{ color: '#22c55e' }}>Billable</div>
+              <div className={styles.kpiValue}><AnimatedNumber value={billableKpi.value} isCurrency /></div>
+              <div className={styles.kpiCount} style={{ color: '#22c55e', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{billableKpi.count} Jobs</div>
+            </div>
+          )}
 
-          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.02))', borderColor: 'rgba(239,68,68,0.3)' }}>
-            <div className={styles.kpiLabel} style={{ color: '#ef4444' }}>No Details</div>
-            <div className={styles.kpiValue}><AnimatedNumber value={noDetailsKpi.value} isCurrency /></div>
-            <div className={styles.kpiCount} style={{ color: '#ef4444', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{noDetailsKpi.count} Jobs</div>
-          </div>
+          {(noDetailsKpi.count > 0 || noDetailsKpi.value > 0) && (
+            <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.02))', borderColor: 'rgba(239,68,68,0.3)' }}>
+              <div className={styles.kpiLabel} style={{ color: '#ef4444' }}>No Details</div>
+              <div className={styles.kpiValue}><AnimatedNumber value={noDetailsKpi.value} isCurrency /></div>
+              <div className={styles.kpiCount} style={{ color: '#ef4444', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{noDetailsKpi.count} Jobs</div>
+            </div>
+          )}
 
-          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.02))', borderColor: 'rgba(245,158,11,0.3)' }}>
-            <div className={styles.kpiLabel} style={{ color: '#f59e0b' }}>PO&PI Pending</div>
-            <div className={styles.kpiValue}><AnimatedNumber value={poPiPendingKpi.value} isCurrency /></div>
-            <div className={styles.kpiCount} style={{ color: '#f59e0b', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{poPiPendingKpi.count} Jobs</div>
-          </div>
+          {(poPiPendingKpi.count > 0 || poPiPendingKpi.value > 0) && (
+            <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.02))', borderColor: 'rgba(245,158,11,0.3)' }}>
+              <div className={styles.kpiLabel} style={{ color: '#f59e0b' }}>PO&PI Pending</div>
+              <div className={styles.kpiValue}><AnimatedNumber value={poPiPendingKpi.value} isCurrency /></div>
+              <div className={styles.kpiCount} style={{ color: '#f59e0b', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{poPiPendingKpi.count} Jobs</div>
+            </div>
+          )}
 
-          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.02))', borderColor: 'rgba(59,130,246,0.3)' }}>
-            <div className={styles.kpiLabel} style={{ color: '#3b82f6' }}>Job Completed</div>
-            <div className={styles.kpiValue}><AnimatedNumber value={jobCompletedKpi.value} isCurrency /></div>
-            <div className={styles.kpiCount} style={{ color: '#3b82f6', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{jobCompletedKpi.count} Jobs</div>
-          </div>
+          {(jobCompletedKpi.count > 0 || jobCompletedKpi.value > 0) && (
+            <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.02))', borderColor: 'rgba(59,130,246,0.3)' }}>
+              <div className={styles.kpiLabel} style={{ color: '#3b82f6' }}>Job Completed</div>
+              <div className={styles.kpiValue}><AnimatedNumber value={jobCompletedKpi.value} isCurrency /></div>
+              <div className={styles.kpiCount} style={{ color: '#3b82f6', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{jobCompletedKpi.count} Jobs</div>
+            </div>
+          )}
 
-          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(220,38,38,0.15), rgba(220,38,38,0.02))', borderColor: 'rgba(220,38,38,0.3)' }}>
-            <div className={styles.kpiLabel} style={{ color: '#dc2626' }}>Damages</div>
-            <div className={styles.kpiValue}><AnimatedNumber value={damagesKpi.value} isCurrency /></div>
-            <div className={styles.kpiCount} style={{ color: '#dc2626', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{damagesKpi.count} Jobs</div>
-          </div>
+          {(damagesKpi.count > 0 || damagesKpi.value > 0) && (
+            <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(220,38,38,0.15), rgba(220,38,38,0.02))', borderColor: 'rgba(220,38,38,0.3)' }}>
+              <div className={styles.kpiLabel} style={{ color: '#dc2626' }}>Damages</div>
+              <div className={styles.kpiValue}><AnimatedNumber value={damagesKpi.value} isCurrency /></div>
+              <div className={styles.kpiCount} style={{ color: '#dc2626', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{damagesKpi.count} Jobs</div>
+            </div>
+          )}
 
-          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.02))', borderColor: 'rgba(139,92,246,0.3)' }}>
-            <div className={styles.kpiLabel} style={{ color: '#8b5cf6' }}>Storage</div>
-            <div className={styles.kpiValue}><AnimatedNumber value={storageKpi.value} isCurrency /></div>
-            <div className={styles.kpiCount} style={{ color: '#8b5cf6', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{storageKpi.count} Jobs</div>
-          </div>
+          {(storageKpi.count > 0 || storageKpi.value > 0) && (
+            <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.02))', borderColor: 'rgba(139,92,246,0.3)' }}>
+              <div className={styles.kpiLabel} style={{ color: '#8b5cf6' }}>Storage</div>
+              <div className={styles.kpiValue}><AnimatedNumber value={storageKpi.value} isCurrency /></div>
+              <div className={styles.kpiCount} style={{ color: '#8b5cf6', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{storageKpi.count} Jobs</div>
+            </div>
+          )}
 
-          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.02))', borderColor: 'rgba(16,185,129,0.3)' }}>
-            <div className={styles.kpiLabel} style={{ color: '#10b981' }}>Ready for Billing</div>
-            <div className={styles.kpiValue}><AnimatedNumber value={readyForBillingKpi.value} isCurrency /></div>
-            <div className={styles.kpiCount} style={{ color: '#10b981', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{readyForBillingKpi.count} Jobs</div>
-          </div>
+          {(readyForBillingKpi.count > 0 || readyForBillingKpi.value > 0) && (
+            <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.02))', borderColor: 'rgba(16,185,129,0.3)' }}>
+              <div className={styles.kpiLabel} style={{ color: '#10b981' }}>Ready for Billing</div>
+              <div className={styles.kpiValue}><AnimatedNumber value={readyForBillingKpi.value} isCurrency /></div>
+              <div className={styles.kpiCount} style={{ color: '#10b981', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{readyForBillingKpi.count} Jobs</div>
+            </div>
+          )}
 
-          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(153,27,27,0.15), rgba(153,27,27,0.02))', borderColor: 'rgba(153,27,27,0.3)' }}>
-            <div className={styles.kpiLabel} style={{ color: '#991b1b' }}>To Be Cancelled</div>
-            <div className={styles.kpiValue}><AnimatedNumber value={toBeCancelledKpi.value} isCurrency /></div>
-            <div className={styles.kpiCount} style={{ color: '#991b1b', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{toBeCancelledKpi.count} Jobs</div>
-          </div>
+          {(toBeCancelledKpi.count > 0 || toBeCancelledKpi.value > 0) && (
+            <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(153,27,27,0.15), rgba(153,27,27,0.02))', borderColor: 'rgba(153,27,27,0.3)' }}>
+              <div className={styles.kpiLabel} style={{ color: '#991b1b' }}>To Be Cancelled</div>
+              <div className={styles.kpiValue}><AnimatedNumber value={toBeCancelledKpi.value} isCurrency /></div>
+              <div className={styles.kpiCount} style={{ color: '#991b1b', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{toBeCancelledKpi.count} Jobs</div>
+            </div>
+          )}
 
-          <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(100,116,139,0.15), rgba(100,116,139,0.02))', borderColor: 'rgba(100,116,139,0.3)' }}>
-            <div className={styles.kpiLabel} style={{ color: '#64748b' }}>Execution Pending</div>
-            <div className={styles.kpiValue}><AnimatedNumber value={executionPendingKpi.value} isCurrency /></div>
-            <div className={styles.kpiCount} style={{ color: '#64748b', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{executionPendingKpi.count} Jobs</div>
+          {(executionPendingKpi.count > 0 || executionPendingKpi.value > 0) && (
+            <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(100,116,139,0.15), rgba(100,116,139,0.02))', borderColor: 'rgba(100,116,139,0.3)' }}>
+              <div className={styles.kpiLabel} style={{ color: '#64748b' }}>Execution Pending</div>
+              <div className={styles.kpiValue}><AnimatedNumber value={executionPendingKpi.value} isCurrency /></div>
+              <div className={styles.kpiCount} style={{ color: '#64748b', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{executionPendingKpi.count} Jobs</div>
+            </div>
+          )}
           </div>
-        </div>
 
           <table className={styles.table}>
             <thead>
