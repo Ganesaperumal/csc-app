@@ -559,20 +559,14 @@ export default function UnbilledManagementPage() {
       legacyBranchesToFetch = ['ALL'];
     }
 
-    const [jobsRes, legacyResData, fMap] = await Promise.all([
+    const [jobsRes, legacyResData] = await Promise.all([
       jobsQuery, 
       fetchLegacyJobsBypassingRLS(legacyBranchesToFetch).catch(err => {
         console.error('Error fetching legacy jobs:', err);
         showToast('Error fetching legacy jobs: ' + err.message, 'error');
         return [];
-      }),
-      fetchAllUnbilledFollowupsMapServerAction().catch(err => {
-        console.error('Error fetching followups map:', err);
-        return {};
       })
     ]);
-
-    setFollowupsMap(fMap || {});
 
     if (jobsRes.error) {
       console.error('Error fetching unbilled jobs:', jobsRes.error);
@@ -590,6 +584,15 @@ export default function UnbilledManagementPage() {
     const combinedList = [...erpJobsList, ...legacyJobsList];
     setJobs(combinedList);
     setLoading(false);
+
+    // Fetch followups map asynchronously in background (non-blocking)
+    fetchAllUnbilledFollowupsMapServerAction()
+      .then(fMap => {
+        setFollowupsMap(fMap || {});
+      })
+      .catch(err => {
+        console.error('Error fetching followups map in background:', err);
+      });
   };
 
   const fetchUpcomingReminders = async () => {
