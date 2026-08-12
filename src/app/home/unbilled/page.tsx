@@ -518,10 +518,13 @@ export default function UnbilledManagementPage() {
 
     setCurrentUser(session.user);
 
-    // Parallel fetch user profile and upcoming followups
-    const [profileRes, remindersRes] = await Promise.all([
+    // Parallel fetch user profile and upcoming followups via Server Action
+    const [profileRes, remindersData] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', session.user.id).single(),
-      supabase.from('unbilled_followups').select('*').not('next_followup_date', 'is', null).order('next_followup_date', { ascending: true })
+      fetchUnbilledFollowupsServerAction().catch(err => {
+        console.error('Error fetching reminders:', err);
+        return [];
+      })
     ]);
 
     const profile = profileRes.data;
@@ -529,8 +532,8 @@ export default function UnbilledManagementPage() {
       setUserProfile(profile);
     }
 
-    if (remindersRes.data) {
-      setUpcomingReminders(remindersRes.data);
+    if (remindersData) {
+      setUpcomingReminders(remindersData);
     }
 
     let jobsQuery = supabase
