@@ -114,23 +114,29 @@ export async function updateUnbilledJobFieldServerAction(params: {
  * Server Action: Insert new follow-up note into `unbilled_followups`
  */
 export async function addUnbilledFollowupServerAction(params: {
-  jobId: string;
+  jobId?: string | null;
   jobNumber: string;
-  updatedBy: string;
+  updatedBy?: string | null;
   agentName: string;
   followupNotes: string;
   nextFollowupDate: string | null;
 }) {
   const supabase = getAdminClient();
 
+  const isValidUUID = (str?: string | null) =>
+    Boolean(str && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str));
+
+  const validJobId = isValidUUID(params.jobId) ? params.jobId : null;
+  const validUpdatedBy = isValidUUID(params.updatedBy) ? params.updatedBy : null;
+
   const { error } = await supabase.from('unbilled_followups').insert([
     {
-      job_id: params.jobId,
+      job_id: validJobId,
       job_number: params.jobNumber,
-      updated_by: params.updatedBy,
+      updated_by: validUpdatedBy,
       agent_name: params.agentName,
       followup_notes: params.followupNotes,
-      next_followup_date: params.nextFollowupDate
+      next_followup_date: params.nextFollowupDate || null
     }
   ]);
 
