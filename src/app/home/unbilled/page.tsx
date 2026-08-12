@@ -657,9 +657,8 @@ export default function UnbilledManagementPage() {
     try {
       const userName = userProfile?.name || userProfile?.username || currentUser?.email?.split('@')[0] || 'Agent';
 
-      // Add follow-up entry strictly to unbilled_followups
+      // Add follow-up entry strictly to unbilled_followups using job_number
       await addUnbilledFollowupServerAction({
-        jobId: activeDrawerJob.id || '',
         jobNumber: activeDrawerJob.job_number,
         updatedBy: currentUser?.id || 'User',
         agentName: userName,

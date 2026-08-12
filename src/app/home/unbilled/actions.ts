@@ -111,10 +111,9 @@ export async function updateUnbilledJobFieldServerAction(params: {
 }
 
 /**
- * Server Action: Insert new follow-up note into `unbilled_followups`
+ * Server Action: Insert new follow-up note into `unbilled_followups` using job_number
  */
 export async function addUnbilledFollowupServerAction(params: {
-  jobId?: string | null;
   jobNumber: string;
   updatedBy?: string | null;
   agentName: string;
@@ -126,12 +125,10 @@ export async function addUnbilledFollowupServerAction(params: {
   const isValidUUID = (str?: string | null) =>
     Boolean(str && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str));
 
-  const validJobId = isValidUUID(params.jobId) ? params.jobId : null;
   const validUpdatedBy = isValidUUID(params.updatedBy) ? params.updatedBy : null;
 
   const { error } = await supabase.from('unbilled_followups').insert([
     {
-      job_id: validJobId,
       job_number: params.jobNumber,
       updated_by: validUpdatedBy,
       agent_name: params.agentName,
@@ -149,12 +146,12 @@ export async function addUnbilledFollowupServerAction(params: {
 }
 
 /**
- * Server Action: Fetch follow-up history or upcoming reminders
+ * Server Action: Fetch follow-up history or upcoming reminders by job_number
  */
 export async function fetchUnbilledFollowupsServerAction(jobNumber?: string) {
   const supabase = getAdminClient();
 
-  let query = supabase.from('unbilled_followups').select('*');
+  let query = supabase.from('unbilled_followups').select('id, job_number, updated_by, agent_name, followup_notes, next_followup_date, created_at');
 
   if (jobNumber) {
     query = query.eq('job_number', jobNumber).order('created_at', { ascending: false });
