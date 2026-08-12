@@ -55,15 +55,24 @@ export async function updateUnbilledJobFieldServerAction(params: {
   const supabase = getAdminClient();
   const targetTable = params.table === 'legacy_jobs' ? 'legacy_jobs' : 'jobs';
 
-  // 1. Update target table
-  const { error: updateErr } = await supabase
-    .from(targetTable)
-    .update({ [params.fieldToUpdate]: params.value })
-    .eq('job_number', params.jobNumber);
+  // 1. Update target table (jobs or legacy_jobs)
+  // Note: legacy_jobs table schema in DB does not have a 'remarks' column.
+  if (targetTable === 'legacy_jobs' && params.fieldToUpdate === 'remarks') {
+    // Skip direct column update on legacy_jobs for 'remarks'; the update is safely stored in unbilled_followups & audit_logs.
+  } else {
+    const { error: updateErr } = await supabase
+      .from(targetTable)
+      .update({ [params.fieldToUpdate]: params.value })
+      .eq('job_number', params.jobNumber);
 
-  if (updateErr) {
-    console.error(`[updateUnbilledJobFieldServerAction] Update failed on ${targetTable}:`, updateErr);
-    throw new Error(updateErr.message);
+    if (updateErr) {
+      if (targetTable === 'legacy_jobs' && (updateErr.message?.includes('schema cache') || updateErr.message?.includes('column'))) {
+        console.warn(`[updateUnbilledJobFieldServerAction] Column ${params.fieldToUpdate} missing on legacy_jobs, skipping table update:`, updateErr.message);
+      } else {
+        console.error(`[updateUnbilledJobFieldServerAction] Update failed on ${targetTable}:`, updateErr);
+        throw new Error(updateErr.message);
+      }
+    }
   }
 
   // 2. Audit log entry
