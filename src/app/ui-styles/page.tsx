@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { copyToClipboard } from '@/lib/clipboard';
 
 type PillarCategory = 'all' | 'foundations' | 'dimensional' | 'composition' | 'artistic';
 
@@ -20,10 +21,8 @@ export default function UIStylesShowcase() {
   const [activePillar, setActivePillar] = useState<PillarCategory>('all');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const copyCode = (id: string, code: string) => {
-    if (typeof navigator !== 'undefined') {
-      navigator.clipboard.writeText(code);
-    }
+  const copyCode = async (id: string, code: string) => {
+    await copyToClipboard(code);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };

@@ -3,6 +3,7 @@ import { showToast } from '@/components/GlobalDialogs';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { copyToClipboard } from '@/lib/clipboard';
 import UserDetailsModal from './UserDetailsModal';
 
 export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
@@ -102,7 +103,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to update password');
         const credText = `Hi ${user.name || user.username},\nYour Jobs Portal password has been updated.\nUsername: ${user.username}\nPassword: ${newPwd}\nLogin: ${window.location.origin}/login`;
-        navigator.clipboard.writeText(credText);
+        await copyToClipboard(credText);
         showToast('📋 Password updated & credentials copied!', 'success');
       })
       .catch((err) => showToast(`❌ ${err.message}`, 'error'));

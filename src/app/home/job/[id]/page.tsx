@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import styles from './jobDetails.module.css';
 import { getUserColor } from '@/lib/colorUtils';
+import { copyToClipboard } from '@/lib/clipboard';
 import JobMap from '../../components/JobMap';
 import CustomSelect from '../../components/CustomSelect';
 import JobSearchBar from '@/components/JobSearchBar';
@@ -448,10 +449,10 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
 
   const [copied, setCopied] = useState(false);
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
     if (!job) return;
     const url = `${window.location.origin}/track/${job.job_number}`;
-    navigator.clipboard.writeText(url);
+    await copyToClipboard(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
