@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { customConfirm } from '@/components/GlobalDialogs';
 
 const BRANCH_CODES = ['ALL', 'BLR', 'DEL', 'BOM', 'MAA', 'PNQ', 'HYD', 'AMD', 'COK', 'KOL', 'OSS'];
@@ -101,6 +101,8 @@ function AccessTile({
 /* ── Main Modal ── */
 export default function UserDetailsModal({ user, onClose, onSave, onDelete }: UserDetailsModalProps) {
   const isCreate = !user || !user.id;
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const mouseDownTarget = useRef<EventTarget | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -191,8 +193,16 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
 
       {/* Overlay Backdrop */}
       <div
+        ref={backdropRef}
         className="udm-backdrop"
-        onClick={onClose}
+        onMouseDown={(e) => {
+          mouseDownTarget.current = e.target;
+        }}
+        onClick={(e) => {
+          if (e.target === backdropRef.current && mouseDownTarget.current === backdropRef.current) {
+            onClose();
+          }
+        }}
         style={{
           position: 'fixed', inset: 0,
           background: 'rgba(15, 23, 42, 0.55)',

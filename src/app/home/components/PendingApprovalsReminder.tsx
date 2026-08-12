@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import UserDetailsModal from '@/app/home/users/UserDetailsModal';
 import { usePermissions } from '@/components/PermissionsContext';
@@ -9,6 +9,8 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [activeModalUser, setActiveModalUser] = useState<any | null>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const mouseDownTarget = useRef<EventTarget | null>(null);
 
   // Pending Sign-Up notifications are shown ONLY to Super Admin (is_super_admin === true)
   const isSuperAdmin = profile?.is_super_admin === true;
@@ -94,6 +96,15 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
       {/* Reminders Modal Popup (Mimicking CSC Follow-up Reminders Popup) */}
       {showModal && (
         <div 
+          ref={backdropRef}
+          onMouseDown={(e) => {
+            mouseDownTarget.current = e.target;
+          }}
+          onClick={(e) => {
+            if (e.target === backdropRef.current && mouseDownTarget.current === backdropRef.current) {
+              setShowModal(false);
+            }
+          }}
           style={{
             position: 'fixed',
             inset: 0,
@@ -106,7 +117,6 @@ export default function PendingApprovalsReminder({ profile }: { profile: any }) 
             padding: '1.5rem',
             fontFamily: "'Outfit', sans-serif"
           }}
-          onClick={() => setShowModal(false)}
         >
           <div 
             style={{
