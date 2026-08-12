@@ -3,7 +3,12 @@ import { showToast, customConfirm } from '@/components/GlobalDialogs';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { fetchLegacyJobsBypassingRLS } from './actions';
+import {
+  fetchLegacyJobsBypassingRLS,
+  updateUnbilledJobFieldServerAction,
+  addUnbilledFollowupServerAction,
+  fetchUnbilledFollowupsServerAction
+} from './actions';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import CustomSelect from '../components/CustomSelect';
@@ -578,15 +583,8 @@ export default function UnbilledManagementPage() {
 
   const fetchUpcomingReminders = async () => {
     try {
-      const { data, error } = await supabase
-        .from('unbilled_followups')
-        .select('*')
-        .not('next_followup_date', 'is', null)
-        .order('next_followup_date', { ascending: true });
-
-      if (!error && data) {
-        setUpcomingReminders(data);
-      }
+      const reminders = await fetchUnbilledFollowupsServerAction();
+      setUpcomingReminders(reminders);
     } catch (err) {
       console.error('Error fetching reminders:', err);
     }
@@ -603,28 +601,19 @@ export default function UnbilledManagementPage() {
 
       if (oldStr === newStr) return;
 
-      const { error } = await supabase
-        .from(table)
-        .update({ [fieldToUpdate]: value })
-        .eq('job_number', job.job_number);
-
-      if (error) throw error;
-
-      // Insert audit log for both jobs and legacy_jobs
       const auditName = userProfile?.name || userProfile?.username || currentUser?.email?.split('@')[0] || 'User';
       const auditUsername = userProfile?.username || currentUser?.email?.split('@')[0] || 'User';
-      supabase.from('audit_logs').insert({
-        job_number: job.job_number,
-        name: auditName,
-        username: auditUsername,
-        field_change: fieldToUpdate,
-        old_value: oldStr,
-        new_value: newStr,
-      }).then(({ error: auditErr }) => {
-        if (auditErr) {
-          console.error('[audit_logs] insert failed:', auditErr.message, auditErr);
-        }
-      }); // fire and forget — no await
+
+      await updateUnbilledJobFieldServerAction({
+        table,
+        jobNumber: job.job_number,
+        fieldToUpdate,
+        value,
+        auditName,
+        auditUsername,
+        oldStr,
+        newStr,
+      });
 
       setJobs(prev => prev.map(j => j.job_number === job.job_number ? { ...j, [fieldToUpdate]: value, [field]: value } : j));
       showToast(`Updated ${fieldToUpdate.replace(/_/g, ' ')}`, 'success');
@@ -638,13 +627,13 @@ export default function UnbilledManagementPage() {
     setNewNote('');
     setNextFollowupDate('');
 
-    const { data: history } = await supabase
-      .from('unbilled_followups')
-      .select('*')
-      .eq('job_number', job.job_number)
-      .order('created_at', { ascending: false });
-
-    setFollowupHistory(history || []);
+    try {
+      const history = await fetchUnbilledFollowupsServerAction(job.job_number);
+      setFollowupHistory(history);
+    } catch (err) {
+      console.error('Error fetching followup history:', err);
+      setFollowupHistory([]);
+    }
   };
 
   const handleSubmitFollowup = async (e: React.FormEvent) => {
@@ -655,18 +644,14 @@ export default function UnbilledManagementPage() {
     try {
       const userName = userProfile?.name || userProfile?.username || currentUser?.email?.split('@')[0] || 'Agent';
 
-      const { error } = await supabase.from('unbilled_followups').insert([
-        {
-          job_id: activeDrawerJob.id,
-          job_number: activeDrawerJob.job_number,
-          updated_by: currentUser.id,
-          agent_name: userName,
-          followup_notes: newNote,
-          next_followup_date: nextFollowupDate || null
-        }
-      ]);
-
-      if (error) throw error;
+      await addUnbilledFollowupServerAction({
+        jobId: activeDrawerJob.id,
+        jobNumber: activeDrawerJob.job_number,
+        updatedBy: currentUser.id || 'User',
+        agentName: userName,
+        followupNotes: newNote,
+        nextFollowupDate: nextFollowupDate || null
+      });
 
       showToast('Follow-up note added ✅', 'success');
       setNewNote('');

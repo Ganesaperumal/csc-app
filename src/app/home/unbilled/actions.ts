@@ -2,15 +2,21 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-export async function fetchLegacyJobsBypassingRLS(branches: string[] | null) {
+function getAdminClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing Supabase Service Role Key');
+    throw new Error('Missing Supabase configuration or key');
   }
 
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  return createClient(supabaseUrl, supabaseKey, {
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+}
+
+export async function fetchLegacyJobsBypassingRLS(branches: string[] | null) {
+  const supabase = getAdminClient();
 
   let query = supabase.from('legacy_jobs').select('*');
 
@@ -27,6 +33,106 @@ export async function fetchLegacyJobsBypassingRLS(branches: string[] | null) {
   const { data, error } = await query;
   if (error) {
     throw new Error(error.message);
+  }
+
+  return data || [];
+}
+
+/**
+ * Server Action: Update job field (remarks, dates, SPOC, status, etc.)
+ * in `jobs` or `legacy_jobs` bypassing RLS issues, and log change to `audit_logs`.
+ */
+export async function updateUnbilledJobFieldServerAction(params: {
+  table: string;
+  jobNumber: string;
+  fieldToUpdate: string;
+  value: any;
+  auditName: string;
+  auditUsername: string;
+  oldStr: string;
+  newStr: string;
+}) {
+  const supabase = getAdminClient();
+  const targetTable = params.table === 'legacy_jobs' ? 'legacy_jobs' : 'jobs';
+
+  // 1. Update target table
+  const { error: updateErr } = await supabase
+    .from(targetTable)
+    .update({ [params.fieldToUpdate]: params.value })
+    .eq('job_number', params.jobNumber);
+
+  if (updateErr) {
+    console.error(`[updateUnbilledJobFieldServerAction] Update failed on ${targetTable}:`, updateErr);
+    throw new Error(updateErr.message);
+  }
+
+  // 2. Audit log entry
+  try {
+    await supabase.from('audit_logs').insert({
+      job_number: params.jobNumber,
+      name: params.auditName,
+      username: params.auditUsername,
+      field_change: params.fieldToUpdate,
+      old_value: params.oldStr,
+      new_value: params.newStr,
+    });
+  } catch (auditErr: any) {
+    console.error('[updateUnbilledJobFieldServerAction] audit_logs insert failed:', auditErr?.message || auditErr);
+  }
+
+  return { success: true };
+}
+
+/**
+ * Server Action: Insert new follow-up note into `unbilled_followups`
+ */
+export async function addUnbilledFollowupServerAction(params: {
+  jobId: string;
+  jobNumber: string;
+  updatedBy: string;
+  agentName: string;
+  followupNotes: string;
+  nextFollowupDate: string | null;
+}) {
+  const supabase = getAdminClient();
+
+  const { error } = await supabase.from('unbilled_followups').insert([
+    {
+      job_id: params.jobId,
+      job_number: params.jobNumber,
+      updated_by: params.updatedBy,
+      agent_name: params.agentName,
+      followup_notes: params.followupNotes,
+      next_followup_date: params.nextFollowupDate
+    }
+  ]);
+
+  if (error) {
+    console.error('[addUnbilledFollowupServerAction] insert error:', error);
+    throw new Error(error.message);
+  }
+
+  return { success: true };
+}
+
+/**
+ * Server Action: Fetch follow-up history or upcoming reminders
+ */
+export async function fetchUnbilledFollowupsServerAction(jobNumber?: string) {
+  const supabase = getAdminClient();
+
+  let query = supabase.from('unbilled_followups').select('*');
+
+  if (jobNumber) {
+    query = query.eq('job_number', jobNumber).order('created_at', { ascending: false });
+  } else {
+    query = query.not('next_followup_date', 'is', null).order('next_followup_date', { ascending: true });
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('[fetchUnbilledFollowupsServerAction] select error:', error);
+    return [];
   }
 
   return data || [];

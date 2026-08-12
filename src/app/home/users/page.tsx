@@ -5,13 +5,40 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { copyToClipboard } from '@/lib/clipboard';
 import UserDetailsModal from './UserDetailsModal';
+import MultiSelect from '../components/MultiSelect';
+
+const BRANCH_OPTIONS = [
+  { value: 'ALL', label: 'ALL (Super)' },
+  { value: 'BLR', label: 'BLR' },
+  { value: 'DEL', label: 'DEL' },
+  { value: 'BOM', label: 'BOM' },
+  { value: 'MAA', label: 'MAA' },
+  { value: 'PNQ', label: 'PNQ' },
+  { value: 'HYD', label: 'HYD' },
+  { value: 'AMD', label: 'AMD' },
+  { value: 'COK', label: 'COK' },
+  { value: 'KOL', label: 'KOL' },
+  { value: 'OSS', label: 'OSS' },
+];
 
 export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
   const router = useRouter();
   const [users, setUsers] = useState<any[]>([]);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
   const [activeModalUser, setActiveModalUser] = useState<any | null>(null);
+
+  /* ── Filter & Search State ── */
+  const [searchQuery, setSearchQuery]         = useState('');
+  const [selectedRole, setSelectedRole]       = useState<string[]>(['All']);
+  const [selectedDepartment, setSelectedDepartment] = useState<string[]>(['All']);
+  const [selectedCsc, setSelectedCsc]         = useState<string[]>(['All']);
+  const [selectedUnbilled, setSelectedUnbilled] = useState<string[]>(['All']);
+  const [selectedAllJobs, setSelectedAllJobs] = useState<string[]>(['All']);
+  const [selectedBranch, setSelectedBranch]   = useState<string[]>(['All']);
+
+  /* ── Sorting State ── */
+  const [sortField, setSortField]             = useState<'name' | 'role' | 'username' | 'status'>('name');
+  const [sortDirection, setSortDirection]     = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -109,18 +136,102 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
       .catch((err) => showToast(`❌ ${err.message}`, 'error'));
   };
 
+  /* ── Computed Filtered & Sorted Users ── */
+  const uniqueRoles = Array.from(new Set(users.map(u => u.role).filter(Boolean)));
+  const roleOptions = [{ value: 'All', label: 'All Roles' }, ...uniqueRoles.map(r => ({ value: r as string, label: r as string }))];
+
+  const uniqueDepts = Array.from(new Set(users.map(u => u.department).filter(Boolean)));
+  const departmentOptions = [{ value: 'All', label: 'All Depts' }, ...uniqueDepts.map(d => ({ value: d as string, label: d as string }))];
+
   const filteredUsers = users
     .filter(u => {
-      const q = searchQuery.toLowerCase();
-      return !q || (
-        u.name?.toLowerCase().includes(q) ||
-        u.username?.toLowerCase().includes(q) ||
-        u.role?.toLowerCase().includes(q) ||
-        u.department?.toLowerCase().includes(q) ||
-        u.designation?.toLowerCase().includes(q)
+      // 1. Text Query
+      const q = searchQuery.toLowerCase().trim();
+      const matchQuery = !q || (
+        (u.name && u.name.toLowerCase().includes(q)) ||
+        (u.username && u.username.toLowerCase().includes(q)) ||
+        (u.email && u.email.toLowerCase().includes(q)) ||
+        (u.phone && u.phone.toLowerCase().includes(q)) ||
+        (u.role && u.role.toLowerCase().includes(q)) ||
+        (u.department && u.department.toLowerCase().includes(q)) ||
+        (u.designation && u.designation.toLowerCase().includes(q))
       );
+
+      // 2. Role
+      const uRole = u.role || '';
+      const matchRole = selectedRole.includes('All') || selectedRole.includes(uRole);
+
+      // 3. Department
+      const uDept = u.department || u.designation || '';
+      const matchDepartment = selectedDepartment.includes('All') || selectedDepartment.includes(uDept);
+
+      // 4. CSC Access
+      const cscVal = u.csc_access || u.csc_role || 'None';
+      const matchCsc = selectedCsc.includes('All') || selectedCsc.includes(cscVal);
+
+      // 5. Unbilled Access
+      const unbilledVal = u.unbilled_access || u.unbilled_role || 'None';
+      const matchUnbilled = selectedUnbilled.includes('All') || selectedUnbilled.includes(unbilledVal);
+
+      // 6. All Jobs Access
+      const allJobsVal = u.all_jobs_access || u.all_jobs_role || 'None';
+      const matchAllJobs = selectedAllJobs.includes('All') || selectedAllJobs.includes(allJobsVal);
+
+      // 7. Assigned Branches
+      const uBranches: string[] = u.branches || [];
+      const matchBranch = selectedBranch.includes('All') ||
+        selectedBranch.some(b => uBranches.includes(b));
+
+      return matchQuery && matchRole && matchDepartment && matchCsc && matchUnbilled && matchAllJobs && matchBranch;
     })
-    .sort((a, b) => ((a.name || a.username) || '').localeCompare((b.name || b.username) || ''));
+    .sort((a, b) => {
+      let valA = '';
+      let valB = '';
+      if (sortField === 'name') {
+        valA = (a.name || a.username || '').toLowerCase();
+        valB = (b.name || b.username || '').toLowerCase();
+      } else if (sortField === 'role') {
+        valA = (a.role || a.department || '').toLowerCase();
+        valB = (b.role || b.department || '').toLowerCase();
+      } else if (sortField === 'username') {
+        valA = (a.username || '').toLowerCase();
+        valB = (b.username || '').toLowerCase();
+      } else if (sortField === 'status') {
+        valA = a.is_approved !== false ? 'Active' : 'Inactive';
+        valB = b.is_approved !== false ? 'Active' : 'Inactive';
+      }
+
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+  const isFiltered = searchQuery !== '' ||
+    !selectedRole.includes('All') ||
+    !selectedDepartment.includes('All') ||
+    !selectedCsc.includes('All') ||
+    !selectedUnbilled.includes('All') ||
+    !selectedAllJobs.includes('All') ||
+    !selectedBranch.includes('All');
+
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setSelectedRole(['All']);
+    setSelectedDepartment(['All']);
+    setSelectedCsc(['All']);
+    setSelectedUnbilled(['All']);
+    setSelectedAllJobs(['All']);
+    setSelectedBranch(['All']);
+  };
+
+  const handleHeaderSort = (field: 'name' | 'role' | 'username' | 'status') => {
+    if (sortField === field) {
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   const getAccessBadge = (value: string, sectionName: string) => {
     const isNone = !value || value === 'None';
@@ -167,51 +278,178 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
   return (
     <div style={{ padding: isEmbedded ? '0' : '1.75rem' }}>
 
-      {/* ─── Page Header ─── */}
+      {/* ─── Single Unified Search, Filters & Count Bar ─── */}
       <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem',
+        background: 'var(--surface-color)',
+        borderRadius: '16px',
+        border: '1px solid var(--border-color)',
+        padding: '0.75rem 1rem',
+        marginBottom: '1rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '0.65rem'
       }}>
-        <div>
-          <h1 style={{
-            fontSize: isEmbedded ? '1.25rem' : '1.5rem', fontWeight: 700,
-            margin: 0, color: 'var(--text-primary)',
+        {/* Center: Search + Filters + Count inline in same line */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', flex: 1, minWidth: 0, justifyContent: 'flex-start' }}>
+          {/* Search Bar Input */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '180px', flexShrink: 0 }}>
+            <span style={{ position: 'absolute', left: '0.65rem', fontSize: '0.8rem', color: 'var(--text-secondary)', pointerEvents: 'none' }}>🔍</span>
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.38rem 1.8rem 0.38rem 2rem',
+                borderRadius: '10px',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-color)',
+                color: 'var(--text-primary)',
+                fontSize: '0.8rem',
+                outline: 'none',
+              }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                style={{
+                  position: 'absolute', right: '0.4rem', background: 'none', border: 'none',
+                  color: 'var(--text-secondary)', fontSize: '0.75rem', cursor: 'pointer'
+                }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', margin: '0 0.1rem', whiteSpace: 'nowrap' }}>
+            Filters:
+          </span>
+
+          {/* CSC Jobs Access Filter */}
+          <MultiSelect
+            value={selectedCsc}
+            onChange={(val) => setSelectedCsc(val)}
+            options={[
+              { value: 'All', label: 'CSC: All' },
+              { value: 'Edit', label: 'Edit ✏️' },
+              { value: 'View', label: 'View 🔍' },
+              { value: 'None', label: 'None ✖️' },
+            ]}
+            placeholder="CSC"
+          />
+
+          {/* Unbilled Access Filter */}
+          <MultiSelect
+            value={selectedUnbilled}
+            onChange={(val) => setSelectedUnbilled(val)}
+            options={[
+              { value: 'All', label: 'Unbilled: All' },
+              { value: 'Edit', label: 'Edit ✏️' },
+              { value: 'View', label: 'View 🔍' },
+              { value: 'None', label: 'None ✖️' },
+            ]}
+            placeholder="Unbilled"
+          />
+
+          {/* All Jobs Access Filter */}
+          <MultiSelect
+            value={selectedAllJobs}
+            onChange={(val) => setSelectedAllJobs(val)}
+            options={[
+              { value: 'All', label: 'Jobs: All' },
+              { value: 'View', label: 'View 🔍' },
+              { value: 'None', label: 'None ✖️' },
+            ]}
+            placeholder="Jobs"
+          />
+
+          {/* Branch Filter */}
+          <MultiSelect
+            value={selectedBranch}
+            onChange={(val) => setSelectedBranch(val)}
+            options={[{ value: 'All', label: 'All Branches' }, ...BRANCH_OPTIONS]}
+            placeholder="Branch"
+          />
+
+          {/* Department Filter */}
+          {departmentOptions.length > 1 && (
+            <MultiSelect
+              value={selectedDepartment}
+              onChange={(val) => setSelectedDepartment(val)}
+              options={departmentOptions}
+              placeholder="Dept"
+            />
+          )}
+
+          {/* Role Filter */}
+          {roleOptions.length > 1 && (
+            <MultiSelect
+              value={selectedRole}
+              onChange={(val) => setSelectedRole(val)}
+              options={roleOptions}
+              placeholder="Role"
+            />
+          )}
+
+          {/* Red Funnel Button to Reset Active Filters */}
+          {isFiltered && (
+            <button
+              onClick={handleResetFilters}
+              title="Reset all active filters"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0.35rem 0.6rem',
+                borderRadius: '10px',
+                border: '1px solid #ef4444',
+                background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                color: '#ffffff',
+                fontWeight: 800,
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: '0 2px 8px rgba(239, 68, 68, 0.35)',
+                minHeight: '34px',
+                boxSizing: 'border-box'
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+              </svg>
+            </button>
+          )}
+
+          {/* User Count Badge placed after filters */}
+          <span style={{
+            fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem',
+            borderRadius: '20px', background: 'rgba(79,70,229,0.1)', color: '#4f46e5',
+            border: '1px solid rgba(79,70,229,0.2)', whiteSpace: 'nowrap',
+            display: 'inline-flex', alignItems: 'center', height: '34px', boxSizing: 'border-box'
           }}>
-            👥 User Directory
-          </h1>
-          <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-            {filteredUsers.length} user{filteredUsers.length !== 1 ? 's' : ''} · Manage access &amp; profiles
-          </p>
+            {filteredUsers.length} / {users.length}
+          </span>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <input
-            type="text"
-            placeholder="Search by name, username..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              padding: '0.55rem 0.9rem',
-              borderRadius: '20px', width: '220px',
-              border: '1px solid var(--border-color)',
-              background: 'var(--surface-color)',
-              color: 'var(--text-primary)', fontSize: '0.85rem',
-              outline: 'none',
-            }}
-          />
-          <button
-            onClick={() => setActiveModalUser({})}
-            style={{
-              padding: '0.55rem 1.15rem', borderRadius: '20px', border: 'none',
-              background: '#4f46e5',
-              color: '#ffffff', fontWeight: 600, fontSize: '0.85rem',
-              cursor: 'pointer', whiteSpace: 'nowrap',
-              display: 'flex', alignItems: 'center', gap: '0.35rem',
-            }}
-          >
-            ＋ Add New User
-          </button>
-        </div>
+        {/* Right: Add New User button */}
+        <button
+          onClick={() => setActiveModalUser({})}
+          style={{
+            padding: '0.45rem 1rem', borderRadius: '20px', border: 'none',
+            background: '#4f46e5',
+            color: '#ffffff', fontWeight: 700, fontSize: '0.8rem',
+            cursor: 'pointer', whiteSpace: 'nowrap',
+            display: 'flex', alignItems: 'center', gap: '0.3rem',
+            boxShadow: '0 4px 12px rgba(79, 70, 229, 0.25)',
+            flexShrink: 0
+          }}
+        >
+          ＋ Add New User
+        </button>
       </div>
 
       {/* ─── Users Directory Table Container ─── */}
@@ -225,16 +463,69 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.02)' }}>
-                {['User', 'Designation', 'Login', 'Access', 'Actions'].map(h => (
-                  <th key={h} style={{
+                
+                {/* User Column (Sortable) */}
+                <th
+                  onClick={() => handleHeaderSort('name')}
+                  style={{
                     padding: '0.85rem 1rem',
                     color: 'var(--text-secondary)', fontWeight: 700,
                     fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {h}
-                  </th>
-                ))}
+                    whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none'
+                  }}
+                >
+                  User {sortField === 'name' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                </th>
+
+                {/* Designation / Role Column (Sortable) */}
+                <th
+                  onClick={() => handleHeaderSort('role')}
+                  style={{
+                    padding: '0.85rem 1rem',
+                    color: 'var(--text-secondary)', fontWeight: 700,
+                    fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em',
+                    whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none'
+                  }}
+                >
+                  Designation {sortField === 'role' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                </th>
+
+                {/* Username Column (Sortable) */}
+                <th
+                  onClick={() => handleHeaderSort('username')}
+                  style={{
+                    padding: '0.85rem 1rem',
+                    color: 'var(--text-secondary)', fontWeight: 700,
+                    fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em',
+                    whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none'
+                  }}
+                >
+                  Login {sortField === 'username' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                </th>
+
+                {/* Access Column */}
+                <th style={{
+                  padding: '0.85rem 1rem',
+                  color: 'var(--text-secondary)', fontWeight: 700,
+                  fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em',
+                  whiteSpace: 'nowrap',
+                }}>
+                  Access
+                </th>
+
+                {/* Actions / Status Column (Sortable) */}
+                <th
+                  onClick={() => handleHeaderSort('status')}
+                  style={{
+                    padding: '0.85rem 1rem',
+                    color: 'var(--text-secondary)', fontWeight: 700,
+                    fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em',
+                    whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none'
+                  }}
+                >
+                  Actions {sortField === 'status' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                </th>
+
               </tr>
             </thead>
             <tbody>
@@ -362,7 +653,25 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                 <tr>
                   <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
                     <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🔍</div>
-                    <div style={{ fontWeight: 600 }}>No users found</div>
+                    <div style={{ fontWeight: 600 }}>No users found matching current filters</div>
+                    {isFiltered && (
+                      <button
+                        onClick={handleResetFilters}
+                        style={{
+                          marginTop: '0.75rem',
+                          padding: '0.45rem 1rem',
+                          borderRadius: '20px',
+                          border: 'none',
+                          background: '#4f46e5',
+                          color: '#ffffff',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Reset All Filters ✕
+                      </button>
+                    )}
                   </td>
                 </tr>
               )}
