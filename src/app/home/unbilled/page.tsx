@@ -7,7 +7,8 @@ import {
   fetchLegacyJobsBypassingRLS,
   updateUnbilledJobFieldServerAction,
   addUnbilledFollowupServerAction,
-  fetchUnbilledFollowupsServerAction
+  fetchUnbilledFollowupsServerAction,
+  fetchAllUnbilledFollowupsMapServerAction
 } from './actions';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
@@ -517,7 +518,9 @@ export default function UnbilledManagementPage() {
 
   // Reminders Popup Modal State
   const [upcomingReminders, setUpcomingReminders] = useState<any[]>([]);
+  const [followupsMap, setFollowupsMap] = useState<Record<string, string>>({});
   const [showRemindersPopup, setShowRemindersPopup] = useState(false);
+
   // Feature-level permission flags
   const [canExportUnbilled, setCanExportUnbilled] = useState(false);
   const [canSeeReminders, setCanSeeReminders] = useState(false);
@@ -634,14 +637,20 @@ export default function UnbilledManagementPage() {
       legacyBranchesToFetch = ['ALL'];
     }
 
-    const [jobsRes, legacyResData] = await Promise.all([
+    const [jobsRes, legacyResData, fMap] = await Promise.all([
       jobsQuery, 
       fetchLegacyJobsBypassingRLS(legacyBranchesToFetch).catch(err => {
         console.error('Error fetching legacy jobs:', err);
         showToast('Error fetching legacy jobs: ' + err.message, 'error');
         return [];
+      }),
+      fetchAllUnbilledFollowupsMapServerAction().catch(err => {
+        console.error('Error fetching followups map:', err);
+        return {};
       })
     ]);
+
+    setFollowupsMap(fMap || {});
 
     if (jobsRes.error) {
       console.error('Error fetching unbilled jobs:', jobsRes.error);
@@ -716,6 +725,27 @@ export default function UnbilledManagementPage() {
     }
   };
 
+  const handleSaveCellRemark = async (job: any, remarkVal: string) => {
+    if (!remarkVal.trim()) return;
+    try {
+      const userName = userProfile?.name || userProfile?.username || currentUser?.email?.split('@')[0] || 'Agent';
+
+      await addUnbilledFollowupServerAction({
+        jobId: job.id || '',
+        jobNumber: job.job_number,
+        updatedBy: currentUser?.id || 'User',
+        agentName: userName,
+        followupNotes: remarkVal,
+        nextFollowupDate: null
+      });
+
+      setFollowupsMap(prev => ({ ...prev, [job.job_number]: remarkVal }));
+      showToast('Remark saved to follow-ups ✅', 'success');
+    } catch (err: any) {
+      showToast(`❌ Failed to save remark: ${err.message}`, 'error');
+    }
+  };
+
   const handleSubmitFollowup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNote.trim() || !activeDrawerJob) return;
@@ -723,37 +753,21 @@ export default function UnbilledManagementPage() {
     setDrawerSubmitting(true);
     try {
       const userName = userProfile?.name || userProfile?.username || currentUser?.email?.split('@')[0] || 'Agent';
-      const userHandle = userProfile?.username || currentUser?.email?.split('@')[0] || 'Agent';
 
-      // 1. Add follow-up entry to unbilled_followups
+      // Add follow-up entry strictly to unbilled_followups
       await addUnbilledFollowupServerAction({
-        jobId: activeDrawerJob.id,
+        jobId: activeDrawerJob.id || '',
         jobNumber: activeDrawerJob.job_number,
-        updatedBy: currentUser.id || 'User',
+        updatedBy: currentUser?.id || 'User',
         agentName: userName,
         followupNotes: newNote,
         nextFollowupDate: nextFollowupDate || null
       });
 
-      // 2. Also update `remarks` field on target job table (jobs / legacy_jobs)
-      const table = activeDrawerJob.source_table || 'jobs';
-      const oldRemarks = activeDrawerJob.remarks || '';
-      await updateUnbilledJobFieldServerAction({
-        table,
-        jobNumber: activeDrawerJob.job_number,
-        fieldToUpdate: 'remarks',
-        value: newNote,
-        auditName: userName,
-        auditUsername: userHandle,
-        oldStr: oldRemarks,
-        newStr: newNote,
-      });
+      // Update local followups map
+      setFollowupsMap(prev => ({ ...prev, [activeDrawerJob.job_number]: newNote }));
 
-      // 3. Update local state
-      setJobs(prev => prev.map(j => j.job_number === activeDrawerJob.job_number ? { ...j, remarks: newNote } : j));
-      setActiveDrawerJob((prev: any) => prev ? { ...prev, remarks: newNote } : null);
-
-      showToast('Follow-up note added & remarks updated ✅', 'success');
+      showToast('Follow-up note added ✅', 'success');
       setNewNote('');
       setNextFollowupDate('');
 
@@ -1365,8 +1379,8 @@ export default function UnbilledManagementPage() {
                     {/* 1. Remarks (First Column) */}
                     <td>
                       <RemarksCellInput
-                        value={j.remarks}
-                        onChange={(val) => handleUpdateJobField(j, 'remarks', val)}
+                        value={followupsMap[j.job_number] || ''}
+                        onChange={(val) => handleSaveCellRemark(j, val)}
                         disabled={isViewer}
                         onOpenDrawer={() => handleOpenFollowupDrawer(j)}
                       />

@@ -39,7 +39,35 @@ export async function fetchLegacyJobsBypassingRLS(branches: string[] | null) {
 }
 
 /**
- * Server Action: Update job field (remarks, dates, SPOC, status, etc.)
+ * Server Action: Fetch latest followup notes map keyed by job_number
+ * strictly from `unbilled_followups` table.
+ */
+export async function fetchAllUnbilledFollowupsMapServerAction(): Promise<Record<string, string>> {
+  const supabase = getAdminClient();
+
+  const { data, error } = await supabase
+    .from('unbilled_followups')
+    .select('job_number, followup_notes, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[fetchAllUnbilledFollowupsMapServerAction] error:', error);
+    return {};
+  }
+
+  const map: Record<string, string> = {};
+  if (data) {
+    for (const item of data) {
+      if (item.job_number && !map[item.job_number]) {
+        map[item.job_number] = item.followup_notes;
+      }
+    }
+  }
+  return map;
+}
+
+/**
+ * Server Action: Update job field (dates, SPOC, status, etc.)
  * in `jobs` or `legacy_jobs` bypassing RLS issues, and log change to `audit_logs`.
  */
 export async function updateUnbilledJobFieldServerAction(params: {
@@ -55,27 +83,17 @@ export async function updateUnbilledJobFieldServerAction(params: {
   const supabase = getAdminClient();
   const targetTable = params.table === 'legacy_jobs' ? 'legacy_jobs' : 'jobs';
 
-  // 1. Update target table (jobs or legacy_jobs)
-  // Note: legacy_jobs table schema in DB does not have a 'remarks' column.
-  if (targetTable === 'legacy_jobs' && params.fieldToUpdate === 'remarks') {
-    // Skip direct column update on legacy_jobs for 'remarks'; the update is safely stored in unbilled_followups & audit_logs.
-  } else {
-    const { error: updateErr } = await supabase
-      .from(targetTable)
-      .update({ [params.fieldToUpdate]: params.value })
-      .eq('job_number', params.jobNumber);
+  const { error: updateErr } = await supabase
+    .from(targetTable)
+    .update({ [params.fieldToUpdate]: params.value })
+    .eq('job_number', params.jobNumber);
 
-    if (updateErr) {
-      if (targetTable === 'legacy_jobs' && (updateErr.message?.includes('schema cache') || updateErr.message?.includes('column'))) {
-        console.warn(`[updateUnbilledJobFieldServerAction] Column ${params.fieldToUpdate} missing on legacy_jobs, skipping table update:`, updateErr.message);
-      } else {
-        console.error(`[updateUnbilledJobFieldServerAction] Update failed on ${targetTable}:`, updateErr);
-        throw new Error(updateErr.message);
-      }
-    }
+  if (updateErr) {
+    console.error(`[updateUnbilledJobFieldServerAction] Update failed on ${targetTable}:`, updateErr);
+    throw new Error(updateErr.message);
   }
 
-  // 2. Audit log entry
+  // Audit log entry
   try {
     await supabase.from('audit_logs').insert({
       job_number: params.jobNumber,
