@@ -60,11 +60,11 @@ const ALL_UNBILLED_COLUMNS = [
   { id: 'packing_date', label: '📦 Packing' },
   { id: 'actual_delivery', label: '🚚 Delivery' },
   { id: 'goods_track_status', label: 'Goods Status' },
+  { id: 'spoc_name', label: 'SPOC' },
   { id: 'po_status', label: 'PO Status' },
   { id: 'bill_closure_date', label: 'Bill Closure Dt' },
   { id: 'po_date', label: 'PO Rcvd Dt' },
-  { id: 'inv_request_date', label: 'Inv Request Dt' },
-  { id: 'spoc_name', label: 'SPOC' }
+  { id: 'inv_request_date', label: 'Inv Request Dt' }
 ];
 
 const formatDate = (dateStr: string | null) => {
@@ -185,11 +185,38 @@ function SpocCellInput({ value, onChange, disabled }: { value: string | null; on
     }
   };
 
+  const hasValue = Boolean(draftValue && draftValue.trim());
+
+  if (disabled) {
+    return (
+      <div
+        style={{
+          padding: '0.4rem 0.6rem',
+          width: '110px',
+          height: '32px',
+          borderRadius: '6px',
+          border: '1px solid var(--border-color)',
+          background: 'var(--bg-color)',
+          fontSize: '0.78rem',
+          fontWeight: hasValue ? 600 : 400,
+          color: hasValue ? 'var(--text-primary)' : 'var(--text-secondary)',
+          display: 'flex',
+          alignItems: 'center',
+          boxSizing: 'border-box',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }}
+      >
+        {hasValue ? draftValue : <span style={{ opacity: 0.4, fontWeight: 400 }}>- Select -</span>}
+      </div>
+    );
+  }
+
   return (
     <input
       type="text"
       value={draftValue}
-      disabled={disabled}
       onChange={(e) => setDraftValue(e.target.value)}
       onBlur={(e) => handleCommit(e.target.value)}
       onKeyDown={(e) => {
@@ -203,8 +230,8 @@ function SpocCellInput({ value, onChange, disabled }: { value: string | null; on
         padding: '0.4rem 0.6rem',
         borderRadius: '6px',
         border: '1px solid var(--border-color)',
-        background: disabled ? 'var(--surface-color)' : 'var(--bg-color)',
-        color: 'var(--text-primary)',
+        background: 'var(--bg-color)',
+        color: hasValue ? 'var(--text-primary)' : 'var(--text-secondary)',
         fontSize: '0.78rem',
         fontFamily: 'inherit',
         boxSizing: 'border-box'
@@ -798,11 +825,11 @@ export default function UnbilledManagementPage() {
         'Packing Date': formatDate(j.packing_date),
         'Delivery Date': formatDate(j.actual_delivery),
         'Goods Status': getDisplayGoodsStatus(j.goods_track_status) || '',
+        'SPOC': j.spoc_name || j.unbilled_spoc || '',
         'PO Status': j.po_status || '',
         'PO Date': formatDate(j.po_date),
         'Inv Request Dt': formatDate(j.inv_request_date),
-        'Bill Closure Date': formatDate(j.bill_closure_date),
-        'SPOC': j.spoc_name || j.unbilled_spoc || ''
+        'Bill Closure Date': formatDate(j.bill_closure_date)
       };
     });
 
@@ -1334,7 +1361,16 @@ export default function UnbilledManagementPage() {
                       />
                     </td>
 
-                    {/* 11. PO Status */}
+                    {/* 11. SPOC */}
+                    <td>
+                      <SpocCellInput
+                        value={j.spoc_name || j.unbilled_spoc}
+                        onChange={(val) => handleUpdateJobField(j, 'spoc_name', val)}
+                        disabled={isViewer}
+                      />
+                    </td>
+
+                    {/* 12. PO Status */}
                     <td>
                       <CustomSelect
                         value={j.po_status || ''}
@@ -1346,7 +1382,7 @@ export default function UnbilledManagementPage() {
                       />
                     </td>
 
-                    {/* 12. Bill Closure Dt */}
+                    {/* 13. Bill Closure Dt */}
                     <td>
                       <DateCellInput
                         value={j.bill_closure_date}
@@ -1355,7 +1391,7 @@ export default function UnbilledManagementPage() {
                       />
                     </td>
 
-                    {/* 13. PO Rcvd Dt (po_date) */}
+                    {/* 14. PO Rcvd Dt (po_date) */}
                     <td>
                       <DateCellInput
                         value={j.po_date}
@@ -1364,20 +1400,11 @@ export default function UnbilledManagementPage() {
                       />
                     </td>
 
-                    {/* 14. Inv Request Dt */}
+                    {/* 15. Inv Request Dt */}
                     <td>
                       <DateCellInput
                         value={j.inv_request_date}
                         onChange={(val) => handleUpdateJobField(j, 'inv_request_date', val)}
-                        disabled={isViewer}
-                      />
-                    </td>
-
-                    {/* 15. SPOC */}
-                    <td>
-                      <SpocCellInput
-                        value={j.spoc_name || j.unbilled_spoc}
-                        onChange={(val) => handleUpdateJobField(j, 'spoc_name', val)}
                         disabled={isViewer}
                       />
                     </td>

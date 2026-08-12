@@ -78,6 +78,7 @@ export default function CustomSelect({
   }, []);
 
   const selectedOption = options.find(opt => opt.value === value);
+  const isFilled = Boolean(selectedOption);
 
   return (
     <div 
@@ -86,7 +87,6 @@ export default function CustomSelect({
         position: 'relative', 
         width: '100%', 
         flexGrow: 1,
-        opacity: disabled ? 0.6 : 1,
         pointerEvents: disabled ? 'none' : 'auto',
         ...style 
       }}
@@ -97,15 +97,17 @@ export default function CustomSelect({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          background: disabled ? 'var(--surface-color)' : (textColor ? `${textColor}15` : 'var(--bg-color)'),
+          background: disabled 
+            ? (textColor ? `${textColor}15` : 'var(--bg-color)')
+            : (textColor ? `${textColor}15` : 'var(--bg-color)'),
           border: textColor ? `1px solid ${textColor}40` : '1px solid var(--border-color)',
-          color: textColor || (value ? 'var(--text-primary)' : 'var(--text-secondary)'),
-          fontWeight: textColor ? 700 : 'inherit',
+          color: textColor || (isFilled ? 'var(--text-primary)' : 'var(--text-secondary)'),
+          fontWeight: textColor ? 700 : (isFilled ? 600 : 400),
           borderRadius: '10px',
           padding: '0.55rem 0.85rem',
           fontSize: '0.875rem',
           fontFamily: "'Outfit', sans-serif",
-          cursor: disabled ? 'not-allowed' : 'pointer',
+          cursor: disabled ? 'default' : 'pointer',
           transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
           boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.015)',
           minHeight: '38px',
@@ -122,7 +124,14 @@ export default function CustomSelect({
           }
         }}
       >
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '0.25rem' }}>
+        <span style={{
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          paddingRight: '0.25rem',
+          opacity: isFilled ? 1 : 0.4,
+          fontWeight: isFilled ? (textColor ? 700 : 600) : 400
+        }}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <svg 
@@ -138,7 +147,8 @@ export default function CustomSelect({
           style={{ 
             transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)', 
             transform: isOpen ? 'rotate(180deg)' : 'none',
-            color: '#4f46e5',
+            color: textColor || '#4f46e5',
+            opacity: disabled ? 0.35 : 1,
             flexShrink: 0
           }}
         >
