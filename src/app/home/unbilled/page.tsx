@@ -1478,7 +1478,9 @@ export default function UnbilledManagementPage() {
               {followupHistory.map((item) => (
                 <div key={item.id} className={styles.historyCard}>
                   <div className={styles.historyMeta}>
-                    <span style={{ fontWeight: 700, color: '#4f46e5' }}>{item.agent_name} ({item.branch})</span>
+                    <span style={{ fontWeight: 700, color: '#4f46e5' }}>
+                      {item.agent_name}{item.branch ? ` (${item.branch})` : ''}
+                    </span>
                     <span>{formatDate(item.created_at)}</span>
                   </div>
                   <div className={styles.historyNotes}>{item.followup_notes}</div>
