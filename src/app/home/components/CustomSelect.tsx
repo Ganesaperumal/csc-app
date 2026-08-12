@@ -9,6 +9,7 @@ interface CustomSelectProps {
   onChange: (value: string) => void;
   placeholder?: string;
   style?: React.CSSProperties;
+  triggerStyle?: React.CSSProperties;
   disabled?: boolean;
   textColor?: string;
 }
@@ -19,6 +20,7 @@ export default function CustomSelect({
   onChange,
   placeholder = 'None',
   style,
+  triggerStyle,
   disabled = false,
   textColor
 }: CustomSelectProps) {
@@ -111,7 +113,8 @@ export default function CustomSelect({
           transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
           boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.015)',
           minHeight: '38px',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          ...triggerStyle
         }}
         onMouseOver={(e) => {
           if (!disabled) {

@@ -1890,10 +1890,10 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
           {/* Documents Section */}
           <div className={`glass ${styles.logsSection}`} style={{ height: 'auto', display: 'flex', flexDirection: 'column', marginBottom: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <h3 style={{ margin: 0 }}>Documents</h3>
               {!isViewer && (
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                   <CustomSelect 
                     value={selectedDocType} 
                     onChange={(val) => setSelectedDocType(val)}
@@ -1904,7 +1904,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                       ...customDocTypes.map(t => ({ value: t, label: t })),
                       { value: 'Add New...', label: 'Add New...' }
                     ]}
-                    style={{ minWidth: '130px', flexGrow: 0 }}
+                    style={{ width: selectedDocType === 'Add New...' ? '115px' : '105px', flexShrink: 0, flexGrow: 0 }}
+                    triggerStyle={{ padding: '0.45rem 0.75rem', fontSize: '0.8rem', borderRadius: '8px', minHeight: '32px' }}
                     disabled={uploadingPod}
                   />
                   
@@ -1914,7 +1915,17 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                       placeholder="Type..." 
                       value={newDocType} 
                       onChange={(e) => setNewDocType(e.target.value)}
-                      style={{ padding: '0.4rem', width: '100px', borderRadius: '6px', border: '1px solid rgba(148, 163, 184, 0.3)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
+                      style={{ 
+                        padding: '0.45rem 0.75rem', 
+                        width: '105px', 
+                        borderRadius: '8px', 
+                        border: '1px solid var(--border-color)', 
+                        background: 'var(--bg-color)', 
+                        color: 'var(--text-primary)',
+                        fontSize: '0.8rem',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
                       disabled={uploadingPod}
                     />
                   )}
@@ -1924,17 +1935,21 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                       position: 'relative',
                       overflow: 'hidden',
                       cursor: uploadingPod ? 'not-allowed' : 'pointer', 
+                      background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', 
+                      color: '#fff', 
+                      border: 'none',
+                      borderRadius: '8px', 
                       padding: '0.45rem 1rem', 
-                      background: '#2563eb', 
-                      color: 'white', 
-                      borderRadius: '6px', 
                       fontSize: '0.8rem', 
-                      fontWeight: 'bold',
+                      fontWeight: 600,
                       display: 'inline-flex',
                       alignItems: 'center',
+                      justifyContent: 'center',
                       gap: '0.4rem',
                       userSelect: 'none',
-                      boxShadow: '0 2px 6px rgba(37, 99, 235, 0.3)'
+                      boxShadow: '0 3px 12px rgba(37, 99, 235, 0.3)',
+                      transition: 'all 0.2s ease',
+                      whiteSpace: 'nowrap'
                     }}
                   >
                     {/* Animated Progress Bar fill inside button */}
@@ -1952,7 +1967,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                         }} 
                       />
                     )}
-                    <span style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{ position: 'relative', zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
                       {uploadingPod ? (
                         <>
                           <span style={{ display: 'inline-block', width: '12px', height: '12px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
