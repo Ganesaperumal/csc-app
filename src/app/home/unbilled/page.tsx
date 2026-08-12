@@ -177,6 +177,86 @@ function DateCellInput({ value, onChange, disabled }: { value: string | null; on
   );
 }
 
+function RemarksCellInput({
+  value,
+  onChange,
+  disabled,
+  onOpenDrawer
+}: {
+  value: string | null;
+  onChange: (val: string) => void;
+  disabled?: boolean;
+  onOpenDrawer: () => void;
+}) {
+  const [draftValue, setDraftValue] = useState(value || '');
+
+  useEffect(() => {
+    setDraftValue(value || '');
+  }, [value]);
+
+  const handleCommit = () => {
+    if (draftValue !== (value || '')) {
+      onChange(draftValue);
+    }
+  };
+
+  const hasValue = Boolean(draftValue && draftValue.trim());
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minWidth: '170px' }}>
+      <input
+        type="text"
+        disabled={disabled}
+        value={draftValue}
+        onChange={(e) => setDraftValue(e.target.value)}
+        onBlur={handleCommit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.currentTarget.blur();
+          }
+        }}
+        placeholder={disabled ? (hasValue ? '' : '— No Remark —') : 'Add remark...'}
+        style={{
+          flex: 1,
+          padding: '0.3rem 0.55rem',
+          height: '32px',
+          borderRadius: '6px',
+          border: disabled ? 'none' : '1px solid var(--border-color)',
+          background: disabled ? 'transparent' : 'var(--bg-color)',
+          color: hasValue ? 'var(--text-primary)' : 'var(--text-secondary)',
+          opacity: disabled ? (hasValue ? 1 : 0.4) : (hasValue ? 1 : 0.7),
+          fontWeight: hasValue ? 600 : 400,
+          fontSize: '0.78rem',
+          outline: 'none',
+          boxSizing: 'border-box'
+        }}
+      />
+      <button
+        onClick={onOpenDrawer}
+        title="View / Add Follow-up History"
+        style={{
+          padding: '0.25rem 0.5rem',
+          height: '32px',
+          borderRadius: '6px',
+          border: '1px solid var(--border-color)',
+          background: 'rgba(79,70,229,0.1)',
+          color: '#4f46e5',
+          fontWeight: 700,
+          fontSize: '0.75rem',
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.25rem',
+          flexShrink: 0
+        }}
+      >
+        💬
+      </button>
+    </div>
+  );
+}
+
 function SpocCellInput({ value, onChange, disabled }: { value: string | null; onChange: (val: string) => void; disabled?: boolean }) {
   const [draftValue, setDraftValue] = useState(value || '');
 
@@ -643,7 +723,9 @@ export default function UnbilledManagementPage() {
     setDrawerSubmitting(true);
     try {
       const userName = userProfile?.name || userProfile?.username || currentUser?.email?.split('@')[0] || 'Agent';
+      const userHandle = userProfile?.username || currentUser?.email?.split('@')[0] || 'Agent';
 
+      // 1. Add follow-up entry to unbilled_followups
       await addUnbilledFollowupServerAction({
         jobId: activeDrawerJob.id,
         jobNumber: activeDrawerJob.job_number,
@@ -653,7 +735,25 @@ export default function UnbilledManagementPage() {
         nextFollowupDate: nextFollowupDate || null
       });
 
-      showToast('Follow-up note added ✅', 'success');
+      // 2. Also update `remarks` field on target job table (jobs / legacy_jobs)
+      const table = activeDrawerJob.source_table || 'jobs';
+      const oldRemarks = activeDrawerJob.remarks || '';
+      await updateUnbilledJobFieldServerAction({
+        table,
+        jobNumber: activeDrawerJob.job_number,
+        fieldToUpdate: 'remarks',
+        value: newNote,
+        auditName: userName,
+        auditUsername: userHandle,
+        oldStr: oldRemarks,
+        newStr: newNote,
+      });
+
+      // 3. Update local state
+      setJobs(prev => prev.map(j => j.job_number === activeDrawerJob.job_number ? { ...j, remarks: newNote } : j));
+      setActiveDrawerJob((prev: any) => prev ? { ...prev, remarks: newNote } : null);
+
+      showToast('Follow-up note added & remarks updated ✅', 'success');
       setNewNote('');
       setNextFollowupDate('');
 
@@ -1264,25 +1364,12 @@ export default function UnbilledManagementPage() {
                   <tr key={uniqueKey}>
                     {/* 1. Remarks (First Column) */}
                     <td>
-                      <button
-                        onClick={() => handleOpenFollowupDrawer(j)}
-                        style={{
-                          padding: '0.35rem 0.6rem',
-                          borderRadius: '6px',
-                          border: '1px solid var(--border-color)',
-                          background: 'rgba(79,70,229,0.1)',
-                          color: '#4f46e5',
-                          fontWeight: 700,
-                          fontSize: '0.78rem',
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.3rem'
-                        }}
-                      >
-                        Add Remark
-                      </button>
+                      <RemarksCellInput
+                        value={j.remarks}
+                        onChange={(val) => handleUpdateJobField(j, 'remarks', val)}
+                        disabled={isViewer}
+                        onOpenDrawer={() => handleOpenFollowupDrawer(j)}
+                      />
                     </td>
 
                     {/* 2. Date (job_date) */}
