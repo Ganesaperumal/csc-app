@@ -1345,7 +1345,7 @@ export default function UnbilledManagementPage() {
                     {/* 6. Client & Company */}
                     <td style={{ maxWidth: '10rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       <div style={{ fontWeight: 700, color: '#065f46', overflow: 'hidden', textOverflow: 'ellipsis' }}>{j.customer_name || '—'}</div>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#9f1239', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '0.15rem' }}>🏢 {j.company || '—'}</div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#9f1239', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '0.15rem' }}>{j.company || '—'}</div>
                     </td>
 
                     {/* 7. Value */}

@@ -575,7 +575,7 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                       </div>
                       {deptVal && (
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.15rem' }}>
-                          <span>🏢</span> <span>{deptVal}</span>
+                          <span>{deptVal}</span>
                         </div>
                       )}
                     </td>

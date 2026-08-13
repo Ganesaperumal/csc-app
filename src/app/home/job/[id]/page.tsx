@@ -21,6 +21,22 @@ const formatDate = (dateStr: string) => {
   return `${day}-${month}-${year}`;
 };
 
+const formatCommDateTime = (dateInput: string | Date) => {
+  if (!dateInput) return '';
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return String(dateInput);
+  
+  const day = d.getDate();
+  const month = d.toLocaleString('en-US', { month: 'short' });
+  let hours = d.getHours();
+  const minutes = d.getMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'P' : 'A';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  
+  return `${day} ${month}, ${hours}:${minutes}${ampm}`;
+};
+
 const toProperCase = (str: string) => {
   if (!str) return '';
   return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
@@ -1132,10 +1148,10 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
             </h3>
             <div className={styles.grid}>
                               {isFieldVisible(isViewOnly, job.customer_name || '') && (
-                                <div className={styles.inputGroup}><label>👤 NAME</label><input disabled={isViewer} name="customer_name" value={job.customer_name || ''} onChange={handleChange} /></div>
+                                <div className={styles.inputGroup}><label>NAME</label><input disabled={isViewer} name="customer_name" value={job.customer_name || ''} onChange={handleChange} /></div>
                               )}
                               {isFieldVisible(isViewOnly, job.company || '') && (
-                                <div className={styles.inputGroup}><label>🏢 COMPANY</label><input disabled={isViewer} name="company" value={job.company || ''} onChange={handleChange} /></div>
+                                <div className={styles.inputGroup}><label>COMPANY</label><input disabled={isViewer} name="company" value={job.company || ''} onChange={handleChange} /></div>
                               )}
                               {isFieldVisible(isViewOnly, job.customer_phone || '') && (
                                 <div className={styles.inputGroup}><label>📞 CONTACT</label><input disabled={isViewer} name="customer_phone" value={job.customer_phone || ''} onChange={handleChange} /></div>
@@ -1263,10 +1279,10 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
               )}
 
               {isHHG && isFieldVisible(isViewOnly, job.origin_floor) && (
-                <div className={styles.inputGroup}><label>🏢 FLOOR</label><input disabled={isViewer} type="number" name="origin_floor" value={job.origin_floor || ''} onChange={handleChange} /></div>
+                <div className={styles.inputGroup}><label>FLOOR</label><input disabled={isViewer} type="number" name="origin_floor" value={job.origin_floor || ''} onChange={handleChange} /></div>
               )}
               {isHHG && isFieldVisible(isViewOnly, job.dest_floor) && (
-                <div className={styles.inputGroup}><label>🏢 FLOOR</label><input disabled={isViewer} type="number" name="dest_floor" value={job.dest_floor || ''} onChange={handleChange} /></div>
+                <div className={styles.inputGroup}><label>FLOOR</label><input disabled={isViewer} type="number" name="dest_floor" value={job.dest_floor || ''} onChange={handleChange} /></div>
               )}
               {isHHG && isFieldVisible(isViewOnly, job.origin_service_lift) && (
                 <div className={styles.inputGroup}>
@@ -1306,7 +1322,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
             <div className={styles.grid}>
               {(!isSPOC || currentCoordinator) && (
                 <div className={styles.inputGroup}>
-                  <label>👤 CSC Coordinator</label>
+                  <label>CSC Coordinator</label>
                   <CustomSelect disabled={isViewer}
                     placeholder="- Select CSC Coordinator-"
                     value={currentCoordinator}
@@ -1719,7 +1735,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                             boxShadow: commForm.call_type === t ? '0 2px 8px rgba(0,0,0,0.15)' : 'none'
                           }}
                         >
-                          {t === 'Customer' ? '👤 Customer' : '🏢 Internal'}
+                          {t === 'Customer' ? 'Customer' : 'Internal'}
                         </button>
                       ))}
                     </div>
@@ -1810,22 +1826,24 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   const tagColor = regardingColors[c.regarding] || '#6366f1';
                   return (
                     <div key={c.id} className={`${styles.logItem} ${styles.logComm}`} style={{ padding: '0.9rem 1rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
                           <span style={{
                             padding: '0.15rem 0.55rem', borderRadius: '20px', fontSize: '0.68rem', fontWeight: 700,
                             background: c.call_type === 'Customer' ? 'rgba(245,158,11,0.12)' : 'rgba(59,130,246,0.12)',
                             color: c.call_type === 'Customer' ? '#d97706' : '#2563eb',
                             border: `1px solid ${c.call_type === 'Customer' ? 'rgba(245,158,11,0.25)' : 'rgba(59,130,246,0.25)'}`
-                          }}>{c.call_type === 'Customer' ? '👤 Customer' : '🏢 Internal'}</span>
+                          }}>{c.call_type === 'Customer' ? 'Customer' : 'Internal'}</span>
+
+                          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                            {formatCommDateTime(c.created_at)}
+                          </span>
+
                           <span style={{
                             padding: '0.15rem 0.55rem', borderRadius: '20px', fontSize: '0.68rem', fontWeight: 700,
                             background: `${tagColor}14`, color: tagColor, border: `1px solid ${tagColor}30`
                           }}>{c.regarding}</span>
                         </div>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                          {new Date(c.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true })}
-                        </span>
                       </div>
 
                       <div className={styles.logMessage}>{c.summary}</div>

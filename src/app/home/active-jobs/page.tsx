@@ -1142,7 +1142,7 @@ function JobsTable() {
                           
                           <div style={{ fontSize: '0.75rem', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.4rem' }}>
                             <div>
-                              {n.branch && <span style={{ padding: '0.15rem 0.6rem', borderRadius: '12px', background: 'rgba(139, 92, 246, 0.08)', color: '#7c3aed', border: '1px solid rgba(139, 92, 246, 0.2)' }}>🏢 {n.branch}</span>}
+                              {n.branch && <span style={{ padding: '0.15rem 0.6rem', borderRadius: '12px', background: 'rgba(139, 92, 246, 0.08)', color: '#7c3aed', border: '1px solid rgba(139, 92, 246, 0.2)' }}>{n.branch}</span>}
                             </div>
                             <div>
                               {n.regarding && <span style={{ padding: '0.15rem 0.6rem', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.08)', color: '#059669', border: '1px solid rgba(16, 185, 129, 0.2)' }}>{n.regarding}</span>}
