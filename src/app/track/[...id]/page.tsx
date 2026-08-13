@@ -19,11 +19,11 @@ const toProperCase = (str: string) => {
 };
 
 const GOODS_STAGES = [
-  { name: 'Packing', status: '03. Packing in Progress' },
-  { name: 'Dispatched', status: '06. Despatched in TI Vehicle' },
-  { name: 'In Transit', status: '09. In Transit' },
-  { name: 'Out for Delivery', status: '13. Out for Delivery' },
-  { name: 'Delivered', status: '14. Delivered' }
+  { name: 'Packing', status: 'Packing in Progress' },
+  { name: 'Dispatched', status: 'Despatched in TI Vehicle' },
+  { name: 'In Transit', status: 'In Transit' },
+  { name: 'Out for Delivery', status: 'Out for Delivery' },
+  { name: 'Delivered', status: 'Delivered' }
 ];
 
 export default function PublicTrackingPage({ params }: { params: Promise<{ id: string | string[] }> }) {
@@ -102,19 +102,27 @@ export default function PublicTrackingPage({ params }: { params: Promise<{ id: s
   }, [decodedId]);
 
   // Determine current active stage index
+  const ALL_GOODS_OPTIONS = [
+    "Packing Not Scheduled", "Packing Scheduled", "Packing in Progress", "In Orgin TI WH",
+    "In Origin Vendor WH", "Despatched in TI Vehicle", "Despatched in Market Vehicle",
+    "Despatched in Market vehicle as Part Load", "In Transit", "In Destination TI WH",
+    "In Destination Vendor  WH", "Planned for Delivery", "Out for Delivery", "Delivered",
+    "JTR Collected", "Complaints", "Damages", "Issues Resolved", "Customer Ratings",
+    "POD Sent to branch", "Storage", "Job Completed", "Job # taken for Billing",
+    "Customer Cancelled", "Job # to be Cancelled", "Billing Pending"
+  ];
+
   const getCurrentStageIndex = () => {
     if (!job?.goods_track_status) return -1;
-    const currentStatus = job.goods_track_status;
-    
-    // Find index of first stage matching or exceeded
-    const statusNum = parseInt(currentStatus.substring(0, 2), 10);
-    if (isNaN(statusNum)) return -1;
+    const cleanStatus = String(job.goods_track_status).replace(/^\d+\.\s*/, '');
+    const idx = ALL_GOODS_OPTIONS.indexOf(cleanStatus);
+    if (idx === -1) return -1;
 
-    if (statusNum >= 14) return 4; // Delivered
-    if (statusNum >= 13) return 3; // Out for Delivery
-    if (statusNum >= 9) return 2;  // In Transit
-    if (statusNum >= 6) return 1;  // Dispatched
-    if (statusNum >= 3) return 0;  // Packing
+    if (idx >= 13) return 4; // Delivered or later
+    if (idx >= 12) return 3; // Out for Delivery
+    if (idx >= 8)  return 2; // In Transit
+    if (idx >= 5)  return 1; // Dispatched
+    if (idx >= 2)  return 0; // Packing in Progress
     return -1;
   };
 

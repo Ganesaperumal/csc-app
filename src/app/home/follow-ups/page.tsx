@@ -1,11 +1,11 @@
 'use client';
 import { showToast } from '@/components/GlobalDialogs';
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import CustomSelect from '../components/CustomSelect';
+import { fetchFollowupsServerAction } from './actions';
 
 interface Task {
   id: number;
@@ -62,104 +62,29 @@ export default function FollowUpsPage() {
     const initializePage = async () => {
       setLoading(true);
       
-      // 1. Get logged-in user profile details
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/login');
-        return;
-      }
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          router.push('/login');
+          return;
+        }
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      let activeName = 'Agent';
-      let showAll = false;
-
-      if (profile) {
-        activeName = profile.name || profile.username || user.email?.split('@')[0] || 'Agent';
-        const fRole = (profile.followups_access || profile.followups_role || profile.tracking_role || '').toLowerCase();
-        const cscRole = profile.csc_access || profile.csc_role || 'None';
-
-        const hasCscAccess = cscRole !== 'None' && cscRole !== '';
-        const hasFollowupsAccess = fRole !== 'none' && fRole !== '';
-
-        if (!hasCscAccess || !hasFollowupsAccess) {
+        const res = await fetchFollowupsServerAction(user.id);
+        if (!res.allowed) {
           router.push('/home');
           return;
         }
 
-        const isViewerUser = cscRole === 'View';
-        setIsViewer(isViewerUser);
-        setAgentName(activeName);
-
-        showAll = fRole === 'all' || fRole.includes('all');
-        setHasAllAccess(showAll);
-      } else {
-        activeName = user.email?.split('@')[0] || 'Agent';
-        setAgentName(activeName);
-      }
-
-      // 2. Query follow-up tasks first
-      let query = supabase
-        .from('job_communications')
-        .select('*')
-        .eq('follow_up_required', true);
-
-      // If not All access, restrict to owner agent
-      if (!showAll) {
-        query = query.ilike('agent_name', activeName);
-      }
-
-      const { data: comms, error } = await query.order('follow_up_date', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching communications:', error);
+        setAgentName(res.agentName);
+        setHasAllAccess(res.hasAllAccess);
+        setIsViewer(res.isViewer);
+        setTasks(res.tasks);
+        setAllAgents(res.allAgents);
+      } catch (err: any) {
+        console.error('Error initializing follow-ups page:', err);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      const activeComms = comms || [];
-
-      // 3. Fetch job details mapping for only those jobs that have active follow-ups
-      const jobMap: Record<string, { customer: string; spoc: string; company: string }> = {};
-      const jobNumbers = Array.from(new Set(activeComms.map(c => c.job_number)));
-
-      if (jobNumbers.length > 0) {
-        const { data: jobs, error: jobsError } = await supabase
-          .from('jobs')
-          .select('job_number, customer_name, spoc_name, company')
-          .in('job_number', jobNumbers);
-
-        if (!jobsError && jobs) {
-          jobs.forEach(j => {
-            jobMap[j.job_number] = {
-              customer: j.customer_name || 'Unknown Client',
-              spoc: j.spoc_name || 'Unassigned SPOC',
-              company: j.company || ''
-            };
-          });
-        }
-      }
-
-      // 4. Enrich and set tasks
-      const enrichedComms = activeComms.map((c: any) => ({
-        ...c,
-        customerName: jobMap[c.job_number]?.customer || 'Unknown Client',
-        spocName: jobMap[c.job_number]?.spoc || 'Unassigned SPOC',
-        companyName: jobMap[c.job_number]?.company || ''
-      }));
-      setTasks(enrichedComms);
-
-      // Find list of all unique agent names for filtering.
-      const agents = Array.from(
-        new Set(enrichedComms.map((c: any) => c.agent_name?.toLowerCase()).filter(Boolean))
-      ).sort() as string[];
-      setAllAgents(agents);
-
-      setLoading(false);
     };
 
     initializePage();

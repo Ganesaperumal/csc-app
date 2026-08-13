@@ -20,15 +20,15 @@ import { usePermissions } from '@/components/PermissionsContext';
 
 // Master Goods Track Options for Branch Users
 const BRANCH_GOODS_STATUS_OPTIONS = [
-  "00. Execution Pending",
-  "17. Damages",
-  "21. Storage",
-  "22. Job Completed",
-  "23. Job # taken for Billing",
-  "25. Job # to be Cancelled",
-  "26. Billing Pending",
-  "27. Month End Billing",
-  "28. Free Job"
+  "Execution Pending",
+  "Damages",
+  "Storage",
+  "Job Completed",
+  "Job # taken for Billing",
+  "Job # to be Cancelled",
+  "Billing Pending",
+  "Month End Billing",
+  "Free Job"
 ];
 
 const PO_STATUS_OPTIONS = [
@@ -40,19 +40,18 @@ const PO_STATUS_OPTIONS = [
   "Not Required"
 ];
 
-
-
 const getDisplayGoodsStatus = (status: string | null) => {
   if (!status) return status;
-  if (BRANCH_GOODS_STATUS_OPTIONS.includes(status) && status !== "00. Execution Pending") return status;
+  const clean = status.replace(/^\d+\.\s*/, '');
+  if (BRANCH_GOODS_STATUS_OPTIONS.includes(clean) && clean !== "Execution Pending") return clean;
   const match = status.match(/^(\d{2})\./);
   if (match) {
     const num = parseInt(match[1], 10);
     if (num >= 1 && num <= 21) {
-      return '00. Execution Pending';
+      return 'Execution Pending';
     }
   }
-  return status;
+  return clean;
 };
 
 const ALL_UNBILLED_COLUMNS = [
@@ -538,7 +537,7 @@ export default function UnbilledManagementPage() {
 
     let jobsQuery = supabase
       .from('jobs')
-      .select('*')
+      .select('job_number, enq_number, erp_job_id, job_date, actual_delivery, planned_delivery, branch, customer_name, company, goods_type, origin, destination, customer_phone, erp_status, invoice_number, invoice_date, goods_track_status, car_track_status, po_status, po_date, inv_request_date, bill_closure_date, sales_by, spoc_name, quote_value, car_included, csc_coordinator, unbilled_spoc, packing_date, created_at, updated_at')
       .eq('erp_status', 'New Order')
       .order('job_date', { ascending: true })
       .order('job_number', { ascending: true });
@@ -878,43 +877,40 @@ export default function UnbilledManagementPage() {
 
   const totalKpi = { count: filteredJobs.length, value: filteredJobs.reduce((sum, j) => sum + Number(j.quote_value || 0), 0) };
 
-  // 1. No Details: goods_track_status is empty/null AND po_status is empty/null
-  const noDetailsKpi = calcKpi(j => isGoodsEmpty(j) && isPoEmpty(j));
+  // 1. No Details: isGoodsEmpty(j)
+  const noDetailsKpi = calcKpi(j => isGoodsEmpty(j));
 
   // 2. PO&PI Pending: Jobs where po_status is PO Pending OR PI Pending
   const poPiPendingKpi = calcKpi(j => j.po_status === 'PO Pending' || j.po_status === 'PI Pending');
 
-  // 3. Job Completed: goods_track_status is 22. Job Completed AND po_status is empty/null
-  const jobCompletedKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '22. Job Completed' && isPoEmpty(j));
+  // 3. Job Completed: goods_status === 'Job Completed'
+  const jobCompletedKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === 'Job Completed');
 
-  // 4. Damages: Jobs where goods_track_status is 17. Damages
-  const damagesKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '17. Damages');
+  // 4. Damages: goods_status === 'Damages'
+  const damagesKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === 'Damages');
 
-  // 5. Storage: goods_track_status is 21. Storage AND po_status is empty/null
-  const storageKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '21. Storage' && isPoEmpty(j));
+  // 5. Storage: goods_status === 'Storage'
+  const storageKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === 'Storage');
 
-  // 6. Ready for Billing: goods_track_status is 27. Billing Pending or 23. Job # taken for Billing (includes 26. Billing Pending & 27. Month End Billing)
+  // 6. Ready for Billing: ['Billing Pending', 'Month End Billing', 'Job # taken for Billing'].includes(goods_status)
   const readyForBillingKpi = calcKpi(j => {
     const s = getDisplayGoodsStatus(j.goods_track_status) || '';
-    return s === '27. Billing Pending' || s === '26. Billing Pending' || s === '27. Month End Billing' || s === '23. Job # taken for Billing';
+    return s === 'Billing Pending' || s === 'Month End Billing' || s === 'Job # taken for Billing';
   });
 
-  // 7. To Be Cancelled: 28. Free Job or 25. Job # to be Cancelled
+  // 7. To Be Cancelled: ['Free Job', 'Job # to be Cancelled'].includes(goods_status)
   const toBeCancelledKpi = calcKpi(j => {
     const s = getDisplayGoodsStatus(j.goods_track_status) || '';
-    return s === '28. Free Job' || s === '25. Job # to be Cancelled';
+    return s === 'Free Job' || s === 'Job # to be Cancelled';
   });
 
-  // 8. Execution Pending: goods_track_status is 00. Execution Pending AND po_status is empty/null
-  const executionPendingKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === '00. Execution Pending' && !isGoodsEmpty(j) && isPoEmpty(j));
+  // 8. Execution Pending: goods_status === 'Execution Pending'
+  const executionPendingKpi = calcKpi(j => getDisplayGoodsStatus(j.goods_track_status) === 'Execution Pending');
 
-  // 9. Billable: PO status is not empty + Goods Status is empty + storage + Job completed + Job # taken for Billing + Billing Pending + Month End Billing
+  // 9. Billable: ['', 'Storage', 'Job Completed', 'Job # taken for Billing', 'Billing Pending', 'Month End Billing'].includes(goods_status)
   const billableKpi = calcKpi(j => {
-    const hasPo = !isPoEmpty(j);
-    const goodsEmpty = isGoodsEmpty(j);
     const s = getDisplayGoodsStatus(j.goods_track_status) || '';
-    const validGoods = ['21. Storage', '22. Job Completed', '23. Job # taken for Billing', '26. Billing Pending', '27. Billing Pending', '27. Month End Billing'].includes(s);
-    return hasPo || goodsEmpty || validGoods;
+    return ['', 'Storage', 'Job Completed', 'Job # taken for Billing', 'Billing Pending', 'Month End Billing'].includes(s);
   });
 
   const hasAppliedFilters = Object.keys(columnFilters).length > 0 || search.trim() !== '' || !selectedBranch.includes('All') || !selectedGoodsStatus.includes('All') || !selectedPoStatus.includes('All') || !selectedSpoc.includes('All') || !selectedYear.includes('All');

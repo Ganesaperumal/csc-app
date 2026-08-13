@@ -16,7 +16,7 @@ export async function GET() {
     while (true) {
       const { data, error } = await supabase
         .from('jobs')
-        .select('*')
+        .select('job_number, enq_number, erp_job_id, job_date, branch, customer_name, company, goods_type, origin, destination, customer_phone, erp_status, invoice_number, invoice_date, goods_track_status, car_track_status, po_status, po_date, inv_request_date, bill_closure_date, sales_by, spoc_name, quote_value, car_included, csc_coordinator, unbilled_spoc, packing_date, actual_delivery, planned_delivery, created_at, updated_at')
         .order('erp_job_id', { ascending: false, nullsFirst: false })
         .range(from, from + step - 1);
         

@@ -139,7 +139,7 @@ ${trackHistory}
             // Perform Supabase text search on jobs table using the cleaned query
             const { data: jobs, error } = await supabaseAdmin
               .from('jobs')
-              .select('*')
+              .select('job_number, enq_number, erp_job_id, job_date, branch, customer_name, company, goods_type, origin, destination, customer_phone, erp_status, invoice_number, invoice_date, goods_track_status, car_track_status, po_status, sales_by, spoc_name')
               .or(`customer_name.ilike.%${cleanQuery}%,job_number.ilike.%${cleanQuery}%,company.ilike.%${cleanQuery}%`)
               .limit(5);
 

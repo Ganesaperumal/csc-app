@@ -787,7 +787,7 @@ export default function ReportsPage() {
       let hasMore = true;
 
       while (hasMore) {
-        let query = supabase.from('jobs').select('*');
+        let query = supabase.from('jobs').select('job_number, enq_number, erp_job_id, job_date, branch, customer_name, company, goods_type, origin, destination, customer_phone, erp_status, invoice_number, invoice_date, goods_track_status, car_track_status, po_status, po_date, inv_request_date, bill_closure_date, sales_by, spoc_name, quote_value, car_included, csc_coordinator, unbilled_spoc, packing_date, actual_delivery, planned_delivery, created_at, updated_at');
         if (branchFilter) {
           query = query.in('branch', branchFilter);
         }
@@ -839,7 +839,7 @@ export default function ReportsPage() {
       setAuditLogs([]);
 
       // 4. Fetch Job Communications
-      const { data: cData } = await supabase.from('job_communications').select('*');
+      const { data: cData } = await supabase.from('job_communications').select('id, job_number, agent_name, call_type, regarding, summary, follow_up_required, follow_up_date, follow_up_completed, created_at');
       setComms(cData || []);
 
       // 7. Fetch legacy jobs for accurate Unbilled matrix
@@ -866,13 +866,15 @@ export default function ReportsPage() {
       const isBilled = job.erp_status?.toLowerCase() === 'billed';
       if (!isBilled) return true;
 
-      const goodsCompleted = job.goods_track_status === '22. Job Completed';
+      const cleanGoods = job.goods_track_status ? String(job.goods_track_status).replace(/^\d+\.\s*/, '') : '';
+      const goodsCompleted = cleanGoods === 'Job Completed';
       const carIncluded = job.car_included === true || job.car_included === 'Yes' || job.car_included === 'yes';
 
       if (!carIncluded) {
         return !goodsCompleted;
       } else {
-        const carCompleted = job.car_track_status === '16. Job Completed';
+        const cleanCar = job.car_track_status ? String(job.car_track_status).replace(/^\d+\.\s*/, '') : '';
+        const carCompleted = cleanCar === 'Job Completed';
         return !(goodsCompleted && carCompleted);
       }
     });
@@ -999,7 +1001,7 @@ export default function ReportsPage() {
       branchCounts[br] = (branchCounts[br] || 0) + 1;
 
       // Status
-      const st = j.goods_track_status ? j.goods_track_status.split('. ')[1] || j.goods_track_status : 'Pending';
+      const st = j.goods_track_status ? String(j.goods_track_status).replace(/^\d+\.\s*/, '') : 'Pending';
       statusCounts[st] = (statusCounts[st] || 0) + 1;
 
       // Goods Type
@@ -1069,18 +1071,18 @@ export default function ReportsPage() {
       const val = Number(enquiryValues[j.enq_number || j.enquiry_number || ''] || j.quote_value || 0);
       matrix[br]['Total'] += val;
 
-      const g = getDisplayStatus(j.goods_track_status);
+      const g = getDisplayStatus(j.goods_track_status ? String(j.goods_track_status).replace(/^\d+\.\s*/, '') : '');
       const p = getDisplayStatus(j.po_status);
       const poEmpty = isPoEmpty(j);
       const goodsEmpty = isGoodsEmpty(j);
 
-      // 1. Billable: po_status not empty OR goods_track_status empty OR goods_track_status in [21. Storage, 22. Job Completed, 23. Job # taken for Billing, 26. Billing Pending, 27. Billing Pending, 27. Month End Billing]
-      if (!poEmpty || goodsEmpty || ['21. Storage', '22. Job Completed', '23. Job # taken for Billing', '26. Billing Pending', '27. Billing Pending', '27. Month End Billing'].some(s => g.includes(s))) {
+      // 1. Billable: ['', 'Storage', 'Job Completed', 'Job # taken for Billing', 'Billing Pending', 'Month End Billing'].includes(goods_status)
+      if (['', 'Storage', 'Job Completed', 'Job # taken for Billing', 'Billing Pending', 'Month End Billing'].includes(g)) {
         matrix[br]['Billable'] += val;
       }
 
-      // 2. No Details: goods_track_status empty/null AND po_status empty/null
-      if (goodsEmpty && poEmpty) {
+      // 2. No Details: isGoodsEmpty(j)
+      if (goodsEmpty) {
         matrix[br]['No Details'] += val;
       }
 
@@ -1089,33 +1091,33 @@ export default function ReportsPage() {
         matrix[br]['PO & PI Pending'] += val;
       }
 
-      // 4. Job Completed: goods_track_status is '22. Job Completed' AND po_status empty/null
-      if (g.includes('22. Job Completed') && poEmpty) {
+      // 4. Job Completed: goods_track_status is 'Job Completed'
+      if (g === 'Job Completed') {
         matrix[br]['Job Completed'] += val;
       }
 
-      // 5. Damages: goods_track_status is '17. Damages'
-      if (g.includes('17. Damages')) {
+      // 5. Damages: goods_track_status is 'Damages'
+      if (g === 'Damages') {
         matrix[br]['Damages'] += val;
       }
 
-      // 6. Storage: goods_track_status is '21. Storage' AND po_status empty/null
-      if (g.includes('21. Storage') && poEmpty) {
+      // 6. Storage: goods_track_status is 'Storage'
+      if (g === 'Storage') {
         matrix[br]['Storage'] += val;
       }
 
-      // 7. Ready for Billing: goods_track_status in [26. Billing Pending, 27. Billing Pending, 27. Month End Billing, 23. Job # taken for Billing]
-      if (g.includes('27. Billing Pending') || g.includes('26. Billing Pending') || g.includes('27. Month End Billing') || g.includes('23. Job # taken for Billing')) {
+      // 7. Ready for Billing: goods_track_status in [Billing Pending, Month End Billing, Job # taken for Billing]
+      if (g === 'Billing Pending' || g === 'Month End Billing' || g === 'Job # taken for Billing') {
         matrix[br]['Ready for Billing'] += val;
       }
 
-      // 8. To Be Cancelled: goods_track_status in [28. Free Job, 25. Job # to be Cancelled]
-      if (g.includes('28. Free Job') || g.includes('25. Job # to be Cancelled')) {
+      // 8. To Be Cancelled: goods_track_status in [Free Job, Job # to be Cancelled]
+      if (g === 'Free Job' || g === 'Job # to be Cancelled') {
         matrix[br]['To Be Cancelled'] += val;
       }
 
-      // 9. Execution Pending: goods_track_status is '00. Execution Pending' AND not goodsEmpty AND poEmpty
-      if (g.includes('00. Execution Pending') && !goodsEmpty && poEmpty) {
+      // 9. Execution Pending: goods_track_status is 'Execution Pending'
+      if (g === 'Execution Pending') {
         matrix[br]['Execution Pending'] += val;
       }
     });
@@ -1732,7 +1734,7 @@ export default function ReportsPage() {
                             {job.branch || '—'}
                           </td>
                           <td style={{ padding: '0.8rem 0.9rem', color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.8rem' }}>
-                            {job.goods_track_status ? job.goods_track_status.split('. ')[1] || job.goods_track_status : 'Pending'}
+                            {job.goods_track_status ? String(job.goods_track_status).replace(/^\d+\.\s*/, '') : 'Pending'}
                           </td>
                         </tr>
                       ))

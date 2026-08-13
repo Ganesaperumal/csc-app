@@ -214,7 +214,7 @@ export default function ClosedJobsPage() {
       while (true) {
         const { data: batch, error } = await supabase
           .from('jobs')
-          .select('*')
+          .select('job_number, enq_number, erp_job_id, job_date, branch, customer_name, company, goods_type, origin, destination, customer_phone, erp_status, invoice_number, invoice_date, goods_track_status, car_track_status, po_status, po_date, inv_request_date, bill_closure_date, sales_by, spoc_name, quote_value, car_included, csc_coordinator, unbilled_spoc, packing_date, actual_delivery, planned_delivery, created_at, updated_at')
           .in('erp_status', ['Billed', 'Canceled', 'Cancelled'])
           .order('erp_job_id', { ascending: false, nullsFirst: false })
           .range(from, from + step - 1);
@@ -238,13 +238,15 @@ export default function ClosedJobsPage() {
         if (job.erp_status?.toLowerCase() !== 'billed') return false;
         
         // For billed jobs, check completion status
-        const goodsCompleted = job.goods_track_status === '22. Job Completed';
+        const cleanGoods = job.goods_track_status ? String(job.goods_track_status).replace(/^\d+\.\s*/, '') : '';
+        const goodsCompleted = cleanGoods === 'Job Completed';
         const carIncluded = job.car_included === true || job.car_included === 'Yes' || job.car_included === 'yes';
         
         if (!carIncluded) {
           return goodsCompleted;
         } else {
-          const carCompleted = job.car_track_status === '16. Job Completed';
+          const cleanCar = job.car_track_status ? String(job.car_track_status).replace(/^\d+\.\s*/, '') : '';
+          const carCompleted = cleanCar === 'Job Completed';
           return goodsCompleted && carCompleted;
         }
       });

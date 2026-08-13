@@ -26,7 +26,7 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
   const canAccessCsc = cscRole !== 'None' && cscRole !== '';
   const canAccessActive = canAccessCsc;
   const canAccessClosed = canAccessCsc;
-  const canAccessFollowUps = canAccessCsc && followupsRole !== 'None';
+  const canAccessFollowUps = followupsRole !== 'None' && followupsRole !== '';
   const canAccessAllJobs = allJobsRole !== 'None' && allJobsRole !== '';
   const canAccessUnbilled = unbilledRole !== 'None' && unbilledRole !== '';
   const canAccessReports = canAccessCsc || canAccessUnbilled || (followupsRole !== 'None' && followupsRole !== '');

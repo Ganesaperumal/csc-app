@@ -56,55 +56,56 @@ const ToggleSwitch = ({ name, value, onChange, disabled }: { name: string, value
 };
 
 const GOODS_TRACK_OPTIONS = [
-  "01. Packing Not Scheduled",
-  "02. Packing Scheduled",
-  "03. Packing in Progress",
-  "04. In Orgin TI WH",
-  "05. In Origin Vendor WH",
-  "06. Despatched in TI Vehicle",
-  "07. Despatched in Market Vehicle",
-  "08. Despatched in Market vehicle as Part Load",
-  "09. In Transit",
-  "10. In Destination TI WH",
-  "11. In Destination Vendor  WH",
-  "12. Planned for Delivery",
-  "13. Out for Delivery",
-  "14. Delivered",
-  "15. JTR Collected",
-  "16. Complaints",
-  "17. Damages",
-  "18. Issues Resolved",
-  "19. Customer Ratings",
-  "20. POD Sent to branch",
-  "21. Storage",
-  "22. Job Completed",
-  "23. Job # taken for Billing",
-  "24. Customer Cancelled",
-  "25. Job # to be Cancelled",
-  "26. Billing Pending"
+  "Packing Not Scheduled",
+  "Packing Scheduled",
+  "Packing in Progress",
+  "In Orgin TI WH",
+  "In Origin Vendor WH",
+  "Despatched in TI Vehicle",
+  "Despatched in Market Vehicle",
+  "Despatched in Market vehicle as Part Load",
+  "In Transit",
+  "In Destination TI WH",
+  "In Destination Vendor  WH",
+  "Planned for Delivery",
+  "Out for Delivery",
+  "Delivered",
+  "JTR Collected",
+  "Complaints",
+  "Damages",
+  "Issues Resolved",
+  "Customer Ratings",
+  "POD Sent to branch",
+  "Storage",
+  "Job Completed",
+  "Job # taken for Billing",
+  "Customer Cancelled",
+  "Job # to be Cancelled",
+  "Billing Pending"
 ];
 
 const CAR_TRACK_OPTIONS = [
-  "01. Car Pickup Not Scheduled",
-  "02. Car Pickup Scheduled",
-  "03. Car Picked",
-  "04. Despatched in Market Vehicle (Exclusive)",
-  "05. Despatched in Mareket Vehicle (Part Load)",
-  "06. In Transit",
-  "07. At Destination WH",
-  "08. Planed for Delivery",
-  "09. Out for Delivery",
-  "10. Delivered",
-  "11. VAR Collected",
-  "12. Complaints",
-  "13. Damages",
-  "14. POD Sent to the branch",
-  "15. Damage Resolved",
-  "16. Job Completed"
+  "Car Pickup Not Scheduled",
+  "Car Pickup Scheduled",
+  "Car Picked",
+  "Despatched in Market Vehicle (Exclusive)",
+  "Despatched in Mareket Vehicle (Part Load)",
+  "In Transit",
+  "At Destination WH",
+  "Planed for Delivery",
+  "Out for Delivery",
+  "Delivered",
+  "VAR Collected",
+  "Complaints",
+  "Damages",
+  "POD Sent to the branch",
+  "Damage Resolved",
+  "Job Completed"
 ];
 
 const StatusSlider = ({ name, options, value, onChange, disabled }: { name: string, options: string[], value: any, onChange: (e: any) => void, disabled?: boolean }) => {
-  const currentIndex = options.indexOf(value);
+  const cleanVal = value ? String(value).replace(/^\d+\.\s*/, '') : value;
+  const currentIndex = options.indexOf(cleanVal);
   const safeIndex = currentIndex === -1 ? 0 : currentIndex;
 
   const handleSliderChange = (e: any) => {
@@ -1580,8 +1581,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
           <h3 className={styles.stepperHeader}>🚚 Goods Track Status</h3>
           <div className={styles.verticalSteps}>
             {GOODS_TRACK_OPTIONS.map((option, idx) => {
-              const isActive = job.goods_track_status === option;
-              const currentIndex = GOODS_TRACK_OPTIONS.indexOf(job.goods_track_status || '01. Packing Not Scheduled');
+              const cleanCurrentStatus = job.goods_track_status ? String(job.goods_track_status).replace(/^\d+\.\s*/, '') : '';
+              const isActive = cleanCurrentStatus === option;
+              const currentIndex = GOODS_TRACK_OPTIONS.indexOf(cleanCurrentStatus || 'Packing Not Scheduled');
               const isCompleted = idx <= currentIndex;
               return (
                 <div 
@@ -1904,8 +1906,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                       ...customDocTypes.map(t => ({ value: t, label: t })),
                       { value: 'Add New...', label: 'Add New...' }
                     ]}
-                    style={{ width: selectedDocType === 'Add New...' ? '115px' : '105px', flexShrink: 0, flexGrow: 0 }}
-                    triggerStyle={{ padding: '0.45rem 0.75rem', fontSize: '0.8rem', borderRadius: '8px', minHeight: '32px' }}
+                    style={{ width: selectedDocType === 'Add New...' ? '110px' : '88px', flexShrink: 0, flexGrow: 0 }}
+                    triggerStyle={{ padding: '0.45rem 0.55rem', fontSize: '0.8rem', borderRadius: '8px', minHeight: '32px' }}
                     disabled={uploadingPod}
                   />
                   
@@ -1916,8 +1918,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                       value={newDocType} 
                       onChange={(e) => setNewDocType(e.target.value)}
                       style={{ 
-                        padding: '0.45rem 0.75rem', 
-                        width: '105px', 
+                        padding: '0.45rem 0.55rem', 
+                        width: '90px', 
                         borderRadius: '8px', 
                         border: '1px solid var(--border-color)', 
                         background: 'var(--bg-color)', 
@@ -1939,13 +1941,13 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                       color: '#fff', 
                       border: 'none',
                       borderRadius: '8px', 
-                      padding: '0.45rem 1rem', 
+                      padding: '0.45rem 0.55rem', 
                       fontSize: '0.8rem', 
                       fontWeight: 600,
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '0.4rem',
+                      gap: '0.25rem',
                       userSelect: 'none',
                       boxShadow: '0 3px 12px rgba(37, 99, 235, 0.3)',
                       transition: 'all 0.2s ease',

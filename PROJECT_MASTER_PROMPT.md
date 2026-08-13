@@ -79,7 +79,7 @@ src/
 | Table | Key Columns | Notes |
 |-------|------------|-------|
 | `profiles` | `id` (UUID, FK auth.users), `name`, `username`, `role`, `department`, `csc_access`, `followups_access`, `all_jobs_access`, `unbilled_access`, `branches` (TEXT[]), `is_approved`, `is_reviewed`, `phone`, `photo`, `csc_coordinator` | Role & access control |
-| `jobs` | `job_number`, `enquiry_number`, `branch`, `customer_name`, `company`, `goods_description`, `origin`, `destination`, `packing_date`, `delivery_date`, `goods_track_status`, `car_track_status`, `po_status`, `po_date`, `inv_request_date`, `bill_closure_date`, `sales_by`, `spoc_name`, `documents` (JSONB), `whatsapp_sent_stages` (JSONB), `insurance_required`, `quote_value` | Main job record |
+| `jobs` | `job_number`, `enq_number`, `branch`, `customer_name`, `company`, `goods_description`, `origin`, `destination`, `packing_date`, `delivery_date`, `goods_track_status`, `car_track_status`, `po_status`, `po_date`, `inv_request_date`, `bill_closure_date`, `sales_by`, `spoc_name`, `documents` (JSONB), `whatsapp_sent_stages` (JSONB), `insurance_required`, `quote_value` | Main job record |
 | `legacy_jobs` | `job_number`, `enquiry_number`, `branch`, `customer_name`, `packing_date`, `delivery_date`, `goods_track_status`, `po_status`, `po_date`, `inv_request_date`, `bill_closure_date`, `sales_by`, `spoc_name` | Old/archived jobs |
 | `job_logs` | `job_id`, `action`, `changed_by`, `changes` (JSONB), `created_at` | Audit log per job |
 | `job_communications` | `job_id`, `call_type` (Customer/Internal), `regarding`, `summary`, `follow_up_required`, `follow_up_date`, `created_by`, `created_at` | Comm log per job |
@@ -123,8 +123,8 @@ Users have **one primary role** + **two category roles**:
 ## 5. KEY FEATURES & LOGIC
 
 ### Job Detail Page (`/home/job/[id]/page.tsx` — ~2000 lines)
-- **Goods Tracking**: `GOODS_TRACK_OPTIONS` (26 stages: "01. Packing Not Scheduled" → "26. Billing Pending"), slider UI
-- **Car Tracking**: `CAR_TRACK_OPTIONS` (16 stages), interactive pointer-drag visual track
+- **Goods Tracking**: `GOODS_TRACK_OPTIONS` (26 text-only stages: "Packing Not Scheduled" → "Billing Pending"), slider UI
+- **Car Tracking**: `CAR_TRACK_OPTIONS` (16 text-only stages: "Car Pickup Not Scheduled" → "Job Completed"), interactive pointer-drag visual track
 - **Documents**: Upload to AWS S3 via `/api/documents`, stored as JSONB in `jobs.documents`
 - **Communications Log**: Call notes (Customer/Internal), follow-ups with dates
 - **WhatsApp Notifications**: Per-stage send buttons, logs in `whatsapp_logs`
@@ -170,7 +170,7 @@ Users have **one primary role** + **two category roles**:
 8. **Theme**: Dark mode default. Toggle stored in `localStorage` as key `theme: 'light'`. CSS vars in `globals.css`.
 9. **No direct DB writes from client pages**: All mutations use Supabase JS SDK with RLS. Admin ops (create-user, etc.) use `SUPABASE_SERVICE_ROLE_KEY` in API routes only.
 10. **Branch filtering**: All non-admin queries must filter by `profile.branches`. `['ALL']` = skip filter.
-11. **Supabase 1000-row limit**: Supabase REST API caps single responses at 1,000 rows max. Full dataset queries (All Jobs, Active Jobs, Closed Jobs, CSV/Sheets exports) loop using `.range(from, from + step - 1)` in 1,000-item steps to fetch all records.
+11. **Supabase 1000-row limit & Egress Optimization**: Supabase REST API caps single responses at 1,000 rows max. Full dataset queries (All Jobs, Active Jobs, Closed Jobs, CSV/Sheets exports) loop using `.range(from, from + step - 1)` in 1,000-item steps. To prevent exceeding Supabase Free Tier 5GB Egress, ALWAYS use explicit scalar column lists instead of `.select('*')` (omitting heavy `documents` and `whatsapp_sent_stages` JSONB columns on list pages), and use a 3-second debounce on Realtime table event handlers.
 
 ---
 

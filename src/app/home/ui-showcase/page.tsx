@@ -8,51 +8,51 @@ import MultiSelect from '../components/MultiSelect';
 import { showToast } from '@/components/GlobalDialogs';
 
 const GOODS_TRACK_OPTIONS = [
-  "01. Packing Not Scheduled",
-  "02. Packing Scheduled",
-  "03. Packing Material Dispatched",
-  "04. Team Dispatched",
-  "05. Packing Completed",
-  "06. Loaded into Vehicle",
-  "07. Vehicle Dispatched (Direct)",
-  "08. In Transit (Direct)",
-  "09. Reached WH (Part Load)",
-  "10. Vehicle Dispatched (Part Load)",
-  "11. Transshipment WH (Part Load)",
-  "12. Vehicle In Transit",
-  "13. Reached Dest WH (Part Load)",
-  "14. Vehicle Arranged (Escort)",
-  "15. Planed for Delivery",
-  "16. Out for Delivery",
-  "17. Unloading Completed",
-  "18. Unpacking Completed",
-  "19. Handyman Job Completed",
-  "20. Goods Delivered",
-  "21. VAR / Hard Copy POD Collected",
-  "22. Job Completed",
-  "23. Job # taken for Billing",
-  "24. Customer Cancelled",
-  "25. Job # to be Cancelled",
-  "26. Billing Pending"
+  "Packing Not Scheduled",
+  "Packing Scheduled",
+  "Packing Material Dispatched",
+  "Team Dispatched",
+  "Packing Completed",
+  "Loaded into Vehicle",
+  "Vehicle Dispatched (Direct)",
+  "In Transit (Direct)",
+  "Reached WH (Part Load)",
+  "Vehicle Dispatched (Part Load)",
+  "Transshipment WH (Part Load)",
+  "Vehicle In Transit",
+  "Reached Dest WH (Part Load)",
+  "Vehicle Arranged (Escort)",
+  "Planed for Delivery",
+  "Out for Delivery",
+  "Unloading Completed",
+  "Unpacking Completed",
+  "Handyman Job Completed",
+  "Goods Delivered",
+  "VAR / Hard Copy POD Collected",
+  "Job Completed",
+  "Job # taken for Billing",
+  "Customer Cancelled",
+  "Job # to be Cancelled",
+  "Billing Pending"
 ];
 
 const CAR_TRACK_OPTIONS = [
-  "01. Car Pickup Not Scheduled",
-  "02. Car Pickup Scheduled",
-  "03. Car Picked",
-  "04. Despatched in Market Vehicle (Exclusive)",
-  "05. Despatched in Mareket Vehicle (Part Load)",
-  "06. In Transit",
-  "07. At Destination WH",
-  "08. Planed for Delivery",
-  "09. Out for Delivery",
-  "10. Delivered",
-  "11. VAR Collected",
-  "12. Complaints",
-  "13. Damages",
-  "14. POD Sent to the branch",
-  "15. Damage Resolved",
-  "16. Job Completed"
+  "Car Pickup Not Scheduled",
+  "Car Pickup Scheduled",
+  "Car Picked",
+  "Despatched in Market Vehicle (Exclusive)",
+  "Despatched in Mareket Vehicle (Part Load)",
+  "In Transit",
+  "At Destination WH",
+  "Planed for Delivery",
+  "Out for Delivery",
+  "Delivered",
+  "VAR Collected",
+  "Complaints",
+  "Damages",
+  "POD Sent to the branch",
+  "Damage Resolved",
+  "Job Completed"
 ];
 
 // --- EXACT APP CAR STATUS SLIDER COMPONENT ---
@@ -1344,7 +1344,7 @@ export default function UIShowcasePage() {
                 🏢 BLR Branch
               </span>
               <span style={{ padding: '0.2rem 0.65rem', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', color: '#059669', border: '1px solid rgba(16, 185, 129, 0.25)', fontWeight: 700, fontSize: '0.78rem' }}>
-                22. Job Completed
+                Job Completed
               </span>
               <span style={{ padding: '0.2rem 0.65rem', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.25)', fontWeight: 700, fontSize: '0.78rem' }}>
                 ⚠️ High Priority

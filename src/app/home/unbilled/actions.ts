@@ -18,7 +18,7 @@ function getAdminClient() {
 export async function fetchLegacyJobsBypassingRLS(branches: string[] | null) {
   const supabase = getAdminClient();
 
-  let query = supabase.from('legacy_jobs').select('*');
+  let query = supabase.from('legacy_jobs').select('job_number, enquiry_number, branch, customer_name, company, job_date, packing_date, actual_delivery, goods_track_status, po_status, po_date, inv_request_date, bill_closure_date, sales_by, spoc_name, quote_value, invoice_number, invoice_date, created_at, updated_at');
 
   if (branches) {
     if (branches.includes('ALL')) {
