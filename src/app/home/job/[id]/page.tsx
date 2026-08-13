@@ -1826,24 +1826,24 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                   const tagColor = regardingColors[c.regarding] || '#6366f1';
                   return (
                     <div key={c.id} className={`${styles.logItem} ${styles.logComm}`} style={{ padding: '0.9rem 1rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.4rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                          <span style={{
-                            padding: '0.15rem 0.55rem', borderRadius: '20px', fontSize: '0.68rem', fontWeight: 700,
-                            background: c.call_type === 'Customer' ? 'rgba(245,158,11,0.12)' : 'rgba(59,130,246,0.12)',
-                            color: c.call_type === 'Customer' ? '#d97706' : '#2563eb',
-                            border: `1px solid ${c.call_type === 'Customer' ? 'rgba(245,158,11,0.25)' : 'rgba(59,130,246,0.25)'}`
-                          }}>{c.call_type === 'Customer' ? 'Customer' : 'Internal'}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem', gap: '0.5rem' }}>
+                        <span style={{
+                          padding: '0.15rem 0.55rem', borderRadius: '20px', fontSize: '0.68rem', fontWeight: 700,
+                          background: c.call_type === 'Customer' ? 'rgba(245,158,11,0.12)' : 'rgba(59,130,246,0.12)',
+                          color: c.call_type === 'Customer' ? '#d97706' : '#2563eb',
+                          border: `1px solid ${c.call_type === 'Customer' ? 'rgba(245,158,11,0.25)' : 'rgba(59,130,246,0.25)'}`,
+                          flexShrink: 0
+                        }}>{c.call_type === 'Customer' ? 'Customer' : 'Internal'}</span>
 
-                          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                            {formatCommDateTime(c.created_at)}
-                          </span>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'center', flex: 1, whiteSpace: 'nowrap' }}>
+                          {formatCommDateTime(c.created_at)}
+                        </span>
 
-                          <span style={{
-                            padding: '0.15rem 0.55rem', borderRadius: '20px', fontSize: '0.68rem', fontWeight: 700,
-                            background: `${tagColor}14`, color: tagColor, border: `1px solid ${tagColor}30`
-                          }}>{c.regarding}</span>
-                        </div>
+                        <span style={{
+                          padding: '0.15rem 0.55rem', borderRadius: '20px', fontSize: '0.68rem', fontWeight: 700,
+                          background: `${tagColor}14`, color: tagColor, border: `1px solid ${tagColor}30`,
+                          flexShrink: 0
+                        }}>{c.regarding}</span>
                       </div>
 
                       <div className={styles.logMessage}>{c.summary}</div>
