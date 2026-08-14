@@ -20,7 +20,6 @@ import { usePermissions } from '@/components/PermissionsContext';
 
 // Master Goods Track Options for Branch Users
 const BRANCH_GOODS_STATUS_OPTIONS = [
-  "Execution Pending",
   "Damages",
   "Storage",
   "Job Completed",
