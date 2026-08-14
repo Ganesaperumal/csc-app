@@ -80,7 +80,7 @@ export default function CustomSelect({
   }, []);
 
   const selectedOption = options.find(opt => opt.value === value);
-  const isFilled = Boolean(selectedOption);
+  const isFilled = Boolean(selectedOption || (value && value.trim() !== ''));
 
   return (
     <div 
@@ -135,7 +135,7 @@ export default function CustomSelect({
           opacity: isFilled ? 1 : 0.4,
           fontWeight: isFilled ? (textColor ? 700 : 600) : 400
         }}>
-          {selectedOption ? selectedOption.label : placeholder}
+          {selectedOption ? selectedOption.label : (value || placeholder)}
         </span>
         <svg 
           xmlns="http://www.w3.org/2000/svg" 

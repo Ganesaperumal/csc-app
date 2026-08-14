@@ -40,17 +40,10 @@ const PO_STATUS_OPTIONS = [
 ];
 
 const getDisplayGoodsStatus = (status: string | null) => {
-  if (!status) return status;
-  const clean = status.replace(/^\d+\.\s*/, '');
-  if (BRANCH_GOODS_STATUS_OPTIONS.includes(clean) && clean !== "Execution Pending") return clean;
-  const match = status.match(/^(\d{2})\./);
-  if (match) {
-    const num = parseInt(match[1], 10);
-    if (num >= 1 && num <= 21) {
-      return 'Execution Pending';
-    }
-  }
-  return clean;
+  if (!status || status.trim() === '') return '';
+  const clean = status.replace(/^\d+\.\s*/, '').trim();
+  if (BRANCH_GOODS_STATUS_OPTIONS.includes(clean)) return clean;
+  return 'Execution Pending';
 };
 
 const ALL_UNBILLED_COLUMNS = [
@@ -496,17 +489,19 @@ export default function UnbilledManagementPage() {
     setIsViewer(isViewerUser);
     setCanExportUnbilled(true);
     setCanSeeReminders(true);
-    // Check SPOC sync permission
-    const spocAccess = userProfile.spoc_access || 'None';
-    if (spocAccess === 'Edit' || userProfile.is_super_admin === true) {
+    // Check SPOC sync permission — restricted to gp@transworldintl.com
+    const isGpUser = (currentUser?.email || '').toLowerCase() === 'gp@transworldintl.com';
+    if (isGpUser) {
       setCanSyncSpoc(true);
       // Load unmapped count in background
       fetch('/api/admin/sync-spocs', { method: 'GET' })
         .then(r => r.json())
         .then(d => { if (d.unmappedCompanies) setUnmappedCompaniesCount(d.unmappedCompanies.length); })
         .catch(() => {});
+    } else {
+      setCanSyncSpoc(false);
     }
-  }, [userProfile]);
+  }, [userProfile, currentUser]);
 
   // Handle ESC key to close drawer
   useEffect(() => {
@@ -880,15 +875,15 @@ export default function UnbilledManagementPage() {
 
   // Helper for status colors
   const getGoodsStatusColor = (status: string | null) => {
-    if (!status) return undefined;
+    if (!status || status.trim() === '') return undefined;
     const s = getDisplayGoodsStatus(status) || '';
-    if (s.includes('Execution Pending')) return '#64748b';
-    if (s.includes('Damages')) return '#dc2626';
-    if (s.includes('Storage')) return '#8b5cf6';
-    if (s.includes('Job Completed')) return '#3b82f6';
-    if (s.includes('Billing') || s.includes('taken for Billing')) return '#10b981';
-    if (s.includes('Cancelled') || s.includes('Free Job')) return '#991b1b';
-    return undefined;
+    if (s === 'Execution Pending') return '#64748b';
+    if (s === 'Damages') return '#dc2626';
+    if (s === 'Storage') return '#8b5cf6';
+    if (s === 'Job Completed') return '#3b82f6';
+    if (s === 'Billing Pending' || s === 'Month End Billing' || s === 'Job # taken for Billing') return '#10b981';
+    if (s === 'Job # to be Cancelled' || s === 'Free Job') return '#991b1b';
+    return '#64748b';
   };
 
   // Helper for computing category metrics (Job Count & Total Value)
@@ -1039,6 +1034,7 @@ export default function UnbilledManagementPage() {
               options={[
                 { value: 'All', label: 'All Status' },
                 { value: 'No Status', label: 'No Status' },
+                { value: 'Execution Pending', label: 'Execution Pending' },
                 ...BRANCH_GOODS_STATUS_OPTIONS.map(s => ({ value: s, label: s }))
               ]}
               placeholder="All Status"
@@ -1265,12 +1261,13 @@ export default function UnbilledManagementPage() {
           )}
           </div>
 
-          {/* Sync SPOCs Button */}
+          {/* Sync SPOCs Button — restricted to gp@transworldintl.com & disabled */}
           {canSyncSpoc && (
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
-              <button onClick={handleSyncSpoc} disabled={syncingSpoc}
-                style={{ padding: '0.45rem 1rem', borderRadius: '10px', border: 'none', background: syncingSpoc ? '#94a3b8' : 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', fontWeight: 700, fontSize: '0.78rem', cursor: syncingSpoc ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                {syncingSpoc ? 'Syncing…' : '⚡ Sync SPOCs'}
+              <button disabled={true}
+                title="SPOC Sync is currently disabled"
+                style={{ padding: '0.45rem 1rem', borderRadius: '10px', border: 'none', background: '#94a3b8', color: '#fff', fontWeight: 700, fontSize: '0.78rem', cursor: 'not-allowed', opacity: 0.6, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                ⚡ Sync SPOCs
               </button>
             </div>
           )}

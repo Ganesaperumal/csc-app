@@ -125,7 +125,7 @@ Users have **one primary role** + **two category roles**:
 ## 5. KEY FEATURES & LOGIC
 
 ### Job Detail Page (`/home/job/[id]/page.tsx` — ~2000 lines)
-- **Goods Tracking**: `GOODS_TRACK_OPTIONS` (26 text-only stages: "Packing Not Scheduled" → "Billing Pending"), slider UI
+- **Goods Tracking**: `GOODS_TRACK_OPTIONS` (27 text-only stages: "Packing Not Scheduled" → "Free Job"), slider UI
 - **Car Tracking**: `CAR_TRACK_OPTIONS` (16 text-only stages: "Car Pickup Not Scheduled" → "Job Completed"), interactive pointer-drag visual track
 - **Documents**: Upload to AWS S3 via `/api/documents`, stored as JSONB in `jobs.documents`
 - **Communications Log**: Call notes (Customer/Internal), follow-ups with dates

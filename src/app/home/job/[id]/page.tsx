@@ -95,9 +95,10 @@ const GOODS_TRACK_OPTIONS = [
   "Storage",
   "Job Completed",
   "Job # taken for Billing",
-  "Customer Cancelled",
   "Job # to be Cancelled",
-  "Billing Pending"
+  "Billing Pending",
+  "Month End Billing",
+  "Free Job"
 ];
 
 const CAR_TRACK_OPTIONS = [
@@ -415,9 +416,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const isViewOnly = isReadOnly;
   const isViewer = isReadOnly;
   const isSPOC = false;
-  const canSyncSpoc = profileRoles
-    ? (profileRoles.spoc_access === 'Edit' || profileRoles.is_super_admin === true)
-    : false;
+  const [userEmail, setUserEmail] = useState<string>('');
+  const canSyncSpoc = userEmail.toLowerCase() === 'gp@transworldintl.com';
   const [supervisors, setSupervisors] = useState<string[]>([]);
   const [viewingAgents, setViewingAgents] = useState<string[]>([]);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
@@ -574,12 +574,14 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
       let user = session?.user;
       if (!user) {
         const { data: userData } = await supabase.auth.getUser();
-        user = userData.user || undefined;
+        user = userData?.user || undefined;
       }
       if (!user) {
         window.location.href = '/login';
         return;
       }
+
+      setUserEmail(user.email || '');
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -1200,10 +1202,10 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'space-between' }}>
                                     <label style={{ margin: 0 }}>🎯 SPOC</label>
                                     {canSyncSpoc && (
-                                      <button type="button" onClick={handleAutoFillSpoc} disabled={autoFillSpocLoading}
-                                        title="Auto-fill SPOC from SPOC Master rules"
-                                        style={{ padding: '0.15rem 0.5rem', borderRadius: '6px', border: 'none', background: autoFillSpocLoading ? '#94a3b8' : 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', fontWeight: 700, fontSize: '0.65rem', cursor: autoFillSpocLoading ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
-                                        {autoFillSpocLoading ? '…' : '⚡ Auto-Fill'}
+                                      <button type="button" disabled={true}
+                                        title="SPOC Auto-Fill is currently disabled"
+                                        style={{ padding: '0.15rem 0.5rem', borderRadius: '6px', border: 'none', background: '#94a3b8', color: '#fff', fontWeight: 700, fontSize: '0.65rem', cursor: 'not-allowed', opacity: 0.6, whiteSpace: 'nowrap' }}>
+                                        ⚡ Auto-Fill
                                       </button>
                                     )}
                                   </div>

@@ -29,6 +29,7 @@ const emptyForm = (): Partial<SpocRule> => ({
 
 export default function SpocMasterPage() {
   const router = useRouter();
+  const [userEmail, setUserEmail] = useState('');
   const [rules, setRules] = useState<SpocRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [canEdit, setCanEdit] = useState(false);
@@ -51,6 +52,7 @@ export default function SpocMasterPage() {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
+      setUserEmail(user.email || '');
 
       const { data: profile } = await supabase.from('profiles').select('spoc_access, is_super_admin').eq('id', user.id).single();
       if (!profile) { router.push('/home'); return; }
@@ -187,9 +189,11 @@ export default function SpocMasterPage() {
               <button onClick={openAdd} style={{ padding: '0.6rem 1.2rem', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
                 + Add Rule
               </button>
-              <button onClick={handleSync} disabled={syncing} style={{ padding: '0.6rem 1.2rem', borderRadius: '10px', border: 'none', background: syncing ? '#94a3b8' : 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: syncing ? 'not-allowed' : 'pointer' }}>
-                {syncing ? 'Syncing…' : '⚡ Sync SPOCs'}
-              </button>
+              {userEmail.toLowerCase() === 'gp@transworldintl.com' && (
+                <button disabled={true} title="SPOC Sync is currently disabled" style={{ padding: '0.6rem 1.2rem', borderRadius: '10px', border: 'none', background: '#94a3b8', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'not-allowed', opacity: 0.6 }}>
+                  ⚡ Sync SPOCs
+                </button>
+              )}
             </>
           )}
         </div>

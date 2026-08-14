@@ -31,7 +31,6 @@ const GOODS_TRACK_OPTIONS = [
   "VAR / Hard Copy POD Collected",
   "Job Completed",
   "Job # taken for Billing",
-  "Customer Cancelled",
   "Job # to be Cancelled",
   "Billing Pending"
 ];
