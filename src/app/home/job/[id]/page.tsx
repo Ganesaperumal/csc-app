@@ -685,18 +685,70 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
   const fetchJobDetails = async () => {
     try {
-      const { data, error } = await supabase
+      if (!decodedId) return;
+
+      // 1. Try querying jobs table
+      let { data, error } = await supabase
         .from('jobs')
         .select('*')
         .eq('job_number', decodedId)
-        .single();
+        .maybeSingle();
+
+      // 2. If not found by job_number, fallback to legacy_jobs table
+      if (!data) {
+        const { data: legacyData, error: legacyErr } = await supabase
+          .from('legacy_jobs')
+          .select('*')
+          .eq('job_number', decodedId)
+          .maybeSingle();
+
+        if (legacyData) {
+          data = { ...legacyData, source_table: 'legacy_jobs' };
+          error = null;
+        } else if (legacyErr) {
+          console.warn('legacy_jobs query warning:', legacyErr);
+        }
+      }
+
+      // 3. If still not found, check by enquiry_number as fallback
+      if (!data) {
+        const { data: enqData } = await supabase
+          .from('jobs')
+          .select('*')
+          .eq('enq_number', decodedId)
+          .maybeSingle();
+
+        if (enqData) {
+          data = enqData;
+          error = null;
+        } else {
+          const { data: legacyEnqData } = await supabase
+            .from('legacy_jobs')
+            .select('*')
+            .eq('enquiry_number', decodedId)
+            .maybeSingle();
+          if (legacyEnqData) {
+            data = { ...legacyEnqData, source_table: 'legacy_jobs' };
+            error = null;
+          }
+        }
+      }
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching job details:', error);
+        return;
+      }
       
+      if (!data) {
+        setJob(null);
+        return;
+      }
+
       // Auto-toggle CAR (INCLUDED?) if goods_type contains "vehicle"
       if (!isViewer && data?.goods_type?.toLowerCase().includes('vehicle') && data.car_included !== true) {
         data.car_included = true;
-        supabase.from('jobs').update({ car_included: true }).eq('job_number', decodedId).then(() => {});
+        const targetTable = data.source_table === 'legacy_jobs' ? 'legacy_jobs' : 'jobs';
+        supabase.from(targetTable).update({ car_included: true }).eq('job_number', decodedId).then(() => {});
       }
 
       if (data.documents) {
@@ -711,7 +763,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
       setJob(data);
     } catch (err: any) {
-      console.error(err);
+      console.error('Error in fetchJobDetails:', err);
     } finally {
       setLoading(false);
     }
@@ -766,8 +818,9 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
 
     try {
       setSaving(true);
+      const targetTable = jobRef.current?.source_table === 'legacy_jobs' ? 'legacy_jobs' : 'jobs';
       const { error } = await supabase
-        .from('jobs')
+        .from(targetTable)
         .update(toSave)
         .eq('job_number', decodedId);
 
