@@ -712,29 +712,76 @@ export default function AdminPage() {
                 <button 
                   disabled={loadingJobs || loadingLogs || loadingBulkUpdate || loadingForceUpdate}
                   style={{ 
-                    padding: '0.6rem 1.2rem', 
+                    padding: '0.6rem 1.25rem', 
                     borderRadius: '8px', 
                     background: (loadingJobs || loadingLogs || loadingBulkUpdate || loadingForceUpdate)
-                      ? 'var(--border-color)' 
+                      ? (csvUploadMode === 'force_overwrite'
+                          ? 'linear-gradient(135deg, #dc2626, #991b1b)'
+                          : 'linear-gradient(135deg, #d97706, #b45309)')
                       : (csvUploadMode === 'force_overwrite'
                           ? 'linear-gradient(135deg, #ef4444, #b91c1c)'
                           : csvUploadMode === 'fill_empty'
                           ? 'linear-gradient(135deg, #f59e0b, #d97706)'
                           : 'linear-gradient(135deg, #10b981, #059669)'), 
-                    color: 'white', 
+                    color: '#ffffff', 
                     border: 'none', 
                     pointerEvents: 'none', 
-                    fontWeight: 600, 
-                    boxShadow: '0 4px 12px rgba(16,185,129,0.3)',
+                    fontWeight: 700, 
+                    fontSize: '0.875rem',
+                    boxShadow: csvUploadMode === 'force_overwrite'
+                      ? '0 4px 12px rgba(239,68,68,0.35)'
+                      : '0 4px 12px rgba(245,158,11,0.35)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.4rem'
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    whiteSpace: 'nowrap',
+                    minWidth: '220px',
+                    transition: 'all 0.2s ease'
                   }}
                 >
-                  {loadingBulkUpdate ? (bulkUpdateProgress ? `Updating ${bulkUpdateProgress.current}/${bulkUpdateProgress.total}...` : 'Updating...') :
-                   loadingForceUpdate ? (forceUpdateProgress ? `Overwriting ${forceUpdateProgress.current}/${forceUpdateProgress.total}...` : 'Overwriting...') :
-                   loadingJobs || loadingLogs ? 'Uploading...' :
-                   '📤 Upload Jobs CSV'}
+                  {loadingBulkUpdate ? (
+                    bulkUpdateProgress ? (
+                      <>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+                          <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+                        </svg>
+                        <span>Uploading {bulkUpdateProgress.current} / {bulkUpdateProgress.total}</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+                          <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+                        </svg>
+                        <span>Uploading...</span>
+                      </>
+                    )
+                  ) : loadingForceUpdate ? (
+                    forceUpdateProgress ? (
+                      <>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+                          <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+                        </svg>
+                        <span>Overwriting {forceUpdateProgress.current} / {forceUpdateProgress.total}</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+                          <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+                        </svg>
+                        <span>Overwriting...</span>
+                      </>
+                    )
+                  ) : loadingJobs || loadingLogs ? (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+                        <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+                      </svg>
+                      <span>Uploading...</span>
+                    </>
+                  ) : (
+                    '📤 Upload Jobs CSV'
+                  )}
                 </button>
               </div>
             </div>
@@ -760,8 +807,8 @@ export default function AdminPage() {
               style={{
                 padding: '0.6rem 1.4rem',
                 borderRadius: '8px',
-                background: loadingJobQuote ? 'var(--border-color)' : 'linear-gradient(135deg, #10b981, #059669)',
-                color: 'white',
+                background: loadingJobQuote ? 'linear-gradient(135deg, #059669, #047857)' : 'linear-gradient(135deg, #10b981, #059669)',
+                color: '#ffffff',
                 border: 'none',
                 cursor: loadingJobQuote ? 'not-allowed' : 'pointer',
                 fontWeight: 700,
@@ -773,7 +820,14 @@ export default function AdminPage() {
                 flexShrink: 0
               }}
             >
-              {loadingJobQuote ? 'Updating...' : '⚡ Update'}
+              {loadingJobQuote ? (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+                  </svg>
+                  <span>Updating...</span>
+                </>
+              ) : '⚡ Update'}
             </button>
           </div>
 
@@ -903,8 +957,8 @@ export default function AdminPage() {
               style={{
                 padding: '0.6rem 1.4rem',
                 borderRadius: '8px',
-                background: loadingDeleteLegacy ? 'var(--border-color)' : 'linear-gradient(135deg, #ef4444, #dc2626)',
-                color: 'white',
+                background: loadingDeleteLegacy ? 'linear-gradient(135deg, #b91c1c, #991b1b)' : 'linear-gradient(135deg, #ef4444, #dc2626)',
+                color: '#ffffff',
                 border: 'none',
                 cursor: loadingDeleteLegacy ? 'not-allowed' : 'pointer',
                 fontWeight: 700,
@@ -916,7 +970,14 @@ export default function AdminPage() {
                 flexShrink: 0
               }}
             >
-              {loadingDeleteLegacy ? 'Deleting...' : '🗑️ Delete Bulk Legacy Jobs'}
+              {loadingDeleteLegacy ? (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+                  </svg>
+                  <span>Deleting...</span>
+                </>
+              ) : '🗑️ Delete Bulk Legacy Jobs'}
             </button>
           </div>
 

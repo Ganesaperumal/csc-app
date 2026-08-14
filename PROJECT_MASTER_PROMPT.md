@@ -78,8 +78,9 @@ src/
 ### Core Tables
 | Table | Key Columns | Notes |
 |-------|------------|-------|
-| `profiles` | `id` (UUID, FK auth.users), `name`, `username`, `role`, `department`, `csc_access`, `followups_access`, `all_jobs_access`, `unbilled_access`, `branches` (TEXT[]), `is_approved`, `is_reviewed`, `phone`, `photo`, `csc_coordinator` | Role & access control |
+| `profiles` | `id` (UUID, FK auth.users), `name`, `username`, `role`, `department`, `csc_access`, `followups_access`, `all_jobs_access`, `unbilled_access`, `spoc_access`, `branches` (TEXT[]), `is_approved`, `is_reviewed`, `phone`, `photo`, `csc_coordinator` | Role & access control |
 | `jobs` | `job_number`, `enq_number`, `branch`, `customer_name`, `company`, `goods_description`, `origin`, `destination`, `packing_date`, `delivery_date`, `goods_track_status`, `car_track_status`, `po_status`, `po_date`, `inv_request_date`, `bill_closure_date`, `sales_by`, `spoc_name`, `documents` (JSONB), `whatsapp_sent_stages` (JSONB), `insurance_required`, `quote_value` | Main job record |
+| `spoc` | `id`, `company_name`, `aliases` (TEXT[]), `branch`, `sales_spoc`, `unbilled_spoc`, `is_private_rule` (BOOL) | Corporate & PRIVATE branch SPOC mapping master |
 | `legacy_jobs` | `job_number`, `enquiry_number`, `branch`, `customer_name`, `packing_date`, `delivery_date`, `goods_track_status`, `po_status`, `po_date`, `inv_request_date`, `bill_closure_date`, `sales_by`, `spoc_name` | Old/archived jobs |
 | `job_logs` | `job_id`, `action`, `changed_by`, `changes` (JSONB), `created_at` | Audit log per job |
 | `job_communications` | `job_id`, `call_type` (Customer/Internal), `regarding`, `summary`, `follow_up_required`, `follow_up_date`, `created_by`, `created_at` | Comm log per job |
@@ -103,6 +104,7 @@ Users have **one primary role** + **two category roles**:
 
 - **csc_role === 'Edit'** → Strictly required for edit access on CSC Job Details (`/home/job/[id]`). `unbilled_role`, `followups_role`, and `all_jobs_role` NEVER grant edit rights on CSC Job Details.
 - **unbilled_role === 'Edit'** → Strictly required for edit access on Unbilled Jobs (`/home/unbilled`). Does NOT grant edit access to CSC Job Details.
+- **spoc_access === 'Edit'** → Access to `/home/spoc` CRUD rules and ability to run Global SPOC Sync and per-job auto-fill.
 - **Admin** (csc_role) → Read-only on job pages (same as Viewer). Full access to Admin panel.
 - **Viewer** (csc_role) → Read-only everywhere. Can filter/search lists. Can see all fields whether empty or not. Cannot edit fields, add logs, send WhatsApp, trigger Sync ERP, or use Group Chat.
 - `branches` (TEXT[]) → `['ALL']` = super admin, else branch-filtered queries
@@ -152,9 +154,11 @@ Users have **one primary role** + **two category roles**:
 ### Command Palette
 - Keyboard: `Cmd+K` / `Ctrl+K` → Global job search across all jobs
 
-### Reports (`/home/reports/`)
-- Built with **Recharts**
-- Analytics: jobs by branch, status, monthly trends, etc.
+### SPOC Master Auto-Fill (`/home/spoc` & `/api/admin/sync-spocs`)
+- Maps companies to Sales SPOC (`sales_by`) and Unbilled SPOC (`spoc_name`).
+- Supports corporate rules (exact + alias fuzzy matching) and PRIVATE customer branch rules (`company_name = 'PRIVATE'` + `branch`).
+- Sync auto-fills only empty SPOC fields in `jobs`; manual entries are strictly preserved (field-level override protection).
+- Unbilled page displays Unmapped Companies KPI count and manual Sync button for users with `spoc_access === 'Edit'`.
 
 ---
 
@@ -184,6 +188,7 @@ Users have **one primary role** + **two category roles**:
 /home/closed-jobs     → Closed jobs (csc_role ≠ None)
 /home/follow-ups      → Follow-ups (csc_role ≠ None)
 /home/all-jobs        → Full-width jobs table (csc_role ≠ None)
+/home/spoc            → SPOC Master CRUD & Auto-Fill Sync (spoc_access ≠ None)
 /home/unbilled        → Unbilled jobs (unbilled_role ≠ None)
 /home/reports         → Reports (csc_role ≠ None, unbilled_role ≠ None, or followups_role ≠ None) — includes Unbilled, Active Jobs, Agent Oversight, and Activity Log tabs
 /home/legacy-jobs     → Legacy jobs (unbilled_role ≠ None)
@@ -191,7 +196,7 @@ Users have **one primary role** + **two category roles**:
 /home/admin           → Admin: Bulk Data Management & Missing Data Editor (Missing Quote Value & Missing Unbilled SPOC)
 /home/data            → Redirects to /home/admin
 /home/permissions     → Redirects to /home/users (replaced by direct section permission pills in User Details drawer)
-/home/users           → Users directory & User Details Permission Editor (CSC Jobs, Follow-Ups, All Jobs, Unbilled, Assigned Unbilled Branches)
+/home/users           → Users directory & User Details Permission Editor (CSC Jobs, Follow-Ups, All Jobs, Unbilled, SPOC Master, Assigned Unbilled Branches)
 /home/activity-log    → Redirects to /home/reports?tab=activity_log (governed by followups_role: View for Self/All, None for None)
 /home/ui-showcase      → Design System & Component Showcase page (Dropdowns, Buttons, Sliders, Calendars, Badges & Inputs — restricted to Super Admin only)
 /track/[...id]        → Public tracking page (no auth required)

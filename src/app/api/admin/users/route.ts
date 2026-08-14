@@ -51,6 +51,7 @@ export async function PUT(request: Request) {
       followups_access, followups_role, tracking_role,
       all_jobs_access, all_jobs_role, 
       unbilled_access, unbilled_role, 
+      spoc_access,
       branches, is_approved, photo, password 
     } = body;
 
@@ -97,6 +98,10 @@ export async function PUT(request: Request) {
     if (unbilledVal !== undefined) {
       updates.unbilled_access = unbilledVal;
       updates.unbilled_role = unbilledVal;
+    }
+
+    if (spoc_access !== undefined) {
+      updates.spoc_access = spoc_access;
     }
 
     if (branches !== undefined) updates.branches = branches;

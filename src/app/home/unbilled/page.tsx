@@ -445,6 +445,9 @@ export default function UnbilledManagementPage() {
   // Feature-level permission flags
   const [canExportUnbilled, setCanExportUnbilled] = useState(false);
   const [canSeeReminders, setCanSeeReminders] = useState(false);
+  const [canSyncSpoc, setCanSyncSpoc] = useState(false);
+  const [syncingSpoc, setSyncingSpoc] = useState(false);
+  const [unmappedCompaniesCount, setUnmappedCompaniesCount] = useState<number | null>(null);
 
   // Show job counts only after 1.5-second value animation completes
   const [showJobCounts, setShowJobCounts] = useState(false);
@@ -494,6 +497,16 @@ export default function UnbilledManagementPage() {
     setIsViewer(isViewerUser);
     setCanExportUnbilled(true);
     setCanSeeReminders(true);
+    // Check SPOC sync permission
+    const spocAccess = userProfile.spoc_access || 'None';
+    if (spocAccess === 'Edit' || userProfile.is_super_admin === true) {
+      setCanSyncSpoc(true);
+      // Load unmapped count in background
+      fetch('/api/admin/sync-spocs', { method: 'GET' })
+        .then(r => r.json())
+        .then(d => { if (d.unmappedCompanies) setUnmappedCompaniesCount(d.unmappedCompanies.length); })
+        .catch(() => {});
+    }
   }, [userProfile]);
 
   // Handle ESC key to close drawer
@@ -606,6 +619,24 @@ export default function UnbilledManagementPage() {
     } catch (err) {
       console.error('Error fetching reminders:', err);
     }
+  };
+
+  const handleSyncSpoc = async () => {
+    const ok = await customConfirm(
+      `This will auto-fill empty SPOC fields in jobs where a master rule exists.\n\nManually entered SPOC values will NOT be overwritten.\n\nProceed?`
+    );
+    if (!ok) return;
+    setSyncingSpoc(true);
+    try {
+      const res = await fetch('/api/admin/sync-spocs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      showToast(`✅ ${data.message}`, 'success');
+      setUnmappedCompaniesCount(data.unmappedCompanies?.length ?? null);
+    } catch (err: any) {
+      showToast('Sync failed: ' + err.message, 'error');
+    }
+    setSyncingSpoc(false);
   };
 
   const handleUpdateJobField = async (job: any, field: string, value: any) => {
@@ -1224,7 +1255,26 @@ export default function UnbilledManagementPage() {
               <div className={styles.kpiCount} style={{ color: '#64748b', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{executionPendingKpi.count} Jobs</div>
             </div>
           )}
+          {/* Unmapped Companies KPI Card — shown only for SPOC Edit users */}
+          {canSyncSpoc && unmappedCompaniesCount !== null && unmappedCompaniesCount > 0 && (
+            <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.02))', borderColor: 'rgba(239,68,68,0.3)', cursor: 'pointer' }}
+              onClick={() => window.open('/home/spoc', '_self')}>
+              <div className={styles.kpiLabel} style={{ color: '#ef4444' }}>Unmapped</div>
+              <div className={styles.kpiValue} style={{ fontSize: '1.5rem', color: '#ef4444' }}>{unmappedCompaniesCount}</div>
+              <div className={styles.kpiCount} style={{ color: '#ef4444', opacity: 1 }}>Companies →</div>
+            </div>
+          )}
           </div>
+
+          {/* Sync SPOCs Button */}
+          {canSyncSpoc && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+              <button onClick={handleSyncSpoc} disabled={syncingSpoc}
+                style={{ padding: '0.45rem 1rem', borderRadius: '10px', border: 'none', background: syncingSpoc ? '#94a3b8' : 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', fontWeight: 700, fontSize: '0.78rem', cursor: syncingSpoc ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                {syncingSpoc ? 'Syncing…' : '⚡ Sync SPOCs'}
+              </button>
+            </div>
+          )}
 
           <table className={styles.table}>
             <thead>
