@@ -16,10 +16,12 @@ create table if not exists public.spoc (
 -- Enable RLS
 alter table public.spoc enable row level security;
 
--- Authenticated users can read
-create policy "spoc_read_authenticated" on public.spoc
-  for select using (auth.role() = 'authenticated');
+-- Drop existing policies if any
+drop policy if exists "spoc_read_authenticated" on public.spoc;
+drop policy if exists "spoc_write_service" on public.spoc;
+drop policy if exists "spoc_all_authenticated" on public.spoc;
 
--- Service role can do everything (used by sync-spocs API route)
-create policy "spoc_write_service" on public.spoc
-  for all using (true) with check (true);
+-- Allow authenticated users to perform all operations
+create policy "spoc_all_authenticated" on public.spoc
+  for all using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');

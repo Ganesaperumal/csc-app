@@ -434,12 +434,12 @@ export default function UnbilledManagementPage() {
   const [followupsMap, setFollowupsMap] = useState<Record<string, string>>({});
   const [showRemindersPopup, setShowRemindersPopup] = useState(false);
 
+  // Financial Year Reports Modal State
+  const [showReportsPopup, setShowReportsPopup] = useState(false);
+
   // Feature-level permission flags
   const [canExportUnbilled, setCanExportUnbilled] = useState(false);
   const [canSeeReminders, setCanSeeReminders] = useState(false);
-  const [canSyncSpoc, setCanSyncSpoc] = useState(false);
-  const [syncingSpoc, setSyncingSpoc] = useState(false);
-  const [unmappedCompaniesCount, setUnmappedCompaniesCount] = useState<number | null>(null);
 
   // Show job counts only after 1.5-second value animation completes
   const [showJobCounts, setShowJobCounts] = useState(false);
@@ -489,30 +489,24 @@ export default function UnbilledManagementPage() {
     setIsViewer(isViewerUser);
     setCanExportUnbilled(true);
     setCanSeeReminders(true);
-    // Check SPOC sync permission — restricted to gp@transworldintl.com
-    const isGpUser = (currentUser?.email || '').toLowerCase() === 'gp@transworldintl.com';
-    if (isGpUser) {
-      setCanSyncSpoc(true);
-      // Load unmapped count in background
-      fetch('/api/admin/sync-spocs', { method: 'GET' })
-        .then(r => r.json())
-        .then(d => { if (d.unmappedCompanies) setUnmappedCompaniesCount(d.unmappedCompanies.length); })
-        .catch(() => {});
-    } else {
-      setCanSyncSpoc(false);
-    }
   }, [userProfile, currentUser]);
 
-  // Handle ESC key to close drawer
+  // Handle ESC key to close drawer, reminders popup, or reports popup
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && activeDrawerJob) {
-        setActiveDrawerJob(null);
+      if (e.key === 'Escape') {
+        if (showReportsPopup) {
+          setShowReportsPopup(false);
+        } else if (showRemindersPopup) {
+          setShowRemindersPopup(false);
+        } else if (activeDrawerJob) {
+          setActiveDrawerJob(null);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeDrawerJob]);
+  }, [activeDrawerJob, showRemindersPopup, showReportsPopup]);
 
   const fetchInitialData = async () => {
     setLoading(true);
@@ -613,24 +607,6 @@ export default function UnbilledManagementPage() {
     } catch (err) {
       console.error('Error fetching reminders:', err);
     }
-  };
-
-  const handleSyncSpoc = async () => {
-    const ok = await customConfirm(
-      `This will auto-fill empty SPOC fields in jobs where a master rule exists.\n\nManually entered SPOC values will NOT be overwritten.\n\nProceed?`
-    );
-    if (!ok) return;
-    setSyncingSpoc(true);
-    try {
-      const res = await fetch('/api/admin/sync-spocs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      showToast(`✅ ${data.message}`, 'success');
-      setUnmappedCompaniesCount(data.unmappedCompanies?.length ?? null);
-    } catch (err: any) {
-      showToast('Sync failed: ' + err.message, 'error');
-    }
-    setSyncingSpoc(false);
   };
 
   const handleUpdateJobField = async (job: any, field: string, value: any) => {
@@ -938,6 +914,128 @@ export default function UnbilledManagementPage() {
     return ['', 'Storage', 'Job Completed', 'Job # taken for Billing', 'Billing Pending', 'Month End Billing'].includes(s);
   });
 
+  // --- Unbilled Financial Year Reports Matrix Logic ---
+  const buildUnbilledMatrixData = (jobList: any[]) => {
+    const isGoodsEmpty = (j: any) => !j.goods_track_status || j.goods_track_status.trim() === '';
+    const getDisplayStatus = (status: string | null) => {
+      if (!status) return '';
+      return String(status).replace(/^\d+\.\s*/, '').trim();
+    };
+
+    const categories = [
+      { id: 'Billable', line1: 'Billable', line2: '', color: '#047857' },
+      { id: 'No Details', line1: 'No', line2: 'Details', color: '#ef4444' },
+      { id: 'PO & PI Pending', line1: 'PO & PI', line2: 'Pending', color: '#be185d' },
+      { id: 'Job Completed', line1: 'Job', line2: 'Completed', color: '#1d4ed8' },
+      { id: 'Damages', line1: 'Damages', line2: '', color: '#b91c1c' },
+      { id: 'Storage', line1: 'Storage', line2: '', color: '#c2410c' },
+      { id: 'Ready for Billing', line1: 'Ready for', line2: 'Billing', color: '#059669' },
+      { id: 'To Be Cancelled', line1: 'To Be', line2: 'Cancelled', color: '#991b1b' },
+      { id: 'Execution Pending', line1: 'Execution', line2: 'Pending', color: '#6d28d9' }
+    ];
+
+    const branchSet = new Set(['BLR', 'DEL', 'BOM', 'MAA', 'HYD', 'PNQ', 'AMD', 'COK', 'KOL', 'OSS']);
+    const matrix: Record<string, Record<string, number>> = {};
+
+    const initBranch = (br: string) => {
+      matrix[br] = { Total: 0 };
+      categories.forEach(c => { matrix[br][c.id] = 0; });
+    };
+
+    Array.from(branchSet).forEach(initBranch);
+
+    jobList.forEach(j => {
+      const br = j.branch?.toUpperCase() || 'UNKNOWN';
+      if (!matrix[br]) {
+        branchSet.add(br);
+        initBranch(br);
+      }
+
+      const val = Number(enquiryValues[j.enq_number || j.enquiry_number || ''] || j.quote_value || 0);
+      matrix[br]['Total'] += val;
+
+      const g = getDisplayStatus(j.goods_track_status);
+      const p = j.po_status ? String(j.po_status).trim() : '';
+      const goodsEmpty = isGoodsEmpty(j);
+
+      // 1. Billable: ['', 'Storage', 'Job Completed', 'Job # taken for Billing', 'Billing Pending', 'Month End Billing'].includes(goods_status)
+      if (['', 'Storage', 'Job Completed', 'Job # taken for Billing', 'Billing Pending', 'Month End Billing'].includes(g)) {
+        matrix[br]['Billable'] += val;
+      }
+
+      // 2. No Details: isGoodsEmpty(j)
+      if (goodsEmpty) {
+        matrix[br]['No Details'] += val;
+      }
+
+      // 3. PO & PI Pending: po_status is 'PO Pending' OR 'PI Pending'
+      if (p === 'PO Pending' || p === 'PI Pending') {
+        matrix[br]['PO & PI Pending'] += val;
+      }
+
+      // 4. Job Completed: goods_track_status is 'Job Completed'
+      if (g === 'Job Completed') {
+        matrix[br]['Job Completed'] += val;
+      }
+
+      // 5. Damages: goods_track_status is 'Damages'
+      if (g === 'Damages') {
+        matrix[br]['Damages'] += val;
+      }
+
+      // 6. Storage: goods_track_status is 'Storage'
+      if (g === 'Storage') {
+        matrix[br]['Storage'] += val;
+      }
+
+      // 7. Ready for Billing: goods_track_status in [Billing Pending, Month End Billing, Job # taken for Billing]
+      if (g === 'Billing Pending' || g === 'Month End Billing' || g === 'Job # taken for Billing') {
+        matrix[br]['Ready for Billing'] += val;
+      }
+
+      // 8. To Be Cancelled: goods_track_status in [Free Job, Job # to be Cancelled]
+      if (g === 'Free Job' || g === 'Job # to be Cancelled') {
+        matrix[br]['To Be Cancelled'] += val;
+      }
+
+      // 9. Execution Pending: goods_track_status is 'Execution Pending'
+      if (g === 'Execution Pending') {
+        matrix[br]['Execution Pending'] += val;
+      }
+    });
+
+    const branchList = Array.from(branchSet);
+    const data: any[] = branchList.map(br => ({ branch: br, ...matrix[br] }));
+
+    const totals: Record<string, number> = { Total: 0 };
+    categories.forEach(c => {
+      totals[c.id] = data.reduce((sum, row) => sum + ((row as any)[c.id] as number || 0), 0);
+    });
+    totals['Total'] = data.reduce((sum, row) => sum + ((row as any)['Total'] as number || 0), 0);
+
+    return { data, totals, categories, grandTotal: totals['Total'], jobCount: jobList.length };
+  };
+
+  const currentFyUnbilledMatrix = useMemo(() => {
+    const currentFyJobs = jobs.filter(j => {
+      const dStr = j.job_date || j.packing_date || j.created_at;
+      if (!dStr) return false;
+      const d = new Date(dStr);
+      return !isNaN(d.getTime()) && d >= new Date('2026-04-01T00:00:00');
+    });
+    return buildUnbilledMatrixData(currentFyJobs);
+  }, [jobs, enquiryValues]);
+
+  const previousFyUnbilledMatrix = useMemo(() => {
+    const previousFyJobs = jobs.filter(j => {
+      const dStr = j.job_date || j.packing_date || j.created_at;
+      if (!dStr) return true; // Default undated jobs to previous FY
+      const d = new Date(dStr);
+      return isNaN(d.getTime()) || d < new Date('2026-04-01T00:00:00');
+    });
+    return buildUnbilledMatrixData(previousFyJobs);
+  }, [jobs, enquiryValues]);
+
   const hasAppliedFilters = Object.keys(columnFilters).length > 0 || search.trim() !== '' || !selectedBranch.includes('All') || !selectedGoodsStatus.includes('All') || !selectedPoStatus.includes('All') || !selectedSpoc.includes('All') || !selectedYear.includes('All');
 
   const yearOptions = useMemo(() => {
@@ -1128,6 +1226,31 @@ export default function UnbilledManagementPage() {
           </button>
           )}
 
+          {/* Unbilled FY Reports Modal Trigger Button */}
+          <button
+            onClick={() => setShowReportsPopup(true)}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '8px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+              color: 'white',
+              fontWeight: 700,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)',
+              transition: 'transform 0.15s ease'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+            onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+          >
+            📊 Report
+          </button>
+
           {/* Reminders Bell — shown for users with Unbilled page access */}
           {canSeeReminders && (
           <div style={{ position: 'relative' }}>
@@ -1159,7 +1282,7 @@ export default function UnbilledManagementPage() {
 
           {/* Showing row count indicator */}
           <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', background: 'var(--surface-color)', padding: '0.35rem 0.65rem', borderRadius: '6px', border: '1px solid var(--border-color)', whiteSpace: 'nowrap' }}>
-            Showing {Math.min(visibleCount, filteredJobs.length)} of {filteredJobs.length} jobs
+            {Math.min(visibleCount, filteredJobs.length)}/{filteredJobs.length} Jobs
           </div>
         </div>
       </div>
@@ -1250,27 +1373,7 @@ export default function UnbilledManagementPage() {
               <div className={styles.kpiCount} style={{ color: '#64748b', opacity: showJobCounts ? 1 : 0, transition: 'opacity 0.4s ease' }}>{executionPendingKpi.count} Jobs</div>
             </div>
           )}
-          {/* Unmapped Companies KPI Card — shown only for SPOC Edit users */}
-          {canSyncSpoc && unmappedCompaniesCount !== null && unmappedCompaniesCount > 0 && (
-            <div className={styles.kpiCard} style={{ ...kpiCardWidthStyle, background: 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.02))', borderColor: 'rgba(239,68,68,0.3)', cursor: 'pointer' }}
-              onClick={() => window.open('/home/spoc', '_self')}>
-              <div className={styles.kpiLabel} style={{ color: '#ef4444' }}>Unmapped</div>
-              <div className={styles.kpiValue} style={{ fontSize: '1.5rem', color: '#ef4444' }}>{unmappedCompaniesCount}</div>
-              <div className={styles.kpiCount} style={{ color: '#ef4444', opacity: 1 }}>Companies →</div>
-            </div>
-          )}
           </div>
-
-          {/* Sync SPOCs Button — restricted to gp@transworldintl.com & disabled */}
-          {canSyncSpoc && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
-              <button disabled={true}
-                title="SPOC Sync is currently disabled"
-                style={{ padding: '0.45rem 1rem', borderRadius: '10px', border: 'none', background: '#94a3b8', color: '#fff', fontWeight: 700, fontSize: '0.78rem', cursor: 'not-allowed', opacity: 0.6, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                ⚡ Sync SPOCs
-              </button>
-            </div>
-          )}
 
           <table className={styles.table}>
             <thead>
@@ -1592,6 +1695,197 @@ export default function UnbilledManagementPage() {
                 <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '0.88rem' }}>No upcoming follow-up reminders scheduled.</div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Scrollable Unbilled Financial Year Reports Modal */}
+      {showReportsPopup && (
+        <div 
+          className={styles.drawerOverlay} 
+          onClick={() => setShowReportsPopup(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            background: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem'
+          }}
+        >
+          <div 
+            style={{ 
+              width: '100%', 
+              maxWidth: '1440px', 
+              maxHeight: '92vh', 
+              background: 'var(--surface-color)', 
+              color: 'var(--text-primary)', 
+              borderRadius: '20px', 
+              padding: '1.25rem', 
+              boxShadow: '0 25px 60px rgba(0,0,0,0.4)', 
+              border: '1px solid var(--border-color)', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '1.5rem',
+              overflowY: 'auto',
+              overflowX: 'auto'
+            }} 
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Table 1: Current FY */}
+            <div className="glass" style={{ padding: '1.25rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+              <div style={{ marginBottom: '1rem' }}>
+                <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.25rem', fontWeight: 800 }}>
+                  Unbilled Reports Current FY
+                </h3>
+              </div>
+
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', fontSize: '0.88rem', border: '1px solid var(--table-border-color)' }}>
+                <thead>
+                  <tr>
+                    <th style={{ padding: '0.75rem', border: '1px solid var(--table-border-color)', background: 'var(--table-header-bg)', color: 'var(--text-primary)', textAlign: 'center', fontWeight: 800, position: 'sticky', left: 0, zIndex: 10 }}>
+                      Branch
+                    </th>
+                    {currentFyUnbilledMatrix.categories.map(c => (
+                      <th key={c.id} style={{ padding: '0.65rem 0.4rem', border: '1px solid var(--table-border-color)', background: 'var(--table-header-bg)', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'normal', lineHeight: 1.2 }}>
+                        <div style={{
+                          display: 'inline-flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0.35rem 0.5rem',
+                          borderRadius: '8px',
+                          background: `${c.color}15`,
+                          color: c.color,
+                          fontWeight: 800,
+                          fontSize: '0.82rem',
+                          boxShadow: `0 1px 2px ${c.color}15`
+                        }}>
+                          <span>{c.line1}</span>
+                          {c.line2 ? <span style={{ fontSize: '0.76rem', opacity: 0.95 }}>{c.line2}</span> : null}
+                        </div>
+                      </th>
+                    ))}
+                    <th style={{ padding: '0.65rem 0.5rem', border: '1px solid var(--table-border-color)', background: 'var(--table-header-bg)', textAlign: 'center', verticalAlign: 'middle' }}>
+                      <div style={{ display: 'inline-flex', padding: '0.35rem 0.65rem', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.12)', color: '#b45309', fontWeight: 800, fontSize: '0.82rem' }}>
+                        Total
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentFyUnbilledMatrix.data.map((row: any) => (
+                    <tr key={row.branch} style={{ background: 'var(--bg-color)', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-color)'}>
+                      <td style={{ padding: '0.6rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 800, textAlign: 'center', position: 'sticky', left: 0, background: 'var(--bg-color)', zIndex: 5 }}>
+                        <span style={{ display: 'inline-block', padding: '0.2rem 0.5rem', borderRadius: '6px', background: 'rgba(99, 102, 241, 0.1)', color: '#4f46e5', fontSize: '0.84rem', letterSpacing: '0.03em', fontWeight: 800 }}>
+                          {row.branch}
+                        </span>
+                      </td>
+                      {currentFyUnbilledMatrix.categories.map(c => (
+                        <td key={c.id} style={{ padding: '0.65rem 0.8rem', border: '1px solid var(--table-border-color)', color: row[c.id] ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: row[c.id] ? 700 : 400, fontFamily: row[c.id] ? 'var(--font-mono)' : 'inherit', fontSize: '0.86rem' }}>
+                          {row[c.id] ? row[c.id].toLocaleString('en-IN', { maximumFractionDigits: 0 }) : <span style={{ opacity: 0.25 }}>—</span>}
+                        </td>
+                      ))}
+                      <td style={{ padding: '0.65rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 800, color: row.Total ? '#d97706' : 'var(--text-secondary)', background: 'rgba(245, 158, 11, 0.04)', fontSize: '0.88rem', fontFamily: 'var(--font-mono)' }}>
+                        {row.Total ? row.Total.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : <span style={{ opacity: 0.25 }}>—</span>}
+                      </td>
+                    </tr>
+                  ))}
+                  {/* Grand Total Row */}
+                  <tr style={{ background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.06), rgba(245, 158, 11, 0.06))' }}>
+                    <td style={{ padding: '0.85rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 900, textAlign: 'center', position: 'sticky', left: 0, background: 'var(--surface-color)', zIndex: 5, color: 'var(--text-primary)', letterSpacing: '0.05em' }}>TOTAL</td>
+                    {currentFyUnbilledMatrix.categories.map(c => (
+                      <td key={c.id} style={{ padding: '0.85rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 800, color: currentFyUnbilledMatrix.totals[c.id] ? c.color : 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}>
+                        {currentFyUnbilledMatrix.totals[c.id] ? currentFyUnbilledMatrix.totals[c.id].toLocaleString('en-IN', { maximumFractionDigits: 0 }) : 0}
+                      </td>
+                    ))}
+                    <td style={{ padding: '0.85rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 900, background: 'rgba(245, 158, 11, 0.15)', color: '#b45309', fontSize: '0.98rem', fontFamily: 'var(--font-mono)' }}>
+                      {currentFyUnbilledMatrix.grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Table 2: Previous FY */}
+            <div className="glass" style={{ padding: '1.25rem', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+              <div style={{ marginBottom: '1rem' }}>
+                <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.25rem', fontWeight: 800 }}>
+                  Unbilled Reports Previous FY
+                </h3>
+              </div>
+
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'right', fontSize: '0.88rem', border: '1px solid var(--table-border-color)' }}>
+                <thead>
+                  <tr>
+                    <th style={{ padding: '0.75rem', border: '1px solid var(--table-border-color)', background: 'var(--table-header-bg)', color: 'var(--text-primary)', textAlign: 'center', fontWeight: 800, position: 'sticky', left: 0, zIndex: 10 }}>
+                      Branch
+                    </th>
+                    {previousFyUnbilledMatrix.categories.map(c => (
+                      <th key={c.id} style={{ padding: '0.65rem 0.4rem', border: '1px solid var(--table-border-color)', background: 'var(--table-header-bg)', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'normal', lineHeight: 1.2 }}>
+                        <div style={{
+                          display: 'inline-flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0.35rem 0.5rem',
+                          borderRadius: '8px',
+                          background: `${c.color}15`,
+                          color: c.color,
+                          fontWeight: 800,
+                          fontSize: '0.82rem',
+                          boxShadow: `0 1px 2px ${c.color}15`
+                        }}>
+                          <span>{c.line1}</span>
+                          {c.line2 ? <span style={{ fontSize: '0.76rem', opacity: 0.95 }}>{c.line2}</span> : null}
+                        </div>
+                      </th>
+                    ))}
+                    <th style={{ padding: '0.65rem 0.5rem', border: '1px solid var(--table-border-color)', background: 'var(--table-header-bg)', textAlign: 'center', verticalAlign: 'middle' }}>
+                      <div style={{ display: 'inline-flex', padding: '0.35rem 0.65rem', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.12)', color: '#b45309', fontWeight: 800, fontSize: '0.82rem' }}>
+                        Total
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {previousFyUnbilledMatrix.data.map((row: any) => (
+                    <tr key={row.branch} style={{ background: 'var(--bg-color)', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-color)'}>
+                      <td style={{ padding: '0.6rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 800, textAlign: 'center', position: 'sticky', left: 0, background: 'var(--bg-color)', zIndex: 5 }}>
+                        <span style={{ display: 'inline-block', padding: '0.2rem 0.5rem', borderRadius: '6px', background: 'rgba(99, 102, 241, 0.1)', color: '#4f46e5', fontSize: '0.84rem', letterSpacing: '0.03em', fontWeight: 800 }}>
+                          {row.branch}
+                        </span>
+                      </td>
+                      {previousFyUnbilledMatrix.categories.map(c => (
+                        <td key={c.id} style={{ padding: '0.65rem 0.8rem', border: '1px solid var(--table-border-color)', color: row[c.id] ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: row[c.id] ? 700 : 400, fontFamily: row[c.id] ? 'var(--font-mono)' : 'inherit', fontSize: '0.86rem' }}>
+                          {row[c.id] ? row[c.id].toLocaleString('en-IN', { maximumFractionDigits: 0 }) : <span style={{ opacity: 0.25 }}>—</span>}
+                        </td>
+                      ))}
+                      <td style={{ padding: '0.65rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 800, color: row.Total ? '#d97706' : 'var(--text-secondary)', background: 'rgba(245, 158, 11, 0.04)', fontSize: '0.88rem', fontFamily: 'var(--font-mono)' }}>
+                        {row.Total ? row.Total.toLocaleString('en-IN', { maximumFractionDigits: 0 }) : <span style={{ opacity: 0.25 }}>—</span>}
+                      </td>
+                    </tr>
+                  ))}
+                  {/* Grand Total Row */}
+                  <tr style={{ background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.06), rgba(245, 158, 11, 0.06))' }}>
+                    <td style={{ padding: '0.85rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 900, textAlign: 'center', position: 'sticky', left: 0, background: 'var(--surface-color)', zIndex: 5, color: 'var(--text-primary)', letterSpacing: '0.05em' }}>TOTAL</td>
+                    {previousFyUnbilledMatrix.categories.map(c => (
+                      <td key={c.id} style={{ padding: '0.85rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 800, color: previousFyUnbilledMatrix.totals[c.id] ? c.color : 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}>
+                        {previousFyUnbilledMatrix.totals[c.id] ? previousFyUnbilledMatrix.totals[c.id].toLocaleString('en-IN', { maximumFractionDigits: 0 }) : 0}
+                      </td>
+                    ))}
+                    <td style={{ padding: '0.85rem 0.8rem', border: '1px solid var(--table-border-color)', fontWeight: 900, background: 'rgba(245, 158, 11, 0.15)', color: '#b45309', fontSize: '0.98rem', fontFamily: 'var(--font-mono)' }}>
+                      {previousFyUnbilledMatrix.grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
           </div>
         </div>
       )}

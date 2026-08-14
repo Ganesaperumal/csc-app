@@ -104,14 +104,14 @@ Users have **one primary role** + **two category roles**:
 
 - **csc_role === 'Edit'** → Strictly required for edit access on CSC Job Details (`/home/job/[id]`). `unbilled_role`, `followups_role`, and `all_jobs_role` NEVER grant edit rights on CSC Job Details.
 - **unbilled_role === 'Edit'** → Strictly required for edit access on Unbilled Jobs (`/home/unbilled`). Does NOT grant edit access to CSC Job Details.
-- **spoc_access === 'Edit'** → Access to `/home/spoc` CRUD rules and ability to run Global SPOC Sync and per-job auto-fill.
+- **SPOCs Hub Access** → Strictly restricted to Super Admin only (`is_super_admin === true`). Super Admin can manage CRUD rules, unmapped company resolver, and run Global SPOC Sync and per-job auto-fill.
 - **Admin** (csc_role) → Read-only on job pages (same as Viewer). Full access to Admin panel.
 - **Viewer** (csc_role) → Read-only everywhere. Can filter/search lists. Can see all fields whether empty or not. Cannot edit fields, add logs, send WhatsApp, trigger Sync ERP, or use Group Chat.
 - `branches` (TEXT[]) → `['ALL']` = super admin, else branch-filtered queries
 - `is_approved` must be `true` to access the dashboard
 - Sidebar hidden on: `/home/job/[id]`, `/home/all-jobs`, `/home/unbilled`
 - **Sync ERP Button**: Enabled for `followups_role` (`Self`/`All`) or `csc_role === 'Edit'`. Visible but disabled for `csc_role === 'View'`. Completely hidden if `csc_role === 'None'` (unless followups role is active).
-- **Reports Access**: CSC Reports (`Active Jobs Report` & `Agent Activity Oversight`) visible for `csc_role !== 'None'` OR `followups_role` (`Self`/`All`). Unbilled Report visible for `unbilled_role !== 'None'`. Hidden if all roles are `None`.
+- **Reports Access**: CSC Reports (`Active Jobs Report` & `Agent Activity Oversight`) and Activity Log visible for `csc_role !== 'None'` OR `followups_role` (`Self`/`All`). Unbilled Financial Year Reports (Current FY & Previous FY) are accessed directly on `/home/unbilled` via the dedicated Reports modal.
 - **Active Jobs Access**: Governed by `csc_role` (`csc_role !== 'None'`), exactly like Closed Jobs. No `is_super_admin` restriction.
 - **Follow-ups Access**: Governed strictly by `followups_role` (`All` vs `Self`). No automatic `All` access granted to `admin` roles.
 - **Group Chat**: Hidden for Viewers; visible for Executive/Manager/Admin
@@ -154,11 +154,11 @@ Users have **one primary role** + **two category roles**:
 ### Command Palette
 - Keyboard: `Cmd+K` / `Ctrl+K` → Global job search across all jobs
 
-### SPOC Master Auto-Fill (`/home/spoc` & `/api/admin/sync-spocs`)
+### SPOC Master & Auto-Fill Hub (`/home/spocs` & `/api/admin/sync-spocs`)
 - Maps companies to Sales SPOC (`sales_by`) and Unbilled SPOC (`spoc_name`).
 - Supports corporate rules (exact + alias fuzzy matching) and PRIVATE customer branch rules (`company_name = 'PRIVATE'` + `branch`).
 - Sync auto-fills only empty SPOC fields in `jobs`; manual entries are strictly preserved (field-level override protection).
-- Unbilled page displays Unmapped Companies KPI count and manual Sync button for users with `spoc_access === 'Edit'`.
+- Dedicated SPOCs Hub (`/home/spocs`) centralizes master rules CRUD, live unmapped companies resolver, jobs missing SPOC inspector, and global/per-job Auto-Fill sync.
 
 ---
 
@@ -188,9 +188,10 @@ Users have **one primary role** + **two category roles**:
 /home/closed-jobs     → Closed jobs (csc_role ≠ None)
 /home/follow-ups      → Follow-ups (csc_role ≠ None)
 /home/all-jobs        → Full-width jobs table (csc_role ≠ None)
-/home/spoc            → SPOC Master CRUD & Auto-Fill Sync (spoc_access ≠ None)
-/home/unbilled        → Unbilled jobs (unbilled_role ≠ None)
-/home/reports         → Reports (csc_role ≠ None, unbilled_role ≠ None, or followups_role ≠ None) — includes Unbilled, Active Jobs, Agent Oversight, and Activity Log tabs
+/home/spocs           → Dedicated SPOCs Master, Unmapped Hub & Auto-Fill Sync (Super Admin only)
+/home/spoc            → Redirects to /home/spocs
+/home/unbilled        → Unbilled jobs & Financial Year Reports Modal (unbilled_role ≠ None)
+/home/reports         → Reports (csc_role ≠ None or followups_role ≠ None) — includes Active Jobs, Agent Oversight, and Activity Log tabs
 /home/legacy-jobs     → Legacy jobs (unbilled_role ≠ None)
 /home/job/[id]        → Job detail (edit or read-only based on role)
 /home/admin           → Admin: Bulk Data Management & Missing Data Editor (Missing Quote Value & Missing Unbilled SPOC)

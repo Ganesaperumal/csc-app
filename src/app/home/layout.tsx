@@ -23,7 +23,8 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
   const allJobsRole = profile?.all_jobs_access || profile?.all_jobs_role || 'None';
   const unbilledRole = profile?.unbilled_access || profile?.unbilled_role || 'None';
 
-  const spocRole = profile?.spoc_access || 'None';
+  const isSuperAdmin = profile?.is_super_admin === true;
+  const canAccessSpoc = isSuperAdmin;
 
   const canAccessCsc = cscRole !== 'None' && cscRole !== '';
   const canAccessActive = canAccessCsc;
@@ -31,14 +32,13 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
   const canAccessFollowUps = followupsRole !== 'None' && followupsRole !== '';
   const canAccessAllJobs = allJobsRole !== 'None' && allJobsRole !== '';
   const canAccessUnbilled = unbilledRole !== 'None' && unbilledRole !== '';
-  const canAccessSpoc = spocRole !== 'None' && spocRole !== '';
   const canAccessReports = canAccessCsc || canAccessUnbilled || (followupsRole !== 'None' && followupsRole !== '');
 
   const isActiveActive = pathname.startsWith('/home/active-jobs');
   const isClosedActive = pathname === '/home/closed-jobs';
   const isFollowUpsActive = pathname === '/home/follow-ups';
   const isAllJobsActive = pathname === '/home/all-jobs';
-  const isSpocActive = pathname === '/home/spoc';
+  const isSpocActive = pathname.startsWith('/home/spoc');
   const isUnbilledActive = pathname.startsWith('/home/unbilled');
   const isReportsActive = pathname === '/home/reports';
   const isShowcaseActive = pathname === '/home/ui-showcase';
@@ -64,10 +64,6 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
     activeKey = 'alljobs';
     pillGradient = 'linear-gradient(135deg, #3b82f6, #1d4ed8)';
     pillGlow = '0 4px 14px rgba(59, 130, 246, 0.35)';
-  } else if (isSpocActive) {
-    activeKey = 'spoc';
-    pillGradient = 'linear-gradient(135deg, #f59e0b, #d97706)';
-    pillGlow = '0 4px 14px rgba(245, 158, 11, 0.35)';
   } else if (isUnbilledActive) {
     activeKey = 'unbilled';
     pillGradient = 'linear-gradient(135deg, #8b5cf6, #6d28d9)';
@@ -236,32 +232,7 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
           </Link>
         )}
 
-        {/* Row 4: SPOC Master (above Unbilled) */}
-        {canAccessSpoc && (
-          <Link
-            href="/home/spoc"
-            data-nav-key="spoc"
-            style={{
-              width: '100%',
-              padding: '0.6rem 0.85rem',
-              fontSize: '0.85rem',
-              fontWeight: 700,
-              borderRadius: '10px',
-              textDecoration: 'none',
-              position: 'relative',
-              zIndex: 2,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.6rem',
-              transition: 'color 0.25s ease',
-              color: isSpocActive ? '#ffffff' : 'var(--text-secondary)',
-            }}
-          >
-            <span>🤝</span> SPOC Master
-          </Link>
-        )}
-
-        {/* Row 5: Unbilled (Full Width) */}
+        {/* Row 4: Unbilled (Full Width) */}
         {canAccessUnbilled && (
           <Link
             href="/home/unbilled"
@@ -341,6 +312,34 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
       <div style={{ marginTop: 'auto' }}>
         <PendingApprovalsReminder profile={profile} />
       </div>
+
+      {/* SPOCs Master Link directly above Admin & Users */}
+      {canAccessSpoc && (
+        <div style={{ marginBottom: '0.35rem' }}>
+          <Link
+            href="/home/spocs"
+            style={{
+              width: '100%',
+              padding: '0.5rem 0.85rem',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              borderRadius: '10px',
+              textDecoration: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.55rem',
+              background: isSpocActive ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'rgba(148, 163, 184, 0.12)',
+              color: isSpocActive ? '#ffffff' : 'var(--text-secondary)',
+              border: isSpocActive ? 'none' : '1px solid var(--border-color)',
+              boxShadow: isSpocActive ? '0 4px 14px rgba(245, 158, 11, 0.35)' : 'none',
+              transition: 'all 0.25s ease',
+              boxSizing: 'border-box'
+            }}
+          >
+            <span>👥</span> SPOCs
+          </Link>
+        </div>
+      )}
 
       {/* Admin & Users segmented toggle bar directly above Sync ERP */}
       {profile?.is_super_admin === true && (

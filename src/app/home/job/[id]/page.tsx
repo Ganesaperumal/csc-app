@@ -416,8 +416,6 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
   const isViewOnly = isReadOnly;
   const isViewer = isReadOnly;
   const isSPOC = false;
-  const [userEmail, setUserEmail] = useState<string>('');
-  const canSyncSpoc = userEmail.toLowerCase() === 'gp@transworldintl.com';
   const [supervisors, setSupervisors] = useState<string[]>([]);
   const [viewingAgents, setViewingAgents] = useState<string[]>([]);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
@@ -464,34 +462,6 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
     } finally {
       setAiLoading(false);
     }
-  };
-
-  const [autoFillSpocLoading, setAutoFillSpocLoading] = useState(false);
-  const handleAutoFillSpoc = async () => {
-    if (!job) return;
-    setAutoFillSpocLoading(true);
-    try {
-      const res = await fetch('/api/admin/sync-spocs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job_number: job.job_number }),
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      if (data.updated > 0) {
-        // Refresh job data to show the newly filled SPOCs
-        const { data: updatedJob } = await supabase.from('jobs').select('sales_by, spoc_name').eq('job_number', job.job_number).single();
-        if (updatedJob) {
-          setJob((prev: any) => ({ ...prev, sales_by: updatedJob.sales_by, spoc_name: updatedJob.spoc_name }));
-        }
-        showToast('✅ SPOC fields auto-filled from master.', 'success');
-      } else {
-        showToast('ℹ️ No empty SPOC fields to fill — either already filled or no matching master rule.', 'info');
-      }
-    } catch (err: any) {
-      showToast('Auto-fill failed: ' + err.message, 'error');
-    }
-    setAutoFillSpocLoading(false);
   };
 
   const [copied, setCopied] = useState(false);
@@ -580,8 +550,6 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
         window.location.href = '/login';
         return;
       }
-
-      setUserEmail(user.email || '');
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -1196,21 +1164,8 @@ export default function JobDetailsPage({ params }: { params: Promise<{ id: strin
                               {isFieldVisible(isViewOnly, job.destination || '') && (
                                 <div className={styles.inputGroup}><label>🛬 DESTINATION</label><input disabled={isViewer} name="destination" value={job.destination || ''} onChange={handleChange} /></div>
                               )}
-                              {/* SPOC field + Auto-Fill button */}
-                              {(isFieldVisible(isViewOnly, job.spoc_name || '') || canSyncSpoc) && (
-                                <div className={styles.inputGroup}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'space-between' }}>
-                                    <label style={{ margin: 0 }}>🎯 SPOC</label>
-                                    {canSyncSpoc && (
-                                      <button type="button" disabled={true}
-                                        title="SPOC Auto-Fill is currently disabled"
-                                        style={{ padding: '0.15rem 0.5rem', borderRadius: '6px', border: 'none', background: '#94a3b8', color: '#fff', fontWeight: 700, fontSize: '0.65rem', cursor: 'not-allowed', opacity: 0.6, whiteSpace: 'nowrap' }}>
-                                        ⚡ Auto-Fill
-                                      </button>
-                                    )}
-                                  </div>
-                                  <input disabled={isViewer} name="spoc_name" value={job.spoc_name || ''} onChange={handleChange} />
-                                </div>
+                              {isFieldVisible(isViewOnly, job.spoc_name || '') && (
+                                <div className={styles.inputGroup}><label>🎯 SPOC</label><input disabled={isViewer} name="spoc_name" value={job.spoc_name || ''} onChange={handleChange} /></div>
                               )}
                               <div className={styles.inputGroup}>
                                 <label>💼 SALES BY</label>
