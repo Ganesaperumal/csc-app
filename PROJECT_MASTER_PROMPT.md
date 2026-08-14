@@ -197,7 +197,7 @@ Users have **one primary role** + **two category roles**:
 /home/admin           → Admin: Bulk Data Management & Missing Data Editor (Missing Quote Value & Missing Unbilled SPOC)
 /home/data            → Redirects to /home/admin
 /home/permissions     → Redirects to /home/users (replaced by direct section permission pills in User Details drawer)
-/home/users           → Users directory & User Details Permission Editor (CSC Jobs, Follow-Ups, All Jobs, Unbilled, SPOC Master, Assigned Unbilled Branches)
+/home/users           → Users directory & User Details Permission Editor (CSC Jobs, Follow-Ups, All Jobs, Unbilled, Assigned Unbilled Branches)
 /home/activity-log    → Redirects to /home/reports?tab=activity_log (governed by followups_role: View for Self/All, None for None)
 /home/ui-showcase      → Design System & Component Showcase page (Dropdowns, Buttons, Sliders, Calendars, Badges & Inputs — restricted to Super Admin only)
 /track/[...id]        → Public tracking page (no auth required)

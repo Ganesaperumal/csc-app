@@ -16,14 +16,12 @@ type CscAccess      = 'None' | 'View' | 'Edit';
 type FollowupAccess = 'None' | 'Self' | 'All';
 type AllJobsAccess  = 'None' | 'View';
 type UnbilledAccess = 'None' | 'View' | 'Edit';
-type SpocAccess     = 'None' | 'View' | 'Edit';
 
 /* ── Cycle helpers ── */
 const cscCycle:      CscAccess[]      = ['None', 'View', 'Edit'];
 const followupCycle: FollowupAccess[] = ['None', 'Self', 'All'];
 const allJobsCycle:  AllJobsAccess[]  = ['None', 'View'];
 const unbilledCycle: UnbilledAccess[] = ['None', 'View', 'Edit'];
-const spocCycle:     SpocAccess[]     = ['None', 'View', 'Edit'];
 
 function next<T>(arr: T[], cur: T): T { return arr[(arr.indexOf(cur) + 1) % arr.length]; }
 
@@ -131,13 +129,11 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
     return (!val || val === 'None') ? 'None' : 'View';
   };
   const initUnbilled = (r?: string): UnbilledAccess => (!r || r === 'None') ? 'None' : (r === 'Edit' ? 'Edit' : 'View');
-  const initSpoc     = (r?: string): SpocAccess     => (!r || r === 'None') ? 'None' : (r === 'Edit' ? 'Edit' : 'View');
 
   const [cscAccess,     setCscAccess]     = useState<CscAccess>(initCsc(user?.csc_access || user?.csc_role));
   const [followupAccess,setFollowupAccess]= useState<FollowupAccess>(initFollowup(user?.followups_access || user?.followups_role, user?.tracking_role));
   const [allJobsAccess, setAllJobsAccess] = useState<AllJobsAccess>(initAllJobs(user?.all_jobs_access || user?.all_jobs_role, user?.role));
   const [unbilledAccess,setUnbilledAccess]= useState<UnbilledAccess>(initUnbilled(user?.unbilled_access || user?.unbilled_role));
-  const [spocAccess,    setSpocAccess]    = useState<SpocAccess>(initSpoc(user?.spoc_access));
   const [branches,      setBranches]      = useState<string[]>(user?.branches?.length ? user.branches : ['ALL']);
   const [isApproved,    setIsApproved]    = useState<boolean>(user?.is_approved !== false);
   const [photo,         setPhoto]         = useState<string | null>(user?.photo || null);
@@ -157,7 +153,6 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
       followups_access: followupsVal,
       all_jobs_access:  allJobsVal,
       unbilled_access:  unbilledVal,
-      spoc_access:      spocAccess,
       // Legacy compatibility
       csc_role:       cscVal,
       followups_role: followupsVal,
@@ -385,12 +380,6 @@ export default function UserDetailsModal({ user, onClose, onSave, onDelete }: Us
                     setUnbilledAccess(next_);
                     if (next_ === 'None') setBranches([]);
                   }}
-                />
-
-                {/* SPOC Master */}
-                <AccessTile
-                  label="SPOC Master" icon="🤝" value={spocAccess}
-                  onClick={() => setSpocAccess(next(spocCycle, spocAccess))}
                 />
               </div>
 

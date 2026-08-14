@@ -535,7 +535,6 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
                 const cscVal = u.csc_access || u.csc_role || 'None';
                 const allJobsVal = u.all_jobs_access || u.all_jobs_role || 'None';
                 const unbilledVal = u.unbilled_access || u.unbilled_role || 'None';
-                const spocVal = u.spoc_access || 'None';
                 const deptVal = u.department || u.designation || '';
 
                 return (
@@ -600,9 +599,6 @@ export default function UsersPage({ isEmbedded }: { isEmbedded?: boolean }) {
 
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700, marginLeft: '0.2rem' }}>Unbilled</span>
                         {getAccessBadge(unbilledVal, 'Unbilled')}
-
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700, marginLeft: '0.2rem' }}>SPOC</span>
-                        {getAccessBadge(spocVal, 'SPOC Master')}
                       </div>
                     </td>
 
