@@ -458,6 +458,56 @@ export default function UnbilledManagementPage() {
   const [visibleCount, setVisibleCount] = useState(80);
 
   const router = useRouter();
+  const filtersInitializedRef = useRef(false);
+
+  // Restore filters from sessionStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('csc_last_jobs_page', '/home/unbilled');
+      try {
+        const saved = sessionStorage.getItem('unbilled_filters');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.search !== undefined) setSearch(parsed.search);
+          if (parsed.selectedBranch) setSelectedBranch(parsed.selectedBranch);
+          if (parsed.selectedGoodsStatus) setSelectedGoodsStatus(parsed.selectedGoodsStatus);
+          if (parsed.selectedPoStatus) setSelectedPoStatus(parsed.selectedPoStatus);
+          if (parsed.selectedSpoc) setSelectedSpoc(parsed.selectedSpoc);
+          if (parsed.selectedYear) setSelectedYear(parsed.selectedYear);
+          if (parsed.showColumnFilters !== undefined) setShowColumnFilters(parsed.showColumnFilters);
+          if (parsed.columnFilters) setColumnFilters(parsed.columnFilters);
+          if (parsed.columnSorts) setColumnSorts(parsed.columnSorts);
+        }
+      } catch (e) {
+        console.error('Failed to restore unbilled filters:', e);
+      } finally {
+        filtersInitializedRef.current = true;
+      }
+    }
+  }, []);
+
+  // Persist filter changes to sessionStorage after initialization
+  useEffect(() => {
+    if (!filtersInitializedRef.current) return;
+    if (typeof window !== 'undefined') {
+      try {
+        const filterState = {
+          search,
+          selectedBranch,
+          selectedGoodsStatus,
+          selectedPoStatus,
+          selectedSpoc,
+          selectedYear,
+          showColumnFilters,
+          columnFilters,
+          columnSorts
+        };
+        sessionStorage.setItem('unbilled_filters', JSON.stringify(filterState));
+      } catch (e) {
+        console.error('Failed to save unbilled filters:', e);
+      }
+    }
+  }, [search, selectedBranch, selectedGoodsStatus, selectedPoStatus, selectedSpoc, selectedYear, showColumnFilters, columnFilters, columnSorts]);
 
   useEffect(() => {
     setVisibleCount(80);
@@ -1483,9 +1533,28 @@ export default function UnbilledManagementPage() {
                       })()}
                     </td>
 
-                    {/* 4. Job Number (Plain text display, no navigation) */}
-                    <td style={{ fontWeight: 800, color: '#6d28d9' }}>
-                      {j.job_number}
+                    {/* 4. Job Number (Clickable link to Job Details) */}
+                    <td style={{ fontWeight: 800 }}>
+                      <span
+                        onClick={() => {
+                          if (typeof window !== 'undefined') {
+                            sessionStorage.setItem('csc_last_jobs_page', '/home/unbilled');
+                          }
+                          router.push(`/home/job/${encodeURIComponent(j.job_number)}`);
+                        }}
+                        style={{
+                          cursor: 'pointer',
+                          color: '#4f46e5',
+                          textDecoration: 'underline',
+                          textUnderlineOffset: '3px',
+                          transition: 'color 0.15s ease'
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.color = '#3730a3')}
+                        onMouseLeave={e => (e.currentTarget.style.color = '#4f46e5')}
+                        title={`View Job Details: ${j.job_number}`}
+                      >
+                        {j.job_number}
+                      </span>
                     </td>
 
                     {/* 5. Enquiry # */}
@@ -1684,7 +1753,18 @@ export default function UnbilledManagementPage() {
               {upcomingReminders.map(rem => (
                 <div key={rem.id} style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.35rem' }}>
-                    <span style={{ color: '#4f46e5' }}>Job: {rem.job_number}</span>
+                    <span
+                      onClick={() => {
+                        if (typeof window !== 'undefined') {
+                          sessionStorage.setItem('csc_last_jobs_page', '/home/unbilled');
+                        }
+                        router.push(`/home/job/${encodeURIComponent(rem.job_number)}`);
+                      }}
+                      style={{ color: '#4f46e5', cursor: 'pointer', textDecoration: 'underline' }}
+                      title={`View Job Details: ${rem.job_number}`}
+                    >
+                      Job: {rem.job_number}
+                    </span>
                     <span style={{ color: '#10b981' }}>Date: {formatDate(rem.next_followup_date)}</span>
                   </div>
                   <div style={{ fontSize: '0.82rem', color: '#334155', marginBottom: '0.35rem' }}>{rem.followup_notes}</div>
