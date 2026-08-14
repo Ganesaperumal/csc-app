@@ -401,6 +401,20 @@ function ColumnFilterDropdown({
   );
 }
 
+const getInitialFilter = <T,>(key: string, fallback: T): T => {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const saved = sessionStorage.getItem('unbilled_filters');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed[key] !== undefined && parsed[key] !== null) {
+        return parsed[key];
+      }
+    }
+  } catch (e) {}
+  return fallback;
+};
+
 export default function UnbilledManagementPage() {
   const { getAccessLevel, loading: permissionsLoading } = usePermissions();
   const [isViewer, setIsViewer] = useState(false);
@@ -409,18 +423,20 @@ export default function UnbilledManagementPage() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [search, setSearch] = useState('');
-  const [selectedBranch, setSelectedBranch] = useState<string[]>(['All']);
-  const [selectedGoodsStatus, setSelectedGoodsStatus] = useState<string[]>(['All']);
-  const [selectedPoStatus, setSelectedPoStatus] = useState<string[]>(['All']);
-  const [selectedSpoc, setSelectedSpoc] = useState<string[]>(['All']);
-  const [selectedYear, setSelectedYear] = useState<string[]>(['All']);
+
+  // Filters with synchronous lazy initializers from sessionStorage
+  const [search, setSearch] = useState<string>(() => getInitialFilter('search', ''));
+  const [selectedBranch, setSelectedBranch] = useState<string[]>(() => getInitialFilter('selectedBranch', ['All']));
+  const [selectedGoodsStatus, setSelectedGoodsStatus] = useState<string[]>(() => getInitialFilter('selectedGoodsStatus', ['All']));
+  const [selectedPoStatus, setSelectedPoStatus] = useState<string[]>(() => getInitialFilter('selectedPoStatus', ['All']));
+  const [selectedSpoc, setSelectedSpoc] = useState<string[]>(() => getInitialFilter('selectedSpoc', ['All']));
+  const [selectedYear, setSelectedYear] = useState<string[]>(() => getInitialFilter('selectedYear', ['All']));
 
   // ColumnFunnel filters
-  const [showColumnFilters, setShowColumnFilters] = useState(false);
-  const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({});
+  const [showColumnFilters, setShowColumnFilters] = useState<boolean>(() => getInitialFilter('showColumnFilters', false));
+  const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>(() => getInitialFilter('columnFilters', {}));
   const [activeFilterColumn, setActiveFilterColumn] = useState<string | null>(null);
-  const [columnSorts, setColumnSorts] = useState<Record<string, 'asc' | 'desc' | null>>({});
+  const [columnSorts, setColumnSorts] = useState<Record<string, 'asc' | 'desc' | null>>(() => getInitialFilter('columnSorts', {}));
 
   // Follow-up Drawer & Reminder Modal States
   const [activeDrawerJob, setActiveDrawerJob] = useState<any | null>(null);
@@ -458,38 +474,11 @@ export default function UnbilledManagementPage() {
   const [visibleCount, setVisibleCount] = useState(80);
 
   const router = useRouter();
-  const filtersInitializedRef = useRef(false);
 
-  // Restore filters from sessionStorage on mount
+  // Persist filter changes to sessionStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('csc_last_jobs_page', '/home/unbilled');
-      try {
-        const saved = sessionStorage.getItem('unbilled_filters');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed.search !== undefined) setSearch(parsed.search);
-          if (parsed.selectedBranch) setSelectedBranch(parsed.selectedBranch);
-          if (parsed.selectedGoodsStatus) setSelectedGoodsStatus(parsed.selectedGoodsStatus);
-          if (parsed.selectedPoStatus) setSelectedPoStatus(parsed.selectedPoStatus);
-          if (parsed.selectedSpoc) setSelectedSpoc(parsed.selectedSpoc);
-          if (parsed.selectedYear) setSelectedYear(parsed.selectedYear);
-          if (parsed.showColumnFilters !== undefined) setShowColumnFilters(parsed.showColumnFilters);
-          if (parsed.columnFilters) setColumnFilters(parsed.columnFilters);
-          if (parsed.columnSorts) setColumnSorts(parsed.columnSorts);
-        }
-      } catch (e) {
-        console.error('Failed to restore unbilled filters:', e);
-      } finally {
-        filtersInitializedRef.current = true;
-      }
-    }
-  }, []);
-
-  // Persist filter changes to sessionStorage after initialization
-  useEffect(() => {
-    if (!filtersInitializedRef.current) return;
-    if (typeof window !== 'undefined') {
       try {
         const filterState = {
           search,
