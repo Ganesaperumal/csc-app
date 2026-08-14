@@ -505,9 +505,17 @@ function JobsTable() {
       const COMPLETED_STATUSES = [
         'Job Completed', 
         'Job # taken for Billing', 
-        'Customer Cancelled', 
-        'Job # to be Cancelled'
+        'Job # to be Cancelled',
+        'Billing Pending',
+        'Month End Billing',
+        'Free Job'
       ];
+
+      const isCompletedStatus = (status: string | null) => {
+        if (!status) return false;
+        const clean = String(status).replace(/^\d+\.\s*/, '').trim();
+        return COMPLETED_STATUSES.includes(clean);
+      };
 
       const isClosedJob = (job: any) => {
         const erpStatus = job.erp_status?.toLowerCase() || '';
@@ -535,8 +543,8 @@ function JobsTable() {
       };
 
       const dashboardJobs = (data || []).filter(job => !isClosedJob(job));
-      const activeJobsList = dashboardJobs.filter(job => !COMPLETED_STATUSES.includes(job.goods_track_status));
-      const completedJobsList = dashboardJobs.filter(job => COMPLETED_STATUSES.includes(job.goods_track_status));
+      const activeJobsList = dashboardJobs.filter(job => !isCompletedStatus(job.goods_track_status));
+      const completedJobsList = dashboardJobs.filter(job => isCompletedStatus(job.goods_track_status));
 
       // Filter by type filter (HHG, COM, ALL) for the dashboard view
       let filteredActiveJobsList = activeJobsList;
