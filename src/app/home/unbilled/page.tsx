@@ -770,6 +770,11 @@ export default function UnbilledManagementPage() {
     return String(fy);
   };
 
+  const isThisYearJob = (jobNumber?: string | null): boolean => {
+    if (!jobNumber) return false;
+    return /\/26\//i.test(jobNumber) || /\/26-\d{2}\//i.test(jobNumber);
+  };
+
   // Filtered jobs logic
   let filteredJobs = jobs.filter(j => {
     const q = search.toLowerCase();
@@ -1533,28 +1538,34 @@ export default function UnbilledManagementPage() {
                       })()}
                     </td>
 
-                    {/* 4. Job Number (Clickable link to Job Details) */}
+                    {/* 4. Job Number (Clickable link only for current year jobs e.g. JB/XXXX/26/YYY) */}
                     <td style={{ fontWeight: 800 }}>
-                      <span
-                        onClick={() => {
-                          if (typeof window !== 'undefined') {
-                            sessionStorage.setItem('csc_last_jobs_page', '/home/unbilled');
-                          }
-                          router.push(`/home/job/${encodeURIComponent(j.job_number)}`);
-                        }}
-                        style={{
-                          cursor: 'pointer',
-                          color: '#4f46e5',
-                          textDecoration: 'underline',
-                          textUnderlineOffset: '3px',
-                          transition: 'color 0.15s ease'
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.color = '#3730a3')}
-                        onMouseLeave={e => (e.currentTarget.style.color = '#4f46e5')}
-                        title={`View Job Details: ${j.job_number}`}
-                      >
-                        {j.job_number}
-                      </span>
+                      {isThisYearJob(j.job_number) ? (
+                        <span
+                          onClick={() => {
+                            if (typeof window !== 'undefined') {
+                              sessionStorage.setItem('csc_last_jobs_page', '/home/unbilled');
+                            }
+                            router.push(`/home/job/${encodeURIComponent(j.job_number)}`);
+                          }}
+                          style={{
+                            cursor: 'pointer',
+                            color: '#4f46e5',
+                            textDecoration: 'underline',
+                            textUnderlineOffset: '3px',
+                            transition: 'color 0.15s ease'
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.color = '#3730a3')}
+                          onMouseLeave={e => (e.currentTarget.style.color = '#4f46e5')}
+                          title={`View Job Details: ${j.job_number}`}
+                        >
+                          {j.job_number}
+                        </span>
+                      ) : (
+                        <span style={{ color: '#6d28d9' }}>
+                          {j.job_number || '—'}
+                        </span>
+                      )}
                     </td>
 
                     {/* 5. Enquiry # */}
@@ -1753,18 +1764,24 @@ export default function UnbilledManagementPage() {
               {upcomingReminders.map(rem => (
                 <div key={rem.id} style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.35rem' }}>
-                    <span
-                      onClick={() => {
-                        if (typeof window !== 'undefined') {
-                          sessionStorage.setItem('csc_last_jobs_page', '/home/unbilled');
-                        }
-                        router.push(`/home/job/${encodeURIComponent(rem.job_number)}`);
-                      }}
-                      style={{ color: '#4f46e5', cursor: 'pointer', textDecoration: 'underline' }}
-                      title={`View Job Details: ${rem.job_number}`}
-                    >
-                      Job: {rem.job_number}
-                    </span>
+                    {isThisYearJob(rem.job_number) ? (
+                      <span
+                        onClick={() => {
+                          if (typeof window !== 'undefined') {
+                            sessionStorage.setItem('csc_last_jobs_page', '/home/unbilled');
+                          }
+                          router.push(`/home/job/${encodeURIComponent(rem.job_number)}`);
+                        }}
+                        style={{ color: '#4f46e5', cursor: 'pointer', textDecoration: 'underline' }}
+                        title={`View Job Details: ${rem.job_number}`}
+                      >
+                        Job: {rem.job_number}
+                      </span>
+                    ) : (
+                      <span style={{ color: '#4f46e5' }}>
+                        Job: {rem.job_number}
+                      </span>
+                    )}
                     <span style={{ color: '#10b981' }}>Date: {formatDate(rem.next_followup_date)}</span>
                   </div>
                   <div style={{ fontSize: '0.82rem', color: '#334155', marginBottom: '0.35rem' }}>{rem.followup_notes}</div>
