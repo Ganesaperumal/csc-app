@@ -77,6 +77,7 @@ export default function AdminPage() {
   ]);
   const [loadingJobQuote, setLoadingJobQuote] = useState(false);
   const [csvUploadMode, setCsvUploadMode] = useState<'fill_empty' | 'force_overwrite'>('fill_empty');
+  const [overwriteBlankWithNull, setOverwriteBlankWithNull] = useState(false);
 
   // Legacy jobs bulk delete states & handlers
   const [legacyDeleteMode, setLegacyDeleteMode] = useState<'rows' | 'textarea'>('rows');
@@ -341,16 +342,18 @@ export default function AdminPage() {
             const jobRecord = existingJob as Record<string, any>;
             for (const col of updateColumns) {
               const currentValue = jobRecord ? jobRecord[col] : null;
-              let newValue = row[col];
+              let rawValue = row[col];
+              const isExplicitNull = typeof rawValue === 'string' && ['null', 'empty', '#clear', '[null]', '<null>'].includes(rawValue.trim().toLowerCase());
+              const isCellBlank = rawValue === null || rawValue === undefined || rawValue === '' || (typeof rawValue === 'string' && rawValue.trim() === '');
 
               // If the CSV cell is empty, skip updating this column
-              if (newValue === null || newValue === undefined || newValue === '') {
+              if (isCellBlank && !isExplicitNull) {
                 continue;
               }
 
               // Only update if current DB value is null or empty
               if (currentValue === null || currentValue === undefined || currentValue === '') {
-                updateData[col] = newValue;
+                updateData[col] = isExplicitNull ? null : rawValue;
                 hasUpdates = true;
               }
             }
@@ -442,12 +445,24 @@ export default function AdminPage() {
             let hasUpdates = false;
 
             for (const col of updateColumns) {
-              let newValue = row[col];
-              if (newValue === null || newValue === undefined || newValue === '') {
-                continue;
+              let rawValue = row[col];
+              const isExplicitNull = typeof rawValue === 'string' && ['null', 'empty', '#clear', '[null]', '<null>'].includes(rawValue.trim().toLowerCase());
+              const isCellBlank = rawValue === null || rawValue === undefined || rawValue === '' || (typeof rawValue === 'string' && rawValue.trim() === '');
+
+              if (isExplicitNull) {
+                updateData[col] = null;
+                hasUpdates = true;
+              } else if (isCellBlank) {
+                if (overwriteBlankWithNull) {
+                  updateData[col] = null;
+                  hasUpdates = true;
+                } else {
+                  continue;
+                }
+              } else {
+                updateData[col] = rawValue;
+                hasUpdates = true;
               }
-              updateData[col] = newValue;
-              hasUpdates = true;
             }
 
             if (!hasUpdates) {
@@ -690,6 +705,21 @@ export default function AdminPage() {
                   ⚡ Force Overwrite (Replaces existing DB values)
                 </button>
               </div>
+
+              {csvUploadMode === 'force_overwrite' && (
+                <div style={{ marginTop: '0.75rem', padding: '0.65rem 0.9rem', background: 'rgba(239, 68, 68, 0.05)', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.25)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <input 
+                    type="checkbox"
+                    id="overwriteBlankWithNull"
+                    checked={overwriteBlankWithNull}
+                    onChange={(e) => setOverwriteBlankWithNull(e.target.checked)}
+                    style={{ width: '16px', height: '16px', accentColor: '#ef4444', cursor: 'pointer' }}
+                  />
+                  <label htmlFor="overwriteBlankWithNull" style={{ fontSize: '0.82rem', color: 'var(--text-primary)', cursor: 'pointer', userSelect: 'none' }}>
+                    🗑️ <strong>Treat blank / empty CSV cells as NULL</strong> (Explicitly clear / wipe database fields if left blank in CSV)
+                  </label>
+                </div>
+              )}
             </div>
 
             {/* Action Buttons */}
