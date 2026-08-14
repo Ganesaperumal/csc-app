@@ -623,12 +623,6 @@ export default function ReportsPage() {
     return (cscRole !== 'None' && cscRole !== '') || hasFollowups;
   }, [currentUserProfile]);
 
-  const canAccessUnbilled = useMemo(() => {
-    if (!currentUserProfile) return false;
-    const unbRole = currentUserProfile.unbilled_access || currentUserProfile.unbilled_role;
-    return unbRole && unbRole !== 'None';
-  }, [currentUserProfile]);
-
   const canAccessActivityLog = useMemo(() => {
     if (!currentUserProfile) return false;
     const fRole = (currentUserProfile.followups_access || currentUserProfile.followups_role || currentUserProfile.tracking_role || '').toLowerCase();

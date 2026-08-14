@@ -32,7 +32,7 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
   const canAccessFollowUps = followupsRole !== 'None' && followupsRole !== '';
   const canAccessAllJobs = allJobsRole !== 'None' && allJobsRole !== '';
   const canAccessUnbilled = unbilledRole !== 'None' && unbilledRole !== '';
-  const canAccessReports = canAccessCsc || canAccessUnbilled || (followupsRole !== 'None' && followupsRole !== '');
+  const canAccessReports = canAccessCsc || (followupsRole !== 'None' && followupsRole !== '');
 
   const isActiveActive = pathname.startsWith('/home/active-jobs');
   const isClosedActive = pathname === '/home/closed-jobs';
