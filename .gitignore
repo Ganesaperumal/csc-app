@@ -42,7 +42,8 @@ next-env.d.ts
 
 # scratch & logs
 sync_logs*
-logs*
+/logs/
+*.log
 erp-reports*
 *.zip
 *.sh

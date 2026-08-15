@@ -39,6 +39,7 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
   const isFollowUpsActive = pathname === '/home/follow-ups';
   const isAllJobsActive = pathname === '/home/all-jobs';
   const isSpocActive = pathname.startsWith('/home/spoc');
+  const isLogsActive = pathname === '/home/logs';
   const isUnbilledActive = pathname.startsWith('/home/unbilled');
   const isReportsActive = pathname === '/home/reports';
   const isShowcaseActive = pathname === '/home/ui-showcase';
@@ -313,21 +314,22 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
         <PendingApprovalsReminder profile={profile} />
       </div>
 
-      {/* SPOCs Master Link directly above Admin & Users */}
+      {/* SPOCs Master & Logs Links directly above Admin & Users (Super Admin only) */}
       {canAccessSpoc && (
-        <div style={{ marginBottom: '0.35rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem', marginBottom: '0.35rem' }}>
           <Link
             href="/home/spocs"
             style={{
               width: '100%',
-              padding: '0.5rem 0.85rem',
+              padding: '0.5rem 0.5rem',
               fontSize: '0.8rem',
               fontWeight: 700,
               borderRadius: '10px',
               textDecoration: 'none',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.55rem',
+              justifyContent: 'center',
+              gap: '0.35rem',
               background: isSpocActive ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'rgba(148, 163, 184, 0.12)',
               color: isSpocActive ? '#ffffff' : 'var(--text-secondary)',
               border: isSpocActive ? 'none' : '1px solid var(--border-color)',
@@ -337,6 +339,29 @@ function DashboardNav({ profile, user }: { profile: any; user: any }) {
             }}
           >
             <span>👥</span> SPOCs
+          </Link>
+          <Link
+            href="/home/logs"
+            style={{
+              width: '100%',
+              padding: '0.5rem 0.5rem',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              borderRadius: '10px',
+              textDecoration: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.35rem',
+              background: isLogsActive ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'rgba(148, 163, 184, 0.12)',
+              color: isLogsActive ? '#ffffff' : 'var(--text-secondary)',
+              border: isLogsActive ? 'none' : '1px solid var(--border-color)',
+              boxShadow: isLogsActive ? '0 4px 14px rgba(99, 102, 241, 0.35)' : 'none',
+              transition: 'all 0.25s ease',
+              boxSizing: 'border-box'
+            }}
+          >
+            <span>📊</span> Logs
           </Link>
         </div>
       )}

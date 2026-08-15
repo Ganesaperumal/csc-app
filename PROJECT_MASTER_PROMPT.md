@@ -91,6 +91,8 @@ src/
 | `role_permissions` | `category` (CSC/Tracking/Unbilled/Admin), `role_name`, `page_name`, `access_level` (None/View/Edit) | RBAC permission matrix |
 | `ai_settings` | Admin-configurable AI prompt context | AI chatbot config |
 | `audit_logs` | `id`, `job_number`, `name`, `username`, `field_change`, `old_value`, `new_value`, `timestamp` | Field-level edit audit trail (written from Job Detail + Unbilled pages for all job edits; excludes unbilled followups and file uploads) |
+| `login_logs` | `id`, `user_id`, `username`, `name`, `role`, `department`, `branch`, `ip_address`, `device`, `browser`, `os`, `status`, `error_message`, `created_at` | Audit trail of user login attempts and devices |
+| `usage_logs` | `id`, `user_id`, `username`, `action_type`, `resource`, `row_count`, `estimated_bytes`, `metadata`, `created_at` | Tracks heavy operations and egress volume (CSV/Sheets exports, syncs) |
 
 ---
 
@@ -188,6 +190,7 @@ Users have **one primary role** + **two category roles**:
 /home/all-jobs        → Full-width jobs table (csc_role ≠ None)
 /home/spocs           → Dedicated SPOCs Master, Unmapped Hub & Auto-Fill Sync (Super Admin only)
 /home/spoc            → Redirects to /home/spocs
+/home/logs            → System, User Login History, Operations Matrix & Egress Monitor (Super Admin only)
 /home/unbilled        → Unbilled jobs & Financial Year Reports Modal (unbilled_role ≠ None)
 /home/reports         → Reports (csc_role ≠ None or followups_role ≠ None) — includes Active Jobs, Agent Oversight, and Activity Log tabs
 /home/legacy-jobs     → Legacy jobs (unbilled_role ≠ None)

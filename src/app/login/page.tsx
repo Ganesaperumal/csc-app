@@ -98,6 +98,17 @@ export default function LoginPage() {
     }
 
     if (authError) {
+      // Fire-and-forget failed login log
+      fetch('/api/auth/log-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: cleanInput,
+          status: 'failed',
+          errorMessage: authError.message
+        })
+      }).catch(() => {});
+
       setError(authError.message);
       setLoading(false);
     } else {
@@ -105,16 +116,43 @@ export default function LoginPage() {
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role, is_approved')
+          .select('name, role, department, branches, is_approved')
           .eq('id', user.id)
           .single();
 
         if (profile && profile.is_approved === false) {
+          fetch('/api/auth/log-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: user.id,
+              username: cleanInput,
+              name: profile?.name,
+              status: 'deactivated',
+              errorMessage: 'Deactivated account attempted login'
+            })
+          }).catch(() => {});
+
           await supabase.auth.signOut();
           setError('⏳ Account Pending Admin Approval. Please contact Super Admin.');
           setLoading(false);
           return;
         }
+
+        // Fire-and-forget successful login log
+        fetch('/api/auth/log-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            username: cleanInput,
+            name: profile?.name,
+            role: profile?.role,
+            department: profile?.department,
+            branch: profile?.branches?.[0] || 'ALL',
+            status: 'success'
+          })
+        }).catch(() => {});
 
         if (profile?.role === 'SPOC') {
           router.push('/home/tracking');

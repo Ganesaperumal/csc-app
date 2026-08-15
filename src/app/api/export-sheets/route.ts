@@ -50,6 +50,19 @@ export async function POST() {
       return NextResponse.json({ error: 'Webhook failed', details: errText }, { status: 500 });
     }
 
+    // Log egress event to usage_logs
+    try {
+      await supabase.from('usage_logs').insert([{
+        action_type: 'sheets_export',
+        resource: 'all_jobs',
+        row_count: allJobs.length,
+        estimated_bytes: Buffer.byteLength(JSON.stringify(allJobs), 'utf8'),
+        metadata: { destination: 'Google Sheets Webhook' }
+      }]);
+    } catch (logErr) {
+      // Non-blocking
+    }
+
     return NextResponse.json({ success: true, count: allJobs.length });
 
   } catch (error: any) {

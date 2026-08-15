@@ -55,6 +55,19 @@ export async function GET() {
 
     const csvString = csvRows.join('\n');
     
+    // Log egress event to usage_logs
+    try {
+      await supabase.from('usage_logs').insert([{
+        action_type: 'csv_export',
+        resource: 'all_jobs',
+        row_count: allJobs.length,
+        estimated_bytes: Buffer.byteLength(csvString, 'utf8'),
+        metadata: { filename: 'All_Jobs_Export.csv' }
+      }]);
+    } catch (logErr) {
+      // Non-blocking log failure
+    }
+
     const headersRes = new Headers();
     headersRes.set('Content-Type', 'text/csv; charset=utf-8');
     headersRes.set('Content-Disposition', 'attachment; filename="All_Jobs_Export.csv"');

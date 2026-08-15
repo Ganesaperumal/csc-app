@@ -306,15 +306,26 @@ function AllJobsContent() {
     fetchJobs();
   }, []);
 
+  // ── Supabase Realtime subscription (In-Memory Patch to Save Egress) ──
   useEffect(() => {
     let timerId: any = null;
     const channel = supabase
       .channel('all-jobs-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => {
-        if (timerId) clearTimeout(timerId);
-        timerId = setTimeout(() => {
-          fetchJobs();
-        }, 3000);
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, (payload: any) => {
+        if (payload.eventType === 'UPDATE' && payload.new?.job_number) {
+          setJobs((prevJobs) =>
+            prevJobs.map((j) => (j.job_number === payload.new.job_number ? { ...j, ...payload.new } : j))
+          );
+        } else if (payload.eventType === 'INSERT' && payload.new?.job_number) {
+          setJobs((prevJobs) => [payload.new, ...prevJobs.filter((j) => j.job_number !== payload.new.job_number)]);
+        } else if (payload.eventType === 'DELETE' && payload.old?.job_number) {
+          setJobs((prevJobs) => prevJobs.filter((j) => j.job_number !== payload.old.job_number));
+        } else {
+          if (timerId) clearTimeout(timerId);
+          timerId = setTimeout(() => {
+            fetchJobs();
+          }, 5000);
+        }
       })
       .subscribe();
     return () => {

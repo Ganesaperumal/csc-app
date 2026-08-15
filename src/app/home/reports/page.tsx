@@ -743,8 +743,8 @@ export default function ReportsPage() {
     try {
       const profile = userProfileOverride || currentUserProfile;
 
-      // 1. Fetch Profiles
-      const { data: pData } = await supabase.from('profiles').select('*');
+      // 1. Fetch Profiles (Scalar Columns only)
+      const { data: pData } = await supabase.from('profiles').select('id, name, username, role, department, designation, branches, is_approved');
       setProfiles(pData || []);
 
       // Branch Isolation check
