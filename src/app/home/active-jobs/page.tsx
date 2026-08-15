@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { jobsCache } from '@/lib/jobsCache';
 import { useRouter } from 'next/navigation';
 import { usePermissions } from '@/components/PermissionsContext';
 import { showToast } from '@/components/GlobalDialogs';
@@ -420,14 +421,17 @@ function JobsTable() {
           setJobs((prevJobs) =>
             prevJobs.map((j) => (j.job_number === payload.new.job_number ? { ...j, ...payload.new } : j))
           );
+          jobsCache.patchItem('active-jobs-raw-data', payload.new);
         } else if (payload.eventType === 'INSERT' && payload.new?.job_number) {
           setJobs((prevJobs) => [payload.new, ...prevJobs.filter((j) => j.job_number !== payload.new.job_number)]);
+          jobsCache.invalidate('active-jobs-raw-data');
         } else if (payload.eventType === 'DELETE' && payload.old?.job_number) {
           setJobs((prevJobs) => prevJobs.filter((j) => j.job_number !== payload.old.job_number));
+          jobsCache.removeItem('active-jobs-raw-data', payload.old.job_number);
         } else {
           if (timerId) clearTimeout(timerId);
           timerId = setTimeout(() => {
-            fetchJobs();
+            fetchJobs(true);
           }, 5000);
         }
       })
@@ -492,24 +496,32 @@ function JobsTable() {
     }
   };
 
-  const fetchJobs = async () => {
+  const fetchJobs = async (force = false) => {
     setLoading(true);
     try {
       let data: any[] = [];
-      let from = 0;
-      const step = 1000;
-      while (true) {
-        const { data: batch, error } = await supabase
-          .from('jobs')
-          .select('job_number, enq_number, erp_job_id, job_date, branch, customer_name, company, goods_type, origin, destination, customer_phone, erp_status, invoice_number, invoice_date, goods_track_status, car_track_status, po_status, po_date, inv_request_date, bill_closure_date, sales_by, spoc_name, quote_value, car_included, csc_coordinator, unbilled_spoc, packing_date, actual_delivery, planned_delivery, created_at, updated_at')
-          .not('erp_status', 'ilike', '%cancel%')
-          .order('erp_job_id', { ascending: false, nullsFirst: false })
-          .range(from, from + step - 1);
-        if (error) throw error;
-        if (!batch || batch.length === 0) break;
-        data.push(...batch);
-        if (batch.length < step) break;
-        from += step;
+
+      // Check in-memory cache first to avoid egress
+      const cached = !force ? jobsCache.get<any[]>('active-jobs-raw-data') : null;
+      if (cached && cached.length > 0) {
+        data = cached;
+      } else {
+        let from = 0;
+        const step = 1000;
+        while (true) {
+          const { data: batch, error } = await supabase
+            .from('jobs')
+            .select('job_number, enq_number, erp_job_id, job_date, branch, customer_name, company, goods_type, origin, destination, customer_phone, erp_status, invoice_number, invoice_date, goods_track_status, car_track_status, po_status, po_date, inv_request_date, bill_closure_date, sales_by, spoc_name, quote_value, car_included, csc_coordinator, unbilled_spoc, packing_date, actual_delivery, planned_delivery, created_at, updated_at')
+            .not('erp_status', 'ilike', '%cancel%')
+            .order('erp_job_id', { ascending: false, nullsFirst: false })
+            .range(from, from + step - 1);
+          if (error) throw error;
+          if (!batch || batch.length === 0) break;
+          data.push(...batch);
+          if (batch.length < step) break;
+          from += step;
+        }
+        jobsCache.set('active-jobs-raw-data', data);
       }
 
       const COMPLETED_STATUSES = [

@@ -3,6 +3,7 @@ import { showToast } from '@/components/GlobalDialogs';
 
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { jobsCache } from '@/lib/jobsCache';
 import { useRouter } from 'next/navigation';
 import { usePermissions } from '@/components/PermissionsContext';
 import styles from '../jobs.module.css';
@@ -316,14 +317,17 @@ function AllJobsContent() {
           setJobs((prevJobs) =>
             prevJobs.map((j) => (j.job_number === payload.new.job_number ? { ...j, ...payload.new } : j))
           );
+          jobsCache.patchItem('all-jobs-dataset', payload.new);
         } else if (payload.eventType === 'INSERT' && payload.new?.job_number) {
           setJobs((prevJobs) => [payload.new, ...prevJobs.filter((j) => j.job_number !== payload.new.job_number)]);
+          jobsCache.invalidate('all-jobs-dataset');
         } else if (payload.eventType === 'DELETE' && payload.old?.job_number) {
           setJobs((prevJobs) => prevJobs.filter((j) => j.job_number !== payload.old.job_number));
+          jobsCache.removeItem('all-jobs-dataset', payload.old.job_number);
         } else {
           if (timerId) clearTimeout(timerId);
           timerId = setTimeout(() => {
-            fetchJobs();
+            fetchJobs(true);
           }, 5000);
         }
       })
@@ -334,7 +338,16 @@ function AllJobsContent() {
     };
   }, []);
 
-  const fetchJobs = async () => {
+  const fetchJobs = async (force = false) => {
+    if (!force) {
+      const cached = jobsCache.get<any[]>('all-jobs-dataset');
+      if (cached && cached.length > 0) {
+        setJobs(cached);
+        setLoading(false);
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       let allJobs: any[] = [];
@@ -353,6 +366,7 @@ function AllJobsContent() {
         from += step;
       }
       setJobs(allJobs);
+      jobsCache.set('all-jobs-dataset', allJobs);
     } catch (err: any) {
       console.error('Error fetching jobs:', err.message);
     } finally {

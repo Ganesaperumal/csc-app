@@ -174,7 +174,7 @@ Users have **one primary role** + **two category roles**:
 8. **Theme**: Dark mode default. Toggle stored in `localStorage` as key `theme: 'light'`. CSS vars in `globals.css`.
 9. **No direct DB writes from client pages**: All mutations use Supabase JS SDK with RLS. Admin ops (create-user, etc.) use `SUPABASE_SERVICE_ROLE_KEY` in API routes only.
 10. **Branch filtering**: All non-admin queries must filter by `profile.branches`. `['ALL']` = skip filter.
-11. **Supabase 1000-row limit & Egress Optimization**: Supabase REST API caps single responses at 1,000 rows max. Full dataset queries (All Jobs, Active Jobs, Closed Jobs, CSV/Sheets exports) loop using `.range(from, from + step - 1)` in 1,000-item steps. To prevent exceeding Supabase Free Tier 5GB Egress, ALWAYS use explicit scalar column lists instead of `.select('*')` (omitting heavy `documents` and `whatsapp_sent_stages` JSONB columns on list pages), and use a 3-second debounce on Realtime table event handlers.
+11. **Supabase 1000-row limit & Egress Optimization**: Supabase REST API caps single responses at 1,000 rows max. Full dataset queries (All Jobs, Active Jobs, Closed Jobs, CSV/Sheets exports) loop using `.range(from, from + step - 1)` in 1,000-item steps. To keep Supabase Egress minimal (< 5GB Free Tier): ALWAYS use explicit scalar column lists instead of `.select('*')` (omitting heavy `documents` and `whatsapp_sent_stages` JSONB columns on list pages), use the shared in-memory client cache (`@/lib/jobsCache`) with a 60-second TTL to avoid duplicate fetches on tab navigation, and use in-memory row patching on Realtime WebSocket updates (`payload.new` state update) instead of triggering full-table refetches.
 
 ---
 

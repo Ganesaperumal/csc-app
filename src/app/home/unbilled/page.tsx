@@ -11,6 +11,7 @@ import {
   fetchAllUnbilledFollowupsMapServerAction
 } from './actions';
 import { supabase } from '@/lib/supabase';
+import { jobsCache } from '@/lib/jobsCache';
 import { useRouter } from 'next/navigation';
 import CustomSelect from '../components/CustomSelect';
 import MultiSelect from '../components/MultiSelect';
@@ -547,7 +548,7 @@ export default function UnbilledManagementPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeDrawerJob, showRemindersPopup, showReportsPopup]);
 
-  const fetchInitialData = async () => {
+  const fetchInitialData = async (force = false) => {
     setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -557,10 +558,24 @@ export default function UnbilledManagementPage() {
 
     setCurrentUser(session.user);
 
-    // Fetch user profile first
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+    // Fetch user profile first (scalar columns only to save egress)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, name, username, role, department, designation, branches, is_approved')
+      .eq('id', session.user.id)
+      .single();
+
     if (profile) {
       setUserProfile(profile);
+    }
+
+    // Check in-memory cache first to avoid re-fetching on tab navigation
+    const cacheKey = `unbilled-jobs-${session.user.id}`;
+    const cachedCombined = !force ? jobsCache.get<any[]>(cacheKey) : null;
+    if (cachedCombined && cachedCombined.length > 0) {
+      setJobs(cachedCombined);
+      setLoading(false);
+      return;
     }
 
     const userName = profile?.name || profile?.username || session.user.email?.split('@')[0];
@@ -588,9 +603,9 @@ export default function UnbilledManagementPage() {
     const requiresSlicing = true;
 
     if (requiresSlicing) {
-      if (profile.branches && profile.branches.includes('ALL')) {
+      if (profile?.branches && profile.branches.includes('ALL')) {
         legacyBranchesToFetch = ['ALL'];
-      } else if (profile.branches && profile.branches.length > 0) {
+      } else if (profile?.branches && profile.branches.length > 0) {
         jobsQuery = jobsQuery.in('branch', profile.branches);
         legacyBranchesToFetch = profile.branches;
       } else {
@@ -625,6 +640,7 @@ export default function UnbilledManagementPage() {
 
     const combinedList = [...erpJobsList, ...legacyJobsList];
     setJobs(combinedList);
+    jobsCache.set(cacheKey, combinedList);
     setLoading(false);
 
     // Fetch followups map asynchronously in background (non-blocking)
