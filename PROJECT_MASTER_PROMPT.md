@@ -107,9 +107,7 @@ Users have **one primary role** + **two category roles**:
 - **SPOCs Hub Access** → Strictly restricted to Super Admin only (`is_super_admin === true`). Super Admin can manage CRUD rules, unmapped company resolver, and run Global SPOC Sync and per-job auto-fill.
 - **Admin** (csc_role) → Read-only on job pages (same as Viewer). Full access to Admin panel.
 - **Viewer** (csc_role) → Read-only everywhere. Can filter/search lists. Can see all fields whether empty or not. Cannot edit fields, add logs, send WhatsApp, trigger Sync ERP, or use Group Chat.
-- `branches` (TEXT[]) → `['ALL']` = super admin, else branch-filtered queries
-- `is_approved` must be `true` to access the dashboard
-- Sidebar hidden on: `/home/job/[id]`, `/home/all-jobs`, `/home/unbilled`
+- `is_approved` must be `true` to access the dashboard. When disabled (`is_approved = false`), the server invalidates their Supabase Auth session globally (`admin.signOut`), and the client layout triggers an immediate forced logout via Realtime push.
 - **Sync ERP Button**: Enabled for `followups_role` (`Self`/`All`) or `csc_role === 'Edit'`. Visible but disabled for `csc_role === 'View'`. Completely hidden if `csc_role === 'None'` (unless followups role is active).
 - **Reports Access**: CSC Reports (`Active Jobs Report` & `Agent Activity Oversight`) and Activity Log visible for `csc_role !== 'None'` OR `followups_role` (`Self`/`All`). Unbilled Financial Year Reports (Current FY & Previous FY) are accessed directly on `/home/unbilled` via the dedicated Reports modal.
 - **Active Jobs Access**: Governed by `csc_role` (`csc_role !== 'None'`), exactly like Closed Jobs. No `is_super_admin` restriction.

@@ -454,8 +454,19 @@ export default function DashboardLayout({
           .single();
           
         if (userProfile) {
+          // If user was disabled or approval revoked, force sign out immediately
+          if (userProfile.is_approved === false) {
+            await supabase.auth.signOut();
+            router.push('/login');
+            return;
+          }
           setProfile(userProfile);
           setRole(userProfile.role);
+        } else {
+          // Profile deleted
+          await supabase.auth.signOut();
+          router.push('/login');
+          return;
         }
         
         setLoading(false);
@@ -476,6 +487,55 @@ export default function DashboardLayout({
       authListener.subscription.unsubscribe();
     };
   }, [router]);
+
+  // Real-time listener for current user's profile status (instant logout if disabled)
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`user-status-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`,
+        },
+        async (payload: any) => {
+          const updated = payload.new;
+          if (updated) {
+            if (updated.is_approved === false) {
+              showToast('⛔ Your account has been deactivated. Logging out...', 'error');
+              await supabase.auth.signOut();
+              router.push('/login');
+              return;
+            }
+            setProfile(updated);
+            if (updated.role) setRole(updated.role);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`,
+        },
+        async () => {
+          showToast('⛔ Your account has been removed. Logging out...', 'error');
+          await supabase.auth.signOut();
+          router.push('/login');
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, router]);
 
   if (loading) {
     return <div className={styles.loadingScreen}>Loading...</div>;

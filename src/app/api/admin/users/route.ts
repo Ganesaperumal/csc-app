@@ -105,7 +105,17 @@ export async function PUT(request: Request) {
     }
 
     if (branches !== undefined) updates.branches = branches;
-    if (is_approved !== undefined) updates.is_approved = is_approved;
+    if (is_approved !== undefined) {
+      updates.is_approved = is_approved;
+      // If user is deactivated/disabled, forcefully invalidate all their active Supabase Auth sessions
+      if (is_approved === false) {
+        try {
+          await supabase.auth.admin.signOut(userId, 'global');
+        } catch (soErr) {
+          console.warn(`[PUT /api/admin/users] Global signOut warning for ${userId}:`, soErr);
+        }
+      }
+    }
     if (photo !== undefined) updates.photo = photo;
 
     // Resilient update loop: automatically strip any column that does not exist in Supabase schema cache
